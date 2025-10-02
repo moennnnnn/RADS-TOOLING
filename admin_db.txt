@@ -1,0 +1,90 @@
+-- Staff users (Owner/Admin/Secretary)
+CREATE TABLE IF NOT EXISTS admin_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    role ENUM('Owner', 'Admin', 'Secretary') NOT NULL DEFAULT 'Secretary',
+    profile_image VARCHAR(255) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Insert default Owner account
+INSERT INTO admin_users (username, password, full_name, role)
+VALUES (
+    'admin',
+    '$2y$10$tZQpbFsqPgp1f0eCMXI6ZeM9guDbJt6631WkLtuoZcN1eKazk/W4u', -- "admin123"
+    'System Owner',
+    'Owner'
+);
+
+-- Customers table
+CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    password VARCHAR(255) NOT NULL, -- important for login
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Products table
+CREATE TABLE IF NOT EXISTS products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    stock INT DEFAULT 0,
+    image VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Orders table
+CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_code VARCHAR(20) UNIQUE NOT NULL,
+    customer_id INT NOT NULL,
+    product_id INT NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    payment_status ENUM('Fully Paid', 'With Balance') DEFAULT 'With Balance',
+    status ENUM('Pending', 'Processing', 'Completed', 'Cancelled') DEFAULT 'Pending',
+    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- Feedback table
+CREATE TABLE IF NOT EXISTS feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_id INT,
+    rating INT CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+ALTER TABLE customers
+  ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER email,
+  ADD COLUMN verification_code VARCHAR(10) DEFAULT NULL AFTER email_verified,
+  ADD COLUMN verification_expires DATETIME DEFAULT NULL AFTER verification_code,
+  ADD COLUMN reset_token VARCHAR(64) DEFAULT NULL,
+  ADD COLUMN reset_expires DATETIME DEFAULT NULL;
+
+ALTER TABLE orders
+  ADD INDEX idx_customer_id (customer_id),
+  ADD INDEX idx_product_id (product_id);
+
+ALTER TABLE feedback
+  ADD INDEX idx_customer_id (customer_id),
+  ADD INDEX idx_order_id (order_id);
+
+ALTER TABLE customers
+  ADD COLUMN profile_image VARCHAR(255) NULL AFTER email,
+  ADD COLUMN address       VARCHAR(255) NULL AFTER phone,
+  ADD COLUMN reset_code VARCHAR(12) NULL,
+  ADD COLUMN reset_code_expires DATETIME NULL;
