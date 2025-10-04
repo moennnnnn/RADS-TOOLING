@@ -171,7 +171,7 @@ class AuthAPI {
 
             // Generate new verification code
             $verificationCode = sprintf('%06d', random_int(100000, 999999));
-            $verificationExpires = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+            $verificationExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
             // Update verification code
             $updateStmt = $this->conn->prepare('
@@ -254,7 +254,7 @@ class AuthAPI {
 
             // Generate verification code (6-digit numeric)
             $verificationCode = sprintf('%06d', random_int(100000, 999999));
-            $verificationExpires = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+            $verificationExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
             // Create full name from first and last name
             $fullName = $firstName . ' ' . $lastName;

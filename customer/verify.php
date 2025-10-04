@@ -95,7 +95,7 @@ require_once __DIR__ . '/../backend/config/database.php';
                 
                 <button type="submit" class="btn-primary" style="width: 100%;">Verify Email</button>
                 
-                <div class="timer" id="timer">Resend code in <span id="countdown">300</span> seconds</div>
+                <div class="timer" id="timer">Resend code in <span id="countdown">600</span> seconds</div>
                 <button type="button" class="resend-btn" id="resendBtn" disabled>Resend Code</button>
                 
                 <div class="error-message" id="errorMessage" style="margin-top: 1rem;"></div>

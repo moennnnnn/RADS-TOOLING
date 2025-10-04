@@ -29,10 +29,23 @@ class Mailer
             $this->mailer->SMTPSecure = $this->config['secure'] === 'tls' ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
             $this->mailer->Port = $this->config['port'];
 
+            // Debug settings (remove in production)
+            // $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
+            
             // Sender settings
             $this->mailer->setFrom($this->config['from_email'], $this->config['from_name']);
+            
+            // Reply-To to improve deliverability
+            if (isset($this->config['reply_to'])) {
+                $this->mailer->addReplyTo($this->config['reply_to'], $this->config['from_name']);
+            }
+            
             $this->mailer->isHTML(true);
             $this->mailer->CharSet = 'UTF-8';
+            
+            // Additional headers to reduce spam score
+            $this->mailer->XMailer = ' '; // Remove X-Mailer header
+            $this->mailer->Sender = $this->config['from_email']; // Add Sender header
 
         } catch (Exception $e) {
             error_log("Mailer configuration error: " . $e->getMessage());
@@ -111,6 +124,7 @@ class Mailer
      */
     private function getRegistrationEmailTemplate(string $fullName, string $verificationCode): string
     {
+        // Fix HTML entities and improve formatting
         return "
         <!DOCTYPE html>
         <html lang='en'>
@@ -128,7 +142,6 @@ class Mailer
                 .code { font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px; font-family: 'Courier New', monospace; }
                 .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
                 .footer { text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; padding-top: 20px; }
-                .button { display: inline-block; background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
             </style>
         </head>
         <body>
@@ -139,7 +152,7 @@ class Mailer
                 </div>
                 
                 <div class='content'>
-                    <p>Hello <strong>{$fullName}</strong>,</p>
+                    <p>Hello <strong>" . htmlspecialchars($fullName) . "</strong>,</p>
                     
                     <p>Thank you for registering with Rads Tooling! To complete your account setup and start using our services, please verify your email address using the verification code below:</p>
                     
@@ -151,7 +164,7 @@ class Mailer
                     <div class='warning'>
                         <strong>Important:</strong>
                         <ul style='margin: 10px 0; padding-left: 20px;'>
-                            <li>This code will expire in 30 minutes</li>
+                            <li>This code will expire in 10 minutes</li>
                             <li>Enter this code exactly as shown (6 digits)</li>
                             <li>Do not share this code with anyone</li>
                         </ul>
@@ -159,11 +172,11 @@ class Mailer
                     
                     <p>If you didn't create an account with Rads Tooling, please ignore this email.</p>
                     
-                    <p>Need help? Contact our support team at <a href='mailto:support@radstooling.com'>support@radstooling.com</a></p>
+                    <p>Need help? Contact our support team at <a href='mailto:moenpogi045@gmail.com'>moenpogi045@gmail.com</a></p>
                 </div>
                 
                 <div class='footer'>
-                    <p>© " . date('Y') . " Rads Tooling. All rights reserved.</p>
+                    <p>&copy; " . date('Y') . " Rads Tooling. All rights reserved.</p>
                     <p>This is an automated message, please do not reply to this email.</p>
                 </div>
             </div>
@@ -176,6 +189,7 @@ class Mailer
      */
     private function getRegistrationEmailTextTemplate(string $fullName, string $verificationCode): string
     {
+        // Fix copyright symbol
         return "
 RADS TOOLING - Account Verification
 
@@ -186,15 +200,15 @@ Thank you for registering with Rads Tooling! To complete your account setup, ple
 VERIFICATION CODE: {$verificationCode}
 
 IMPORTANT:
-- This code will expire in 30 minutes
+- This code will expire in 10 minutes
 - Enter this code exactly as shown (6 digits)
 - Do not share this code with anyone
 
 If you didn't create an account with Rads Tooling, please ignore this email.
 
-Need help? Contact our support team at support@radstooling.com
+Need help? Contact our support team at moenpogi045@gmail.com
 
-© " . date('Y') . " Rads Tooling. All rights reserved.
+(c) " . date('Y') . " Rads Tooling. All rights reserved.
 This is an automated message, please do not reply to this email.";
     }
 
@@ -203,6 +217,7 @@ This is an automated message, please do not reply to this email.";
      */
     private function getPasswordResetEmailTemplate(string $fullName, string $resetCode): string
     {
+        // Fix HTML entities and improve formatting
         return "
         <!DOCTYPE html>
         <html lang='en'>
@@ -230,7 +245,7 @@ This is an automated message, please do not reply to this email.";
                 </div>
                 
                 <div class='content'>
-                    <p>Hello <strong>{$fullName}</strong>,</p>
+                    <p>Hello <strong>" . htmlspecialchars($fullName) . "</strong>,</p>
                     
                     <p>We received a request to reset your password for your Rads Tooling account. Use the code below to reset your password:</p>
                     
@@ -242,7 +257,7 @@ This is an automated message, please do not reply to this email.";
                     <div class='warning'>
                         <strong>Security Notice:</strong>
                         <ul style='margin: 10px 0; padding-left: 20px;'>
-                            <li>This code will expire in 30 minutes</li>
+                            <li>This code will expire in 10 minutes</li>
                             <li>Enter this code exactly as shown (6 digits)</li>
                             <li>If you didn't request this reset, please ignore this email</li>
                             <li>Never share this code with anyone</li>
@@ -251,11 +266,11 @@ This is an automated message, please do not reply to this email.";
                     
                     <p>After entering the code, you'll be able to set a new password for your account.</p>
                     
-                    <p>If you didn't request a password reset, please contact our support team immediately at <a href='mailto:support@radstooling.com'>support@radstooling.com</a></p>
+                    <p>If you didn't request a password reset, please contact our support team immediately at <a href='mailto:moenpogi045@gmail.com'>moenpogi045@gmail.com</a></p>
                 </div>
                 
                 <div class='footer'>
-                    <p>© " . date('Y') . " Rads Tooling. All rights reserved.</p>
+                    <p>&copy; " . date('Y') . " Rads Tooling. All rights reserved.</p>
                     <p>This is an automated message, please do not reply to this email.</p>
                 </div>
             </div>
@@ -268,6 +283,7 @@ This is an automated message, please do not reply to this email.";
      */
     private function getPasswordResetEmailTextTemplate(string $fullName, string $resetCode): string
     {
+        // Fix copyright symbol
         return "
 RADS TOOLING - Password Reset Code
 
@@ -278,16 +294,16 @@ We received a request to reset your password for your Rads Tooling account. Use 
 PASSWORD RESET CODE: {$resetCode}
 
 SECURITY NOTICE:
-- This code will expire in 30 minutes
+- This code will expire in 10 minutes
 - Enter this code exactly as shown (6 digits)
 - If you didn't request this reset, please ignore this email
 - Never share this code with anyone
 
 After entering the code, you'll be able to set a new password for your account.
 
-If you didn't request a password reset, please contact our support team immediately at support@radstooling.com
+If you didn't request a password reset, please contact our support team immediately at moenpogi045@gmail.com
 
-© " . date('Y') . " Rads Tooling. All rights reserved.
+(c) " . date('Y') . " Rads Tooling. All rights reserved.
 This is an automated message, please do not reply to this email.";
     }
 

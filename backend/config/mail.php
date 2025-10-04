@@ -5,6 +5,7 @@ return [
     'secure'     => 'tls',
     'username'   => 'moenpogi045@gmail.com',
     'password'   => 'urhl knaz kggl ukfx',
-    'from_email' => 'radstooling@gmail.com',
-    'from_name'  => 'Rads Tooling'
+    'from_email' => 'moenpgi045@gmail.com',
+    'from_name'  => 'Rads Tooling',
+    'reply_to'   => 'moenpogi045@gmail.com'
 ];
