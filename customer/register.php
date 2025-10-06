@@ -144,8 +144,12 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
         </div>
         
         <input type="hidden" id="next" value="<?= htmlspecialchars($next) ?>">
-        <button class="btn-primary" type="submit">Create Account</button>
         
+        <button type="submit" class="btn-signup-primary" id="signupBtn">
+          <span class="material-symbols-rounded">person_add</span>
+          <span>Create Free Account</span>
+        </button>    
+
         <div class="error-message" id="errorMessage"></div>
         <div class="loading" id="loadingMessage">Creating your account...</div>
       </form>

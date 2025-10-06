@@ -1,3 +1,21 @@
+-- =======================
+-- RADS TOOLING COMPLETE DATABASE SCHEMA
+-- Final Consolidated Version - January 2025
+-- =======================
+-- Supports:
+--   ✓ Premade Products + Custom Cabinets
+--   ✓ Full E-commerce Flow (Cart → Checkout → Order Tracking)
+--   ✓ Dual Chat System (Guest + Customer Support)
+--   ✓ Order Cancellation Tracking
+--   ✓ Content Management (Announcements/Banners)
+--   ✓ User Activity Logs & Security
+--   ✓ Password Reset System
+-- =======================
+
+-- ============================================================
+-- PART 1: CORE USER TABLES (FROM ORIGINAL admin_db.txt)
+-- ============================================================
+
 -- Staff users (Owner/Admin/Secretary)
 CREATE TABLE IF NOT EXISTS admin_users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -8,10 +26,10 @@ CREATE TABLE IF NOT EXISTS admin_users (
     profile_image VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB;
 
--- Insert default Owner account
-INSERT INTO admin_users (username, password, full_name, role)
+-- Insert default Owner account (only if doesn't exist)
+INSERT IGNORE INTO admin_users (username, password, full_name, role)
 VALUES (
     'admin',
     '$2y$10$tZQpbFsqPgp1f0eCMXI6ZeM9guDbJt6631WkLtuoZcN1eKazk/W4u', -- "admin123"
@@ -19,18 +37,29 @@ VALUES (
     'Owner'
 );
 
--- Customers table
+-- Customers table (with all features from admin_db.txt)
 CREATE TABLE IF NOT EXISTS customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     full_name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
+    profile_image VARCHAR(255) NULL,
+    email_verified TINYINT(1) NOT NULL DEFAULT 0,
+    verification_code VARCHAR(10) DEFAULT NULL,
+    verification_expires DATETIME DEFAULT NULL,
     phone VARCHAR(20),
-    password VARCHAR(255) NOT NULL, -- important for login
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    address VARCHAR(255) NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_username (username)
+) ENGINE=InnoDB;
 
--- Products table
+-- ============================================================
+-- PART 2: PRODUCT TABLES
+-- ============================================================
+
+-- Products table (premade cabinets - from admin_db.txt)
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -39,24 +68,137 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(10,2) NOT NULL,
     stock INT DEFAULT 0,
     image VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_type (type),
+    INDEX idx_stock (stock)
+) ENGINE=InnoDB;
 
--- Orders table
+-- Customizable cabinet templates (for 360° customization)
+CREATE TABLE IF NOT EXISTS cabinets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'Wall Cabinet', 'Base Cabinet', etc.
+    base_price DECIMAL(10,2) NOT NULL, -- starting price before customization
+    image VARCHAR(255), -- preview image
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_type (type)
+) ENGINE=InnoDB;
+
+-- Customer's saved cabinet designs (color, size, layout choices)
+CREATE TABLE IF NOT EXISTS customizations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    cabinet_id INT NOT NULL,
+    color VARCHAR(50),
+    size VARCHAR(50), -- 'Small', 'Medium', 'Large'
+    layout VARCHAR(50), -- 'Single Door', 'Double Door', etc.
+    material VARCHAR(50), -- 'Oak', 'Mahogany', etc.
+    price_adjustment DECIMAL(10,2) DEFAULT 0.00, -- how much customization adds to base_price
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (cabinet_id) REFERENCES cabinets(id) ON DELETE CASCADE,
+    INDEX idx_customer_id (customer_id),
+    INDEX idx_cabinet_id (cabinet_id)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- PART 3: SHOPPING CART
+-- ============================================================
+
+-- Shopping cart (supports BOTH products and custom cabinets)
+CREATE TABLE IF NOT EXISTS cart_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    item_type ENUM('product', 'cabinet') NOT NULL, -- what kind of item
+    product_id INT DEFAULT NULL, -- for premade products
+    cabinet_id INT DEFAULT NULL, -- for custom cabinets
+    customization_id INT DEFAULT NULL, -- only if item_type='cabinet'
+    quantity INT DEFAULT 1,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    FOREIGN KEY (cabinet_id) REFERENCES cabinets(id) ON DELETE CASCADE,
+    FOREIGN KEY (customization_id) REFERENCES customizations(id) ON DELETE SET NULL,
+    INDEX idx_customer_id (customer_id),
+    INDEX idx_item_type (item_type)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- PART 4: ORDERS & PAYMENTS
+-- ============================================================
+
+-- Orders table (updated from admin_db.txt - removed product_id, added cancellation)
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_code VARCHAR(20) UNIQUE NOT NULL,
     customer_id INT NOT NULL,
-    product_id INT NOT NULL,
     total_amount DECIMAL(10,2) NOT NULL,
-    payment_status ENUM('Fully Paid', 'With Balance') DEFAULT 'With Balance',
+    payment_status ENUM('Pending', 'Partially Paid', 'Fully Paid') DEFAULT 'Pending',
     status ENUM('Pending', 'Processing', 'Completed', 'Cancelled') DEFAULT 'Pending',
+    cancelled_by ENUM('customer', 'admin') DEFAULT NULL,
+    cancellation_reason TEXT DEFAULT NULL,
+    cancelled_at TIMESTAMP NULL,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
-);
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    INDEX idx_customer_id (customer_id),
+    INDEX idx_order_code (order_code),
+    INDEX idx_status (status)
+) ENGINE=InnoDB;
 
--- Feedback table
+-- Order items (supports BOTH products and custom cabinets)
+CREATE TABLE IF NOT EXISTS order_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    item_type ENUM('product', 'cabinet') NOT NULL, -- what kind of item
+    product_id INT DEFAULT NULL, -- for premade products
+    cabinet_id INT DEFAULT NULL, -- for custom cabinets
+    customization_id INT DEFAULT NULL, -- only if item_type='cabinet'
+    quantity INT DEFAULT 1,
+    unit_price DECIMAL(10,2) NOT NULL, -- price at time of order
+    subtotal DECIMAL(10,2) NOT NULL, -- unit_price * quantity
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    FOREIGN KEY (cabinet_id) REFERENCES cabinets(id) ON DELETE RESTRICT,
+    FOREIGN KEY (customization_id) REFERENCES customizations(id) ON DELETE SET NULL,
+    INDEX idx_order_id (order_id),
+    INDEX idx_item_type (item_type)
+) ENGINE=InnoDB;
+
+-- Order status timeline (for customer tracking page)
+CREATE TABLE IF NOT EXISTS order_status_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    status ENUM('Pending', 'Processing', 'Completed', 'Cancelled') NOT NULL,
+    changed_by INT DEFAULT NULL, -- admin who changed status
+    notes TEXT, -- reason for change
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES admin_users(id) ON DELETE SET NULL,
+    INDEX idx_order_id (order_id),
+    INDEX idx_changed_at (changed_at)
+) ENGINE=InnoDB;
+
+-- Payment records (30% down payment, QR codes)
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    amount_paid DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('GCash QR', 'Cash', 'Bank Transfer', 'Cheque') NOT NULL,
+    qr_code VARCHAR(255), -- path to generated QR code image
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    verified_by INT DEFAULT NULL, -- admin who verified
+    verified_at TIMESTAMP NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    FOREIGN KEY (verified_by) REFERENCES admin_users(id) ON DELETE SET NULL,
+    INDEX idx_order_id (order_id),
+    INDEX idx_payment_date (payment_date)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- PART 5: FEEDBACK & MESSAGING
+-- ============================================================
+
+-- Feedback table (from admin_db.txt, ensuring InnoDB)
 CREATE TABLE IF NOT EXISTS feedback (
     id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -64,27 +206,184 @@ CREATE TABLE IF NOT EXISTS feedback (
     rating INT CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id),
-    FOREIGN KEY (order_id) REFERENCES orders(id)
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    INDEX idx_customer_id (customer_id),
+    INDEX idx_order_id (order_id)
+) ENGINE=InnoDB;
+
+-- Chat messages (logged-in customer ↔ admin communication)
+CREATE TABLE IF NOT EXISTS messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sender_type ENUM('customer', 'admin') NOT NULL,
+    sender_id INT NOT NULL,
+    receiver_type ENUM('customer', 'admin') NOT NULL,
+    receiver_id INT NOT NULL,
+    message TEXT NOT NULL,
+    read_status TINYINT(1) DEFAULT 0,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sender (sender_type, sender_id),
+    INDEX idx_receiver (receiver_type, receiver_id),
+    INDEX idx_sent_at (sent_at)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- PART 6: GUEST CHAT SUPPORT SYSTEM
+-- ============================================================
+
+-- Drop old chat tables if they exist from previous attempts
+DROP TABLE IF EXISTS rt_chat_messages;
+DROP TABLE IF EXISTS rt_chat_threads;
+DROP TABLE IF EXISTS rt_faqs;
+DROP TABLE IF EXISTS chat_messages;
+DROP TABLE IF EXISTS chat_threads;
+DROP TABLE IF EXISTS chat_faqs;
+
+-- FAQs database (for chatbot auto-responses)
+CREATE TABLE rt_faqs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    question VARCHAR(255) NOT NULL,
+    answer TEXT NOT NULL,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_active (is_active),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Chat threads (anonymous/guest chat sessions)
+CREATE TABLE rt_chat_threads (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    thread_code VARCHAR(32) UNIQUE NOT NULL,
+    customer_name VARCHAR(120) NULL,
+    customer_email VARCHAR(160) NULL,
+    customer_phone VARCHAR(64) NULL,
+    status ENUM('open','closed') DEFAULT 'open',
+    last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_code (thread_code),
+    INDEX idx_last_message (last_message_at),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Chat messages (messages in anonymous/guest chats)
+CREATE TABLE rt_chat_messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    thread_id INT NOT NULL,
+    sender_type ENUM('customer','admin','bot') NOT NULL,
+    sender_id INT NULL,
+    body TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_thread (thread_id),
+    INDEX idx_sender (sender_type),
+    INDEX idx_created (created_at),
+    CONSTRAINT fk_rt_msg_thread 
+        FOREIGN KEY (thread_id) 
+        REFERENCES rt_chat_threads(id) 
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed Sample FAQs
+INSERT INTO rt_faqs (question, answer) VALUES
+('What are your lead times?', 'Typical build time is 7–14 days depending on customization.'),
+('Do you deliver?', 'Yes, we deliver within Cavite and nearby cities. Fees vary by location.'),
+('Can I customize size/color?', 'Yes! Share your preferred dimensions and color; we will confirm feasibility and pricing.');
+
+-- ============================================================
+-- PART 7: CONTENT MANAGEMENT
+-- ============================================================
+
+-- Homepage announcements/banners/promotions
+CREATE TABLE IF NOT EXISTS announcements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    type ENUM('banner', 'promotion', 'announcement') DEFAULT 'announcement',
+    image VARCHAR(255), -- for banner images
+    is_active TINYINT(1) DEFAULT 1, -- admin can enable/disable
+    display_order INT DEFAULT 0, -- for sorting multiple banners
+    created_by INT NOT NULL, -- admin who created it
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES admin_users(id) ON DELETE CASCADE,
+    INDEX idx_is_active (is_active),
+    INDEX idx_type (type),
+    INDEX idx_display_order (display_order)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- PART 8: SECURITY & AUDIT
+-- ============================================================
+
+-- User activity logs (login, order placed, customer deleted, etc.)
+CREATE TABLE IF NOT EXISTS user_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_type ENUM('customer', 'admin') NOT NULL,
+    user_id INT NOT NULL,
+    action VARCHAR(100) NOT NULL, -- 'login', 'order_placed', 'customer_deleted'
+    details TEXT, -- JSON or description
+    ip_address VARCHAR(45), -- supports IPv6
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_type_id (user_type, user_id),
+    INDEX idx_action (action),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB;
+
+-- Password reset tokens (more secure than storing in customers table)
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_type ENUM('customer', 'admin') NOT NULL,
+    user_id INT NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL, -- SHA256 hash
+    expires_at DATETIME NOT NULL,
+    used TINYINT(1) DEFAULT 0, -- prevent token reuse
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token),
+    INDEX idx_user_type_id (user_type, user_id),
+    INDEX idx_expires_at (expires_at)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- PART 9: CLEANUP OLD PASSWORD RESET COLUMNS
+-- ============================================================
+
+-- Remove old password reset columns from customers table
+SET @drop_reset_code = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS 
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'reset_code') > 0,
+    'ALTER TABLE customers DROP COLUMN reset_code',
+    'SELECT "reset_code already removed"'
 );
+PREPARE stmt FROM @drop_reset_code;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE customers
-  ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER email,
-  ADD COLUMN verification_code VARCHAR(10) DEFAULT NULL AFTER email_verified,
-  ADD COLUMN verification_expires DATETIME DEFAULT NULL AFTER verification_code,
-  ADD COLUMN reset_token VARCHAR(64) DEFAULT NULL,
-  ADD COLUMN reset_expires DATETIME DEFAULT NULL;
+SET @drop_reset_expires = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS 
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'reset_code_expires') > 0,
+    'ALTER TABLE customers DROP COLUMN reset_code_expires',
+    'SELECT "reset_code_expires already removed"'
+);
+PREPARE stmt FROM @drop_reset_expires;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE orders
-  ADD INDEX idx_customer_id (customer_id),
-  ADD INDEX idx_product_id (product_id);
+SET @drop_reset_token = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS 
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'reset_token') > 0,
+    'ALTER TABLE customers DROP COLUMN reset_token',
+    'SELECT "reset_token already removed"'
+);
+PREPARE stmt FROM @drop_reset_token;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE feedback
-  ADD INDEX idx_customer_id (customer_id),
-  ADD INDEX idx_order_id (order_id);
-
-ALTER TABLE customers
-  ADD COLUMN profile_image VARCHAR(255) NULL AFTER email,
-  ADD COLUMN address       VARCHAR(255) NULL AFTER phone,
-  ADD COLUMN reset_code VARCHAR(12) NULL,
-  ADD COLUMN reset_code_expires DATETIME NULL;
+SET @drop_reset_expires2 = IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS 
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'reset_expires') > 0,
+    'ALTER TABLE customers DROP COLUMN reset_expires',
+    'SELECT "reset_expires already removed"'
+);
+PREPARE stmt FROM @drop_reset_expires2;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

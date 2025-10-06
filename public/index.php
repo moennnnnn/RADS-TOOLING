@@ -295,77 +295,79 @@ if ($isCustomer) {
     </main>
 
     <!-- FOOTER -->
-    <footer class="custom-footer">
-      <div class="footer-content">
-        <div class="footer-columns">
-          <div class="footer-col">
-            <h3 class="footer-heading">About RADS TOOLING</h3>
-            <p class="footer-desc">
-              Premium custom cabinet manufacturer serving clients since 2007.
-              Quality craftsmanship, affordable prices, and exceptional service.
-            </p>
-            <div class="footer-social">
-              <a href="https://facebook.com/RadsTooling" target="_blank" rel="noopener" aria-label="Facebook">
-                <i class="fab fa-facebook-f"></i>
-              </a>
-              <a href="https://instagram.com/RadsTooling" target="_blank" rel="noopener" aria-label="Instagram">
-                <i class="fab fa-instagram"></i>
-              </a>
-              <a href="mailto:RadsTooling@gmail.com" aria-label="Email">
-                <i class="fas fa-envelope"></i>
-              </a>
-            </div>
-          </div>
-
-          <div class="footer-col">
-            <h3 class="footer-heading">Quick Links</h3>
-            <ul class="footer-links">
-              <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-              <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
-              <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
-              <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h3 class="footer-heading">Categories</h3>
-            <ul class="footer-links">
-              <li><a href="/RADS-TOOLING/public/products.php?cat=kitchen">Kitchen</a></li>
-              <li><a href="/RADS-TOOLING/public/products.php?cat=bedroom">Bedroom</a></li>
-              <li><a href="/RADS-TOOLING/public/products.php?cat=living">Living Room</a></li>
-              <li><a href="/RADS-TOOLING/public/products.php?cat=bathroom">Bathroom</a></li>
-              <li><a href="/RADS-TOOLING/public/products.php?cat=commercial">Commercial</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h3 class="footer-heading">Contact Info</h3>
-            <ul class="footer-contact">
-              <li>
-                <i class="fas fa-map-marker-alt"></i>
-                <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
-              </li>
-              <li>
-                <i class="fas fa-envelope"></i>
-                <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
-              </li>
-              <li>
-                <i class="fas fa-clock"></i>
-                <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <p>&copy; <?= date('Y') ?> RADS TOOLING INC. All rights reserved.</p>
-          <div class="footer-legal">
-            <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
-            <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
-          </div>
-        </div>
+ <footer class="footer">
+  <div class="footer-content">
+    <!-- About Section -->
+    <div class="footer-section">
+      <h3>About RADS TOOLING</h3>
+      <p class="footer-description">
+        Premium custom cabinet manufacturer serving clients since 2007. 
+        Quality craftsmanship, affordable prices, and exceptional service.
+      </p>
+      <div class="footer-social">
+        <a href="#" class="social-icon" aria-label="Facebook">
+          <span class="material-symbols-rounded">facebook</span>
+        </a>
+        <a href="#" class="social-icon" aria-label="Instagram">
+          <span class="material-symbols-rounded">photo_camera</span>
+        </a>
+        <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+          <span class="material-symbols-rounded">mail</span>
+        </a>
       </div>
-    </footer>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="footer-section">
+      <h3>Quick Links</h3>
+      <ul class="footer-links">
+        <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+        <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
+        <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
+      </ul>
+    </div>
+
+    <!-- Categories -->
+    <div class="footer-section">
+      <h3>Categories</h3>
+      <ul class="footer-links">
+        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+      </ul>
+    </div>
+
+    <!-- Contact Info -->
+    <div class="footer-section">
+      <h3>Contact Info</h3>
+      <div class="contact-info-item">
+        <span class="material-symbols-rounded">location_on</span>
+        <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+      </div>
+      <div class="contact-info-item">
+        <span class="material-symbols-rounded">mail</span>
+        <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+      </div>
+      <div class="contact-info-item">
+        <span class="material-symbols-rounded">schedule</span>
+        <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p class="footer-copyright">
+      © 2025 RADS TOOLING INC. All rights reserved.
+    </p>
+    <div class="footer-legal">
+      <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
+      <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
+    </div>
+  </div>
+</footer>
 
   </div><!-- /.page-wrapper -->
 

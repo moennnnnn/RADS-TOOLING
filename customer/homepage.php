@@ -104,7 +104,6 @@ $customerId = $user['id'] ?? 0;
         <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item active">Home</a>
         <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About</a>
         <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
-        <a href="/RADS-TOOLING/customer/orders.php" class="nav-menu-item">Orders</a>
       </nav>
     </header>
 
@@ -235,1293 +234,360 @@ $customerId = $user['id'] ?? 0;
     </main>
 
     <!-- FOOTER -->
-    <footer class="custom-footer">
-      <div class="footer-content">
-        <div class="footer-columns">
-          <div class="footer-col">
-            <h3 class="footer-heading">RADS TOOLING</h3>
-            <p class="footer-desc"> Premium custom cabinet manufacturer serving clients since 2007. Quality craftsmanship, affordable prices, and exceptional service.</p>
-            <div class="footer-social">
-              <a href="https://facebook.com/RadsTooling" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a>
-              <a href="https://instagram.com/RadsTooling" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a>
-              <a href="mailto:RadsTooling@gmail.com"><i class="fas fa-envelope"></i></a>
-            </div>
-          </div>
-
-          <div class="footer-col">
-            <h3 class="footer-heading">Quick Links</h3>
-            <ul class="footer-links">
-              <li><a href="/RADS-TOOLING/customer/profile.php">My Account</a></li>
-              <li><a href="/RADS-TOOLING/customer/orders.php">Orders</a></li>
-              <li><a href="/RADS-TOOLING/customer/customize.php">Customize</a></li>
-              <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h3 class="footer-heading">Support</h3>
-            <ul class="footer-links">
-              <li><a href="/RADS-TOOLING/help.php">Help Center</a></li>
-              <li><a href="/RADS-TOOLING/faqs.php">FAQs</a></li>
-              <li><a href="/RADS-TOOLING/customer/feedback.php">Feedback</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-col">
-            <h3 class="footer-heading">Contact</h3>
-            <ul class="footer-contact">
-              <li><i class="fas fa-map-marker-alt"></i><span>Piela, Dasmariñas, Cavite</span></li>
-              <li><i class="fas fa-envelope"></i><a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a></li>
-              <li><i class="fas fa-clock"></i><span>Mon-Sat: 8 AM - 5 PM</span></li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <p>&copy; <?= date('Y') ?> RADS TOOLING INC. All rights reserved.</p>
-          <div class="footer-legal">
-            <a href="/RADS-TOOLING/privacy.php">Privacy Policy</a>
-            <a href="/RADS-TOOLING/terms.php">Terms & Conditions</a>
-          </div>
-        </div>
+    <footer class="footer">
+  <div class="footer-content">
+    <!-- About Section -->
+    <div class="footer-section">
+      <h3>About RADS TOOLING</h3>
+      <p class="footer-description">
+        Premium custom cabinet manufacturer serving clients since 2007. 
+        Quality craftsmanship, affordable prices, and exceptional service.
+      </p>
+      <div class="footer-social">
+        <a href="#" class="social-icon" aria-label="Facebook">
+          <span class="material-symbols-rounded">facebook</span>
+        </a>
+        <a href="#" class="social-icon" aria-label="Instagram">
+          <span class="material-symbols-rounded">photo_camera</span>
+        </a>
+        <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+          <span class="material-symbols-rounded">mail</span>
+        </a>
       </div>
-    </footer>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="footer-section">
+      <h3>Quick Links</h3>
+      <ul class="footer-links">
+        <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+        <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
+        <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
+      </ul>
+    </div>
+
+    <!-- Categories -->
+    <div class="footer-section">
+      <h3>Categories</h3>
+      <ul class="footer-links">
+        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
+        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+      </ul>
+    </div>
+
+    <!-- Contact Info -->
+    <div class="footer-section">
+      <h3>Contact Info</h3>
+      <div class="contact-info-item">
+        <span class="material-symbols-rounded">location_on</span>
+        <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+      </div>
+      <div class="contact-info-item">
+        <span class="material-symbols-rounded">mail</span>
+        <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+      </div>
+      <div class="contact-info-item">
+        <span class="material-symbols-rounded">schedule</span>
+        <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p class="footer-copyright">
+      © 2025 RADS TOOLING INC. All rights reserved.
+    </p>
+    <div class="footer-legal">
+      <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
+      <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
+    </div>
+  </div>
+</footer>
 
   </div><!-- /.page-wrapper -->
 
-  <style>
-    /* Customer Homepage Specific Styles */
-    .customer-welcome {
-      background: linear-gradient(135deg, #1f4e74 0%, #3a77b8 100%);
-      /* Changed from purple */
-      padding: 60px 5%;
-      color: white;
-    }
-
-    .welcome-content {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .welcome-text h1 {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-    }
-
-    .welcome-text p {
-      font-size: 1.2rem;
-      opacity: 0.9;
-      margin-bottom: 30px;
-    }
-
-    .welcome-stats {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-
-    .stat-card {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 20px 30px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      flex: 1;
-      min-width: 200px;
-    }
-
-    .stat-card i {
-      font-size: 2.5rem;
-      opacity: 0.9;
-    }
-
-    .stat-number {
-      display: block;
-      font-size: 2rem;
-      font-weight: 700;
-    }
-
-    .stat-label {
-      display: block;
-      font-size: 0.9rem;
-      opacity: 0.9;
-    }
-
-    .quick-actions {
-      padding: 60px 5%;
-      background: white;
-    }
-
-    .quick-actions h2 {
-      text-align: center;
-      font-size: 2rem;
-      margin-bottom: 40px;
-      color: #1a1a1a;
-    }
-
-    .actions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 30px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .action-card {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      text-align: center;
-      text-decoration: none;
-      color: #1a1a1a;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-      border: 2px solid transparent;
-    }
-
-    .action-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-      border-color: #1f4e74;
-    }
-
-    .action-icon {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 20px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 1.8rem;
-    }
-
-    .action-card h3 {
-      font-size: 1.3rem;
-      margin-bottom: 10px;
-      color: #1a1a1a;
-    }
-
-    .action-card p {
-      color: #666;
-      font-size: 0.95rem;
-    }
-
-    .recent-orders {
-      padding: 60px 5%;
-      background: #f8f9fa;
-    }
-
-    .section-header-inline {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      max-width: 1200px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .section-header-inline h2 {
-      font-size: 2rem;
-      color: #1a1a1a;
-      margin: 0;
-    }
-
-    .view-all-link {
-      color: #1f4e74;
-      text-decoration: none;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: gap 0.3s ease;
-    }
-
-    .view-all-link:hover {
-      gap: 12px;
-    }
-
-    .orders-list {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .order-item {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-    }
-
-    .order-item:hover {
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .order-info h4 {
-      margin: 0 0 8px;
-      color: #1a1a1a;
-      font-size: 1.1rem;
-    }
-
-    .order-info p {
-      margin: 0;
-      color: #666;
-      font-size: 0.9rem;
-    }
-
-    .order-status {
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .order-status.pending {
-      background: #fff3cd;
-      color: #856404;
-    }
-
-    .order-status.processing {
-      background: #cfe2ff;
-      color: #084298;
-    }
-
-    .order-status.completed {
-      background: #d1e7dd;
-      color: #0f5132;
-    }
-
-    .featured-products {
-      padding: 60px 5%;
-      background: white;
-    }
-
-    .featured-products h2 {
-      text-align: center;
-      font-size: 2rem;
-      margin-bottom: 40px;
-      color: #1a1a1a;
-    }
-
-    .products-carousel {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 30px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .product-card {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-      text-decoration: none;
-      color: inherit;
-    }
-
-    .product-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .product-image {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-    }
-
-    .product-details {
-      padding: 20px;
-    }
-
-    .product-details h3 {
-      margin: 0 0 10px;
-      font-size: 1.2rem;
-      color: #1a1a1a;
-    }
-
-    .product-details p {
-      margin: 0 0 15px;
-      color: #666;
-      font-size: 0.9rem;
-      line-height: 1.4;
-    }
-
-    .product-price {
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #1f4e74;
-    }
-
-    .user-dropdown {
-      position: relative;
-    }
-
-    .user-menu-toggle {
-      background: rgba(31, 78, 116, 0.1);
-      border: 2px solid #1f4e74;
-      padding: 10px 15px;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 600;
-      color: #1f4e74;
-      transition: all 0.3s ease;
-    }
-
-    .user-menu-toggle:hover {
-      background: #1f4e74;
-      color: white;
-    }
-
-    .user-dropdown-menu {
-      display: none;
-      position: absolute;
-      top: 100%;
-      right: 0;
-      margin-top: 10px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-      min-width: 220px;
-      overflow: hidden;
-      z-index: 100;
-    }
-
-    .user-dropdown-menu.show {
-      display: block;
-    }
-
-    .user-dropdown-menu a,
-    .user-dropdown-menu button {
-      display: block;
-      padding: 12px 20px;
-      text-decoration: none;
-      color: #333;
-      transition: all 0.3s ease;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    .user-dropdown-menu a:hover,
-    .user-dropdown-menu button:hover {
-      background: #f8f9fa;
-      color: #1f4e74;
-    }
-
-    .dropdown-logout {
-      border-top: 1px solid #e9ecef;
-      color: #dc3545 !important;
-    }
-
-    .dropdown-logout:hover {
-      background: #fff5f5 !important;
-    }
-
-    .cart-link {
-      position: relative;
-      color: #1f4e74;
-      font-size: 1.5rem;
-      text-decoration: none;
-      padding: 10px;
-    }
-
-    .cart-badge {
-      position: absolute;
-      top: 0;
-      right: 0;
-      background: #dc3545;
-      color: white;
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #666;
-      font-size: 1.1rem;
-    }
-
-    .loading i {
-      font-size: 2rem;
-      color: #1f4e74;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .chat-input-container {
-      display: flex;
-      border-top: 1px solid #e9ecef;
-      padding: 15px;
-      gap: 10px;
-    }
-
-    #chatInput {
-      flex: 1;
-      padding: 10px 15px;
-      border: 1px solid #ddd;
-      border-radius: 20px;
-      outline: none;
-    }
-
-    #chatInput:focus {
-      border-color: #1f4e74;
-    }
-
-    .chat-send-btn {
-      background: #1f4e74;
-      color: white;
-      border: none;
-      width: 45px;
-      height: 45px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-    }
-
-    .chat-send-btn:hover {
-      background: #154162;
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 768px) {
-      .welcome-text h1 {
-        font-size: 1.8rem;
-      }
-
-      .welcome-stats {
-        flex-direction: column;
-      }
-
-      .stat-card {
-        min-width: 100%;
-      }
-
-      .actions-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .section-header-inline {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-      }
-
-      .products-carousel {
-        grid-template-columns: 1fr;
-      }
-
-      .order-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-      }
-    }
-
-    /* Custom Modal Styles */
-    .custom-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .custom-modal-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
-    }
-
-    .custom-modal-content {
-      position: relative;
-      background: white;
-      border-radius: 16px;
-      max-width: 450px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      animation: modalSlideIn 0.3s ease;
-    }
-
-    @keyframes modalSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(-30px) scale(0.95);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-
-    .custom-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 24px 28px;
-      border-bottom: 1px solid #e9ecef;
-    }
-
-    .custom-modal-header h3 {
-      margin: 0;
-      font-size: 1.4rem;
-      color: #1a1a1a;
-    }
-
-    .modal-close-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px;
-      color: #666;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-    }
-
-    .modal-close-btn:hover {
-      background: #f0f0f0;
-      color: #1a1a1a;
-    }
-
-    .custom-modal-body {
-      padding: 32px 28px;
-      text-align: center;
-    }
-
-    .modal-icon {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 24px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-icon.warning {
-      background: #fff3cd;
-      color: #856404;
-    }
-
-    .modal-icon.success {
-      background: #d1e7dd;
-      color: #0f5132;
-    }
-
-    .modal-icon .material-symbols-rounded {
-      font-size: 3rem;
-    }
-
-    .custom-modal-body p {
-      font-size: 1.1rem;
-      color: #555;
-      margin: 0;
-    }
-
-    .custom-modal-footer {
-      display: flex;
-      gap: 12px;
-      padding: 20px 28px;
-      border-top: 1px solid #e9ecef;
-    }
-
-    .btn-modal-cancel,
-    .btn-modal-confirm {
-      flex: 1;
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-    }
-
-    .btn-modal-cancel {
-      background: #f8f9fa;
-      color: #495057;
-    }
-
-    .btn-modal-cancel:hover {
-      background: #e9ecef;
-    }
-
-    .btn-modal-confirm {
-      background: #dc3545;
-      color: white;
-    }
-
-    .btn-modal-confirm:hover {
-      background: #c82333;
-    }
-
-    /* Enhanced User Dropdown */
-    .user-menu-toggle {
-      background: white;
-      border: 2px solid #e9ecef;
-      padding: 8px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 600;
-      color: #1a1a1a;
-      transition: all 0.3s ease;
-    }
-
-    .user-menu-toggle:hover {
-      border-color: #1f4e74;
-      box-shadow: 0 4px 12px rgba(31, 78, 116, 0.15);
-    }
-
-    .user-menu-toggle .material-symbols-rounded {
-      font-size: 24px;
-    }
-
-    .user-menu-toggle .dropdown-arrow {
-      font-size: 20px;
-      transition: transform 0.3s ease;
-    }
-
-    .user-menu-toggle:hover .dropdown-arrow {
-      transform: rotate(180deg);
-    }
-
-    .user-name {
-      max-width: 150px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .user-dropdown-menu {
-      display: none;
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      min-width: 280px;
-      overflow: hidden;
-      z-index: 100;
-      animation: dropdownSlide 0.3s ease;
-    }
-
-    @keyframes dropdownSlide {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .user-dropdown-menu.show {
-      display: block;
-    }
-
-    .dropdown-header {
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    }
-
-    .dropdown-avatar {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #1f4e74, #3a77b8);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .dropdown-name {
-      font-weight: 700;
-      color: #1a1a1a;
-      font-size: 1.05rem;
-    }
-
-    .dropdown-email {
-      font-size: 0.85rem;
-      color: #666;
-      margin-top: 2px;
-    }
-
-    .dropdown-divider {
-      height: 1px;
-      background: #e9ecef;
-      margin: 8px 0;
-    }
-
-    .user-dropdown-menu a,
-    .user-dropdown-menu button {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 20px;
-      text-decoration: none;
-      color: #333;
-      transition: all 0.3s ease;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-      cursor: pointer;
-      font-size: 0.95rem;
-    }
-
-    .user-dropdown-menu a:hover,
-    .user-dropdown-menu button:hover {
-      background: #f8f9fa;
-      color: #1f4e74;
-    }
-
-    .user-dropdown-menu .material-symbols-rounded {
-      font-size: 20px;
-    }
-
-    .dropdown-logout {
-      color: #dc3545 !important;
-    }
-
-    .dropdown-logout:hover {
-      background: #fff5f5 !important;
-    }
-
-    /* ========== PRODUCT CARDS ========== */
-.product-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  text-decoration: none;
-  color: #2c3e50;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.product-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background: #f8f9fa;
-}
-
-.product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.product-card:hover .product-image img {
-  transform: scale(1.05);
-}
-
-.product-info {
-  padding: 1.25rem;
-}
-
-.product-info h3 {
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-  color: #2c3e50;
-}
-
-.product-type {
-  color: #7f8c8d;
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-}
-
-.product-price {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #2f5b88;
-}
-  </style>
-
-  <script>
-    // ========== USER DROPDOWN MENU ==========
-    const userMenuBtn = document.getElementById('userMenuBtn');
-    const userDropdownMenu = document.getElementById('userDropdownMenu');
-
-    userMenuBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      userDropdownMenu.classList.toggle('show');
+<script>
+// ========== INITIALIZE ON PAGE LOAD ==========
+document.addEventListener('DOMContentLoaded', function() {
+  initProfileDropdown();
+  loadUserEmail();
+  loadUserStatistics();
+  loadRecentOrders();
+  loadRecommendedProducts();
+  initializeChat();
+  updateCartCount();
+});
+
+// ========== PROFILE DROPDOWN TOGGLE ==========
+function initProfileDropdown() {
+  const profileToggle = document.getElementById('profileToggle');
+  const profileDropdown = document.getElementById('profileDropdown');
+  
+  if (!profileToggle || !profileDropdown) {
+    console.error('Profile elements not found');
+    return;
+  }
+  
+  profileToggle.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    profileDropdown.classList.toggle('show');
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
+      profileDropdown.classList.remove('show');
+    }
+  });
+
+  profileDropdown.querySelectorAll('a, button').forEach(item => {
+    item.addEventListener('click', function() {
+      profileDropdown.classList.remove('show');
     });
+  });
+}
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!userMenuBtn.contains(e.target) && !userDropdownMenu.contains(e.target)) {
-        userDropdownMenu.classList.remove('show');
-      }
+// ========== LOAD USER EMAIL ==========
+async function loadUserEmail() {
+  try {
+    const response = await fetch('/RADS-TOOLING/backend/api/customer_profile.php?action=get_profile', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
     });
+    
+    if (!response.ok) throw new Error('Network response failed');
+    
+    const result = await response.json();
+    
+    if (result.success && result.data && result.data.email) {
+      const emailDisplay = document.getElementById('userEmailDisplay');
+      if (emailDisplay) {
+        emailDisplay.textContent = result.data.email;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load user email:', error);
+  }
+}
 
-    // ========== LOAD USER STATISTICS ==========
-    fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
-        credentials: 'same-origin'
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('totalOrders').textContent = data.stats.total || 0;
-          document.getElementById('pendingOrders').textContent = data.stats.pending || 0;
-          document.getElementById('completedOrders').textContent = data.stats.completed || 0;
-        } else {
-          document.getElementById('totalOrders').textContent = '0';
-          document.getElementById('pendingOrders').textContent = '0';
-          document.getElementById('completedOrders').textContent = '0';
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load stats:', err);
-        document.getElementById('totalOrders').textContent = '0';
-        document.getElementById('pendingOrders').textContent = '0';
-        document.getElementById('completedOrders').textContent = '0';
-      });
+// ========== LOAD USER STATISTICS ==========
+async function loadUserStatistics() {
+  try {
+    const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
+      credentials: 'same-origin'
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      document.getElementById('totalOrders').textContent = data.stats.total || 0;
+      document.getElementById('pendingOrders').textContent = data.stats.pending || 0;
+      document.getElementById('completedOrders').textContent = data.stats.completed || 0;
+    } else {
+      document.getElementById('totalOrders').textContent = '0';
+      document.getElementById('pendingOrders').textContent = '0';
+      document.getElementById('completedOrders').textContent = '0';
+    }
+  } catch (err) {
+    console.error('Failed to load stats:', err);
+    document.getElementById('totalOrders').textContent = '0';
+    document.getElementById('pendingOrders').textContent = '0';
+    document.getElementById('completedOrders').textContent = '0';
+  }
+}
 
-    // ========== LOAD RECENT ORDERS ==========
-    const ordersContainer = document.getElementById('recentOrdersContainer');
+// ========== LOAD RECENT ORDERS ==========
+async function loadRecentOrders() {
+  const ordersContainer = document.getElementById('recentOrdersContainer');
+  if (!ordersContainer) return;
 
-    fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
-        credentials: 'same-origin'
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.orders.length > 0) {
-          ordersContainer.innerHTML = data.orders.map(order => `
-      <div class="order-item">
-        <div class="order-info">
-          <h4>Order #${escapeHtml(order.order_code)}</h4>
-          <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
-          <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
+  try {
+    const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
+      credentials: 'same-origin'
+    });
+    const data = await response.json();
+    
+    if (data.success && data.orders.length > 0) {
+      ordersContainer.innerHTML = data.orders.map(order => `
+        <div class="order-item">
+          <div class="order-info">
+            <h4>Order #${escapeHtml(order.order_code)}</h4>
+            <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
+            <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
+          </div>
+          <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
+            ${escapeHtml(order.status)}
+          </span>
         </div>
-        <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
-          ${escapeHtml(order.status)}
-        </span>
-      </div>
-    `).join('');
-        } else {
-          ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
-        }
-      })
-      .catch(() => {
-        ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
-      });
+      `).join('');
+    } else {
+      ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
+    }
+  } catch {
+    ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
+  }
+}
 
-    // ========== LOAD RECOMMENDED PRODUCTS ==========
-    const productsContainer = document.getElementById('recommendedProducts');
+// ========== LOGOUT MODAL ==========
+function showLogoutModal() {
+  const modal = document.getElementById('logoutModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+  const dropdown = document.getElementById('profileDropdown');
+  if (dropdown) dropdown.classList.remove('show');
+}
 
-    fetch('/RADS-TOOLING/backend/api/products.php?limit=4', {
-        credentials: 'same-origin'
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.products.length > 0) {
-          productsContainer.innerHTML = data.products.map(product => `
-      <a href="/RADS-TOOLING/public/products.php?id=${product.id}" class="product-card">
-        <img src="${escapeHtml(product.image || '/RADS-TOOLING/assets/images/placeholder.jpg')}" 
-             alt="${escapeHtml(product.name)}" 
-             class="product-image"
-             onerror="this.src='https://via.placeholder.com/280x250?text=${encodeURIComponent(product.name)}'">
-        <div class="product-details">
-          <h3>${escapeHtml(product.name)}</h3>
-          <p>${escapeHtml((product.description || 'Premium quality cabinet').substring(0, 80))}...</p>
-          <div class="product-price">₱${parseFloat(product.price).toLocaleString()}</div>
-        </div>
-      </a>
-    `).join('');
-        } else {
-          productsContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;grid-column:1/-1;">No products available</p>';
-        }
-      })
-      .catch(() => {
-        productsContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;grid-column:1/-1;">Failed to load products</p>';
-      });
+function closeLogoutModal() {
+  const modal = document.getElementById('logoutModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
 
-    // ========== CART COUNT ==========
-    let cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
-    document.getElementById('cartCount').textContent = cartItems.length;
+async function confirmLogout() {
+  try {
+    await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
+      method: 'POST',
+      credentials: 'same-origin'
+    });
+    
+    localStorage.removeItem('cart');
+    window.location.href = '/RADS-TOOLING/public/index.php';
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    localStorage.removeItem('cart');
+    window.location.href = '/RADS-TOOLING/public/index.php';
+  }
+}
 
-    // ========== CHAT FUNCTIONALITY ==========
-    const chatBtn = document.getElementById('chatBtn');
-    const chatPopup = document.getElementById('chatPopup');
-    const chatClose = document.getElementById('chatClose');
-    const chatInput = document.getElementById('chatInput');
-    const chatSend = document.getElementById('chatSend');
-    const chatMessages = document.getElementById('chatMessages');
-
-    chatBtn.addEventListener('click', () => {
+// ========== CHAT FUNCTIONALITY ==========
+function initializeChat() {
+  const chatBtn = document.getElementById('chatBtn');
+  const chatPopup = document.getElementById('chatPopup');
+  const chatClose = document.getElementById('chatClose');
+  const chatSend = document.getElementById('chatSend');
+  const chatInput = document.getElementById('chatInput');
+  
+  if (chatBtn && chatPopup && chatClose) {
+    chatBtn.addEventListener('click', function(e) {
+      e.preventDefault();
       chatPopup.style.display = 'flex';
       chatBtn.style.display = 'none';
     });
-
-    chatClose.addEventListener('click', () => {
+    
+    chatClose.addEventListener('click', function(e) {
+      e.preventDefault();
       chatPopup.style.display = 'none';
       chatBtn.style.display = 'flex';
     });
-
-    chatSend.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
+  }
+  
+  if (chatSend && chatInput) {
+    chatSend.addEventListener('click', () => sendMessage());
+    chatInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+      }
     });
+  }
+}
 
-    function sendMessage() {
-      const message = chatInput.value.trim();
-      if (!message) return;
+function sendMessage() {
+  const chatInput = document.getElementById('chatInput');
+  const chatMessages = document.getElementById('chatMessages');
+  
+  if (!chatInput || !chatMessages) return;
+  
+  const message = chatInput.value.trim();
+  if (!message) return;
+  
+  const messageEl = document.createElement('div');
+  messageEl.className = 'chat-message user';
+  messageEl.innerHTML = `<p>${escapeHtml(message)}</p>`;
+  chatMessages.appendChild(messageEl);
+  
+  chatInput.value = '';
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  setTimeout(() => {
+    const replyEl = document.createElement('div');
+    replyEl.className = 'chat-message system';
+    replyEl.innerHTML = '<p>Thank you for your message. Our team will respond shortly.</p>';
+    chatMessages.appendChild(replyEl);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 1000);
+}
 
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'chat-message user';
-      msgDiv.innerHTML = `<p>${escapeHtml(message)}</p>`;
-      chatMessages.appendChild(msgDiv);
+// ========== LOAD PRODUCTS ==========
+async function loadRecommendedProducts() {
+  const productsContainer = document.getElementById('recommendedProducts');
+  if (!productsContainer) return;
 
-      chatInput.value = '';
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-
-      // Auto-reply for now (replace with real chat API later)
-      setTimeout(() => {
-        const replyDiv = document.createElement('div');
-        replyDiv.className = 'chat-message system';
-        replyDiv.innerHTML = `<p>Thank you for your message. Our support team will assist you shortly!</p>`;
-        chatMessages.appendChild(replyDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      }, 1000);
-    }
-
-    // ========== LOGOUT FUNCTION ==========
-    // ========== LOGOUT MODAL ==========
-    function showLogoutModal() {
-      document.getElementById('logoutModal').style.display = 'flex';
-      document.getElementById('userDropdownMenu').classList.remove('show');
-    }
-
-    function closeLogoutModal() {
-      document.getElementById('logoutModal').style.display = 'none';
-    }
-
-    async function confirmLogout() {
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
-          method: 'POST',
-          credentials: 'same-origin'
-        });
-        const result = await response.json();
-
-        if (result.success) {
-          localStorage.removeItem('cart');
-          window.location.href = '/RADS-TOOLING/public/index.php';
-        } else {
-          alert('Logout failed. Please try again.');
-        }
-      } catch (error) {
-        console.error('Logout error:', error);
-        localStorage.removeItem('cart');
-        window.location.href = '/RADS-TOOLING/public/index.php';
-      }
-    }
-
-    // ========== UTILITY FUNCTIONS ==========
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-      const profileToggle = document.getElementById('profileToggle');
-      const profileDropdown = document.getElementById('profileDropdown');
-
-      if (profileToggle && profileDropdown) {
-        profileToggle.addEventListener('click', function(e) {
-          e.stopPropagation();
-          profileDropdown.classList.toggle('show');
-        });
-
-        document.addEventListener('click', function(e) {
-          if (!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
-            profileDropdown.classList.remove('show');
-          }
-        });
-      }
-
-      // Load user email
-      loadUserEmail();
-
-      // Load recommended products
-      loadRecommendedProducts();
-
-      // Initialize chat
-      initializeChat();
+  try {
+    const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
     });
-
-    // ========== LOAD USER EMAIL ==========
-    async function loadUserEmail() {
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/customer_profile.php?action=get_profile', {
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.data && result.data.email) {
-          const emailDisplay = document.getElementById('userEmailDisplay');
-          if (emailDisplay) {
-            emailDisplay.textContent = result.data.email;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load user email:', error);
-        const emailDisplay = document.getElementById('userEmailDisplay');
-        if (emailDisplay) {
-          emailDisplay.textContent = 'customer@rads.com';
-        }
-      }
+    
+    const result = await response.json();
+    
+    if (result.success && result.data && result.data.products && result.data.products.length > 0) {
+      productsContainer.innerHTML = result.data.products.map(product => `
+        <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
+          <div class="product-image">
+            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.jpg'}" 
+                 alt="${escapeHtml(product.name)}"
+                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+          </div>
+          <div class="product-info">
+            <h3>${escapeHtml(product.name)}</h3>
+            <p class="product-type">${escapeHtml(product.type || 'Cabinet')}</p>
+            <p class="product-price">₱${parseFloat(product.price || 0).toLocaleString()}</p>
+          </div>
+        </a>
+      `).join('');
+    } else {
+      productsContainer.innerHTML = '<div class="loading-state">No products available</div>';
     }
+  } catch (error) {
+    console.error('Failed to load products:', error);
+    productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
+  }
+}
 
-    // ========== LOGOUT MODAL ==========
-    function showLogoutModal() {
-      const modal = document.getElementById('logoutModal');
-      if (modal) {
-        modal.style.display = 'flex';
-      }
-    }
+// ========== CART COUNT ==========
+function updateCartCount() {
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  const cartCount = document.getElementById('cartCount');
+  if (cartCount) {
+    cartCount.textContent = cart.length;
+  }
+}
 
-    function closeLogoutModal() {
-      const modal = document.getElementById('logoutModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    }
+// ========== UTILITY FUNCTIONS ==========
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
-    async function confirmLogout() {
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
-          method: 'POST',
-          credentials: 'same-origin'
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          localStorage.removeItem('cart');
-          window.location.href = '/RADS-TOOLING/public/index.php';
-        } else {
-          alert('Logout failed. Please try again.');
-        }
-      } catch (error) {
-        console.error('Logout error:', error);
-        localStorage.removeItem('cart');
-        window.location.href = '/RADS-TOOLING/public/index.php';
-      }
-    }
-
-    // ========== LOAD RECOMMENDED PRODUCTS ==========
-    async function loadRecommendedProducts() {
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.data && result.data.products) {
-          displayProducts(result.data.products);
-        } else {
-          showNoProducts();
-        }
-      } catch (error) {
-        console.error('Failed to load products:', error);
-        showNoProducts();
-      }
-    }
-
-    function displayProducts(products) {
-      const container = document.getElementById('recommendedProducts');
-      if (!container) return;
-
-      if (products.length === 0) {
-        showNoProducts();
-        return;
-      }
-
-      container.innerHTML = products.map(product => `
-    <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
-      <div class="product-image">
-        <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.jpg'}" 
-             alt="${escapeHtml(product.name)}"
-             onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
-      </div>
-      <div class="product-info">
-        <h3>${escapeHtml(product.name)}</h3>
-        <p class="product-type">${escapeHtml(product.type || 'Cabinet')}</p>
-        <p class="product-price">₱${parseFloat(product.price || 0).toLocaleString()}</p>
-      </div>
-    </a>
-  `).join('');
-    }
-
-    function showNoProducts() {
-      const container = document.getElementById('recommendedProducts');
-      if (container) {
-        container.innerHTML = '<div class="loading-state">No products available</div>';
-      }
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    // ========== CHAT FUNCTIONALITY ==========
-    function initializeChat() {
-      const chatBtn = document.getElementById('chatBtn');
-      const chatPopup = document.getElementById('chatPopup');
-      const chatClose = document.getElementById('chatClose');
-      const chatSend = document.getElementById('chatSend');
-      const chatInput = document.getElementById('chatInput');
-
-      if (chatBtn && chatPopup) {
-        chatBtn.addEventListener('click', function() {
-          chatPopup.style.display = 'flex';
-          chatBtn.style.display = 'none';
-        });
-      }
-
-      if (chatClose && chatPopup && chatBtn) {
-        chatClose.addEventListener('click', function() {
-          chatPopup.style.display = 'none';
-          chatBtn.style.display = 'flex';
-        });
-      }
-
-      if (chatSend && chatInput) {
-        chatSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', function(e) {
-          if (e.key === 'Enter') {
-            sendMessage();
-          }
-        });
-      }
-    }
-
-    function sendMessage() {
-      const chatInput = document.getElementById('chatInput');
-      const chatMessages = document.getElementById('chatMessages');
-
-      if (!chatInput || !chatMessages) return;
-
-      const message = chatInput.value.trim();
-      if (!message) return;
-
-      const messageEl = document.createElement('div');
-      messageEl.className = 'chat-message user';
-      messageEl.innerHTML = `<p>${escapeHtml(message)}</p>`;
-      chatMessages.appendChild(messageEl);
-
-      chatInput.value = '';
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-
-      setTimeout(() => {
-        const replyEl = document.createElement('div');
-        replyEl.className = 'chat-message system';
-        replyEl.innerHTML = '<p>Thank you for your message. Our team will respond shortly.</p>';
-        chatMessages.appendChild(replyEl);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-      }, 1000);
-    }
-
-    // ========== CART COUNT ==========
-    function updateCartCount() {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const cartCount = document.getElementById('cartCount');
-      if (cartCount) {
-        cartCount.textContent = cart.length;
-      }
-    }
-
-    updateCartCount();
-  </script>
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+</script>
 </body>
 
 </html>
