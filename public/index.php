@@ -1,201 +1,509 @@
-  <?php
-// /index.php — PUBLIC landing page (no guard here)
+<?php
+// /public/index.php – PUBLIC landing page (no auth required)
 require_once __DIR__ . '/../backend/config/app.php';
 session_start();
+
 $user = $_SESSION['user'] ?? null;
 $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
+
+// If customer is logged in, redirect to customer homepage
+if ($isCustomer) {
+  header('Location: /RADS-TOOLING/customer/homepage.php');
+  exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RADS TOOLING</title>
-  <!-- Standardize to lowercase paths and absolute URLs -->
+  <title>RADS TOOLING - Custom Cabinet Solutions</title>
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
-  <link rel="stylesheet" href="/assets/css/about.css" />
-  <link rel="stylesheet" href="/assets/css/helpcenter.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
 <body>
-<div class="page-wrapper">
+  <div class="page-wrapper">
 
-<header class="navbar">
-  <div class="navbar-top">
-    <div class="logo">
-      <span class="big-blue-italic">R</span><span class="black-italic">ADS </span>
-      <span class="big-blue-italic">T</span><span class="black-italic">OOLING</span>
-    </div>
+    <!-- HEADER -->
+    <header class="navbar">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          <a href="/RADS-TOOLING/public/index.php" class="logo-link">
+            <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+          </a>
+        </div>
 
-    <form class="search-bar" action="/products.php" method="get">
-      <input type="text" name="q" placeholder="Search..." />
-      <button type="submit"><i class="fas fa-search"></i></button>
-    </form>
-
-    <div class="nav-icons">
-      <?php if ($isCustomer): ?>
-        <a href="/RADS-TOOLING/customer/account.php"><i class="fas fa-user"></i> My Account</a>
-        <a href="/RADS-TOOLING/cart.php"><i class="fas fa-shopping-cart"></i></a>
-        <form method="post" action="/backend/api/auth.php?action=logout" style="display:inline">
-          <button class="linklike" style="background:none;border:0;cursor:pointer"><i class="fas fa-right-from-bracket"></i> Logout</button>
+        <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+          <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
+          <button type="submit" class="search-btn" aria-label="Search">
+            <span class="material-symbols-rounded">search</span>
+          </button>
         </form>
-      <?php else: ?>
-        <a href="/RADS-TOOLING/customer/cust_login.php"><i class="fas fa-user"></i> Login</a>
-        <a href="/RADS-TOOLING/customer/register.php"><i class="fas fa-user-plus"></i> Signup</a>
-        <a href="/RADS-TOOLING/cart.php"><i class="fas fa-shopping-cart"></i></a>
-      <?php endif; ?>
-      <a href="/RADS-TOOLING/admin/login.php" title="Staff"><i class="fas fa-lock"></i></a>
-    </div>
-  </div>
 
-  <div class="navbar-bottom">
-    <nav>
-      <a href="/" class="active">Home</a>
-      <a href="/RADS-TOOLING/public/about.php">About Us</a>
-      <a href="/RADS-TOOLING/public/products.php">Products</a>
-    </nav>
-  </div>
-</header>
-
-<main>
-  <!-- Hero -->
-  <section class="hero-section">
-    <div class="hero-text">
-      <h2><span class="big-blue-italic">C</span>ustomize your <br> cabinets online</h2>
-      <p>Choose your style, size, select finishes, and visualize your design in real time.</p>
-      <div style="margin-top:12px">
-        <a class="login-btn" href="/customize.php">Start Customizing</a>
-        <a class="login-btn" style="background:#6e7ca1" href="/products.php">Browse Cabinets</a>
+        <div class="navbar-actions">
+          <a href="/RADS-TOOLING/customer/cust_login.php" class="nav-link">
+            <span class="material-symbols-rounded">login</span>
+            <span>Login</span>
+          </a>
+          <a href="/RADS-TOOLING/customer/register.php" class="nav-link">
+            <span class="material-symbols-rounded">person_add</span>
+            <span>Sign Up</span>
+          </a>
+          <a href="/RADS-TOOLING/admin/login.php" class="nav-link-icon" title="Staff Login">
+            <span class="material-symbols-rounded">admin_panel_settings</span>
+          </a>
+        </div>
       </div>
-    </div>
-    <div class="hero-image">
-      <img src="/assets/images/cabinet-hero.jpg" alt="Cabinet Preview" />
-    </div>
-  </section>
 
-  <!-- Cabinets Carousel -->
-  <section class="cabinets-section">
-    <h3>Cabinets</h3>
-    <div class="carousel">
-      <button class="carousel-btn prev" type="button">&#8249;</button>
-      <div class="carousel-track">
-        <!-- Replace with DB-driven images later -->
-        <img src="/assets/images/cabs/cab1.jpg" alt="Cabinet 1" onerror="this.src='https://via.placeholder.com/300x350?text=Cabinet+1'">
-        <img src="/assets/images/cabs/cab2.jpg" alt="Cabinet 2" onerror="this.src='https://via.placeholder.com/300x350?text=Cabinet+2'">
-        <img src="/assets/images/cabs/cab3.jpg" alt="Cabinet 3" onerror="this.src='https://via.placeholder.com/300x350?text=Cabinet+3'">
-        <img src="/assets/images/cabs/cab4.jpg" alt="Cabinet 4" onerror="this.src='https://via.placeholder.com/300x350?text=Cabinet+4'">
-        <img src="/assets/images/cabs/cab5.jpg" alt="Cabinet 5" onerror="this.src='https://via.placeholder.com/300x350?text=Cabinet+5'">
+      <nav class="navbar-menu">
+        <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item active">Home</a>
+        <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
+        <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
+        <a href="#testimonials" class="nav-menu-item">Testimonials</a>
+      </nav>
+    </header>
+
+   <main>
+      <!-- HERO SECTION -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <div class="hero-text">
+            <h1>
+              <span class="big-blue-italic">C</span>ustomize Your Dream Cabinets
+            </h1>
+            <p class="hero-subtitle">
+              Design, visualize, and order premium custom cabinets online.
+              Choose your style, materials, and finishes with our 360° preview tool.
+            </p>
+            <div class="hero-cta">
+              <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary">
+                <i class="fas fa-rocket"></i> Get Started Free
+              </a>
+              <a href="/RADS-TOOLING/public/products.php" class="btn-cta-secondary">
+                <i class="fas fa-th-large"></i> Browse Gallery
+              </a>
+            </div>
+
+            <!-- Trust Indicators -->
+            <div class="trust-badges">
+              <div class="badge">
+                <i class="fas fa-check-circle"></i>
+                <span>17+ Years Experience</span>
+              </div>
+              <div class="badge">
+                <i class="fas fa-star"></i>
+                <span>100+ Happy Clients</span>
+              </div>
+              <div class="badge">
+                <i class="fas fa-tools"></i>
+                <span>Premium Quality</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-image">
+            <img src="/RADS-TOOLING/assets/images/cabinet-hero.jpg" alt="Premium Custom Cabinets" />
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES SECTION -->
+      <section class="features-section">
+        <div class="section-header">
+          <h2>Why Choose <span class="highlight">RADS TOOLING</span>?</h2>
+          <p>Everything you need to create your perfect cabinet</p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-cube"></i>
+            </div>
+            <h3>3D Customization</h3>
+            <p>Visualize your cabinet in real-time with our 360° preview tool. Choose colors, materials, and dimensions.</p>
+            <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Start Customizing →</a>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-shipping-fast"></i>
+            </div>
+            <h3>Track Your Orders</h3>
+            <p>Monitor every step from production to delivery with real-time status updates.</p>
+            <a href="/RADS-TOOLING/customer/cust_login.php" class="feature-link">Login to Track →</a>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-credit-card"></i>
+            </div>
+            <h3>Fast Checkout</h3>
+            <p>Secure payment via GCash QR code. Pay 30% down payment to start production.</p>
+            <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Create Account →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- CABINETS GALLERY CAROUSEL -->
+      <section class="cabinets-section">
+        <div class="section-header">
+          <h2>Featured <span class="highlight">Cabinets</span></h2>
+          <p>Explore our collection of premium custom cabinets</p>
+        </div>
+
+        <div class="carousel-container">
+          <button class="carousel-btn prev" type="button" aria-label="Previous">
+            <span class="material-symbols-rounded">chevron_left</span>
+          </button>
+
+          <div class="carousel-track">
+            <div class="carousel-item">
+              <img src="/RADS-TOOLING/assets/images/cabs/cab1.jpg" alt="Modern Kitchen Cabinet"
+                onerror="this.src='https://via.placeholder.com/400x450?text=Kitchen+Cabinet'">
+              <div class="carousel-caption">
+                <h4>Modern Kitchen</h4>
+                <p>Contemporary design with premium finishes</p>
+              </div>
+            </div>
+
+            <div class="carousel-item">
+              <img src="/RADS-TOOLING/assets/images/cabs/cab2.jpg" alt="Bedroom Wardrobe"
+                onerror="this.src='https://via.placeholder.com/400x450?text=Wardrobe'">
+              <div class="carousel-caption">
+                <h4>Bedroom Wardrobe</h4>
+                <p>Spacious storage with elegant styling</p>
+              </div>
+            </div>
+
+            <div class="carousel-item">
+              <img src="/RADS-TOOLING/assets/images/cabs/cab3.jpg" alt="Living Room Cabinet"
+                onerror="this.src='https://via.placeholder.com/400x450?text=Living+Room'">
+              <div class="carousel-caption">
+                <h4>Living Room Display</h4>
+                <p>Showcase your style with custom shelving</p>
+              </div>
+            </div>
+
+            <div class="carousel-item">
+              <img src="/RADS-TOOLING/assets/images/cabs/cab4.jpg" alt="Bathroom Vanity"
+                onerror="this.src='https://via.placeholder.com/400x450?text=Bathroom+Vanity'">
+              <div class="carousel-caption">
+                <h4>Bathroom Vanity</h4>
+                <p>Water-resistant premium materials</p>
+              </div>
+            </div>
+
+            <div class="carousel-item">
+              <img src="/RADS-TOOLING/assets/images/cabs/cab5.jpg" alt="Office Storage"
+                onerror="this.src='https://via.placeholder.com/400x450?text=Office+Cabinet'">
+              <div class="carousel-caption">
+                <h4>Office Storage</h4>
+                <p>Professional workspace solutions</p>
+              </div>
+            </div>
+          </div>
+
+          <button class="carousel-btn next" type="button" aria-label="Next">
+            <span class="material-symbols-rounded">chevron_right</span>
+          </button>
+        </div>
+
+        <div class="carousel-dots"></div>
+      </section>
+
+      <!-- VIDEO SECTION -->
+      <section class="video-section">
+        <div class="video-content">
+          <div class="video-text">
+            <h2>
+              <span class="big-blue-italic">C</span>rafted with Passion & Precision
+            </h2>
+            <p class="video-subtitle">
+              Every cabinet is handcrafted by skilled artisans using premium materials.
+              Watch our craftsmen bring your vision to life.
+            </p>
+            <ul class="video-features">
+              <li><i class="fas fa-check"></i> Premium hardwood materials</li>
+              <li><i class="fas fa-check"></i> Expert craftsmanship</li>
+              <li><i class="fas fa-check"></i> Quality assurance tested</li>
+              <li><i class="fas fa-check"></i> Custom finishing options</li>
+            </ul>
+          </div>
+
+          <div class="video-wrapper">
+            <video controls playsinline poster="/RADS-TOOLING/assets/images/video-poster.jpg">
+              <source src="/RADS-TOOLING/assets/videos/crafting.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+      </section>
+
+      <!-- TESTIMONIALS SECTION -->
+      <section class="testimonials-section" id="testimonials">
+        <div class="section-header">
+          <h2>What Our <span class="highlight">Customers Say</span></h2>
+          <p>Real feedback from satisfied clients</p>
+        </div>
+
+        <div class="testimonials-grid" id="testimonialsContainer">
+          <!-- Testimonials will be loaded here via JavaScript -->
+          <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading testimonials...
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA BANNER -->
+      <section class="cta-banner">
+        <div class="cta-content">
+          <h2>Ready to Design Your Dream Cabinet?</h2>
+          <p>Join hundreds of satisfied customers who transformed their spaces</p>
+          <div class="cta-buttons">
+            <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary btn-large">
+              <i class="fas fa-user-plus"></i> Create Free Account
+            </a>
+            <a href="/RADS-TOOLING/public/products.php" class="btn-cta-secondary btn-large">
+              <i class="fas fa-images"></i> View Gallery
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT SUPPORT BUTTON -->
+      <button class="chat-fab" id="chatBtn" aria-label="Chat Support">
+        <i class="fas fa-comments"></i>
+      </button>
+
+      <!-- CHAT POPUP (Only shown after login) -->
+      <div id="chatPopup" class="chat-popup" role="dialog" aria-modal="true" aria-label="Support Chat" style="display:none;">
+        <div class="chat-header">
+          <span>Chat Support</span>
+          <button id="chatClose" class="chat-close-btn" aria-label="Close chat">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="chat-body">
+          <div class="chat-message system">
+            <p>Please login to chat with our support team.</p>
+            <a href="/RADS-TOOLING/customer/cust_login.php" class="btn-primary btn-small">Login Now</a>
+          </div>
+        </div>
       </div>
-      <button class="carousel-btn next" type="button">&#8250;</button>
-    </div>
-  </section>
+    </main>
 
-  <!-- Video -->
-  <section class="video-section">
-    <div class="video-flex">
-      <div class="video-caption">
-        <h2><span class="big-blue-italic">C</span>rafted with passion and precision</h2>
-        <p>Choose your style, size, select finishes, and visualize your design in real time.</p>
+    <!-- FOOTER -->
+    <footer class="custom-footer">
+      <div class="footer-content">
+        <div class="footer-columns">
+          <div class="footer-col">
+            <h3 class="footer-heading">About RADS TOOLING</h3>
+            <p class="footer-desc">
+              Premium custom cabinet manufacturer serving clients since 2007.
+              Quality craftsmanship, affordable prices, and exceptional service.
+            </p>
+            <div class="footer-social">
+              <a href="https://facebook.com/RadsTooling" target="_blank" rel="noopener" aria-label="Facebook">
+                <i class="fab fa-facebook-f"></i>
+              </a>
+              <a href="https://instagram.com/RadsTooling" target="_blank" rel="noopener" aria-label="Instagram">
+                <i class="fab fa-instagram"></i>
+              </a>
+              <a href="mailto:RadsTooling@gmail.com" aria-label="Email">
+                <i class="fas fa-envelope"></i>
+              </a>
+            </div>
+          </div>
+
+          <div class="footer-col">
+            <h3 class="footer-heading">Quick Links</h3>
+            <ul class="footer-links">
+              <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+              <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+              <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
+              <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h3 class="footer-heading">Categories</h3>
+            <ul class="footer-links">
+              <li><a href="/RADS-TOOLING/public/products.php?cat=kitchen">Kitchen</a></li>
+              <li><a href="/RADS-TOOLING/public/products.php?cat=bedroom">Bedroom</a></li>
+              <li><a href="/RADS-TOOLING/public/products.php?cat=living">Living Room</a></li>
+              <li><a href="/RADS-TOOLING/public/products.php?cat=bathroom">Bathroom</a></li>
+              <li><a href="/RADS-TOOLING/public/products.php?cat=commercial">Commercial</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h3 class="footer-heading">Contact Info</h3>
+            <ul class="footer-contact">
+              <li>
+                <i class="fas fa-map-marker-alt"></i>
+                <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+              </li>
+              <li>
+                <i class="fas fa-envelope"></i>
+                <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+              </li>
+              <li>
+                <i class="fas fa-clock"></i>
+                <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>&copy; <?= date('Y') ?> RADS TOOLING INC. All rights reserved.</p>
+          <div class="footer-legal">
+            <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
+            <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
+          </div>
+        </div>
       </div>
-      <div class="video-wrapper">
-        <video autoplay muted loop playsinline controls>
-          <source src="/assets/videos/crafting.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      </div>
-    </div>
-  </section>
+    </footer>
 
-  <!-- Chat -->
-  <button class="message-btn" id="helpBtn">Need Help?</button>
-  <div id="chatPopup" class="chat-popup" role="dialog" aria-modal="true" aria-label="Support Chat">
-    <div class="chat-header">
-      Chat with Us
-      <span id="chatClose" style="float:right; cursor:pointer;">&times;</span>
-    </div>
-    <div class="chat-body"></div>
-    <div class="chat-input">
-      <input type="text" placeholder="Write a message..." />
-      <button class="chat-send" type="button">&#10148;</button>
-    </div>
-  </div>
-</main>
+  </div><!-- /.page-wrapper -->
 
-<footer class="custom-footer">
-  <div class="footer-columns">
-    <div>
-      <p class="footer-heading">About Store</p>
-      <a href="/help.php">Help Center</a>
-      <a href="/faqs.php">FAQs</a>
-      <a href="/feedback.php">Feedbacks</a>
-    </div>
-    <div>
-      <p class="footer-heading">Categories</p>
-      <a href="/products.php?cat=living">Living Room</a>
-      <a href="/products.php?cat=bedroom">Bedroom</a>
-      <a href="/products.php?cat=kitchen">Kitchen</a>
-      <a href="/products.php?cat=bathroom">Bathroom</a>
-      <a href="/products.php?cat=commercial">Commercial Cabinet</a>
-    </div>
-    <div class="footer-contact">
-      <p class="footer-heading brand-name">
-        <span class="blue-italic">R</span>ADS <span class="blue-italic">T</span>OOLING
-      </p>
-      <a href="mailto:RadsTooling@gmail.com"><i class="fas fa-envelope"></i> RadsTooling@gmail.com</a>
-      <a href="https://facebook.com/RadsTooling" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i> Rads Tooling</a>
-      <a href="https://instagram.com/RadsTooling" target="_blank" rel="noopener"><i class="fab fa-instagram"></i> @RadsTooling</a>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <p>&copy;<?= date('Y') ?> <em>Rads Tooling INC.</em></p>
-    <div class="footer-bottom-links">
-      <a href="/privacy.php">Privacy Policy</a>
-      <a href="/terms.php">Terms and Conditions</a>
-    </div>
-  </div>
-</footer>
+  <script>
+    // ========== CAROUSEL ==========
+    (function() {
+      const track = document.querySelector('.carousel-track');
+      const items = document.querySelectorAll('.carousel-item');
+      const nextBtn = document.querySelector('.carousel-btn.next');
+      const prevBtn = document.querySelector('.carousel-btn.prev');
+      const dotsContainer = document.querySelector('.carousel-dots');
 
-</div><!-- /.page-wrapper -->
+      if (!track || items.length === 0) return;
 
-<script>
-  // Carousel
-  (function(){
-    const track = document.querySelector('.carousel-track');
-    const nextBtn = document.querySelector('.carousel-btn.next');
-    const prevBtn = document.querySelector('.carousel-btn.prev');
-    const scrollAmount = 320;
-    nextBtn?.addEventListener('click', () => track?.scrollBy({ left: scrollAmount, behavior: 'smooth' }));
-    prevBtn?.addEventListener('click', () => track?.scrollBy({ left: -scrollAmount, behavior: 'smooth' }));
-  })();
+      let currentIndex = 0;
+      const itemWidth = items[0].offsetWidth + 20; // including gap
 
-  // Chat
-  (function(){
-    const helpBtn = document.getElementById("helpBtn");
-    const chatPopup = document.getElementById("chatPopup");
-    const chatClose = document.getElementById("chatClose");
-    helpBtn?.addEventListener('click', () => { chatPopup.style.display = "flex"; helpBtn.style.display = "none"; });
-    chatClose?.addEventListener('click', () => { chatPopup.style.display = "none"; helpBtn.style.display = "block"; });
-  })();
+      // Create dots
+      items.forEach((_, index) => {
+        const dot = document.createElement('span');
+        dot.classList.add('dot');
+        if (index === 0) dot.classList.add('active');
+        dot.addEventListener('click', () => goToSlide(index));
+        dotsContainer.appendChild(dot);
+      });
 
-  // Optional: generic gate for buttons/links that need login
-  // Add class="requires-auth" to any element to force login before proceeding.
-  document.addEventListener('click', async (e) => {
-    const el = e.target.closest('.requires-auth');
-    if (!el) return;
-    e.preventDefault();
-    try {
-      const r = await fetch('/backend/api/auth.php?action=check_session', {credentials:'same-origin'});
-      const j = await r.json();
-      if (j.success && j.who === 'customer') {
-        location.href = el.getAttribute('href') || el.dataset.href || '/customer/index.php';
-      } else {
-        const next = el.getAttribute('href') || el.dataset.href || location.pathname;
-        location.href = '/customer/login.php?next=' + encodeURIComponent(next);
+      const dots = document.querySelectorAll('.dot');
+
+      function updateCarousel() {
+        track.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
+        dots.forEach((dot, index) => {
+          dot.classList.toggle('active', index === currentIndex);
+        });
       }
-    } catch {
-      const next = el.getAttribute('href') || el.dataset.href || location.pathname;
-      location.href = '/customer/login.php?next=' + encodeURIComponent(next);
-    }
-  });
-</script>
+
+      function goToSlide(index) {
+        currentIndex = index;
+        updateCarousel();
+      }
+
+      nextBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex + 1) % items.length;
+        updateCarousel();
+      });
+
+      prevBtn.addEventListener('click', () => {
+        currentIndex = (currentIndex - 1 + items.length) % items.length;
+        updateCarousel();
+      });
+
+      // Auto-play
+      setInterval(() => {
+        currentIndex = (currentIndex + 1) % items.length;
+        updateCarousel();
+      }, 5000);
+    })();
+
+    // ========== TESTIMONIALS ==========
+    (function() {
+      const container = document.getElementById('testimonialsContainer');
+
+      fetch('/RADS-TOOLING/backend/api/testimonials.php')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.testimonials.length > 0) {
+            container.innerHTML = data.testimonials.map(t => `
+          <div class="testimonial-card">
+            <div class="testimonial-header">
+              <div class="testimonial-avatar">
+                ${t.customer_name.charAt(0).toUpperCase()}
+              </div>
+              <div class="testimonial-info">
+                <h4>${escapeHtml(t.customer_name)}</h4>
+                <div class="testimonial-rating">
+                  ${'<i class="fas fa-star"></i>'.repeat(t.rating)}
+                  ${'<i class="far fa-star"></i>'.repeat(5 - t.rating)}
+                </div>
+              </div>
+            </div>
+            <p class="testimonial-comment">"${escapeHtml(t.comment)}"</p>
+            <span class="testimonial-date">${formatDate(t.created_at)}</span>
+          </div>
+        `).join('');
+          } else {
+            container.innerHTML = '<p class="no-testimonials">No testimonials yet. Be the first to share your experience!</p>';
+          }
+        })
+        .catch(() => {
+          container.innerHTML = '<p class="error">Unable to load testimonials.</p>';
+        });
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    })();
+
+    // ========== CHAT BUTTON ==========
+    (function() {
+      const chatBtn = document.getElementById('chatBtn');
+      const chatPopup = document.getElementById('chatPopup');
+      const chatClose = document.getElementById('chatClose');
+
+      chatBtn?.addEventListener('click', () => {
+        chatPopup.style.display = 'flex';
+        chatBtn.style.display = 'none';
+      });
+
+      chatClose?.addEventListener('click', () => {
+        chatPopup.style.display = 'none';
+        chatBtn.style.display = 'flex';
+      });
+    })();
+
+    // ========== SMOOTH SCROLL ==========
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+  </script>
 </body>
+
 </html>
