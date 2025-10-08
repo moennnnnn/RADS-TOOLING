@@ -145,6 +145,37 @@ body {
     transform: none;
 }
 
+/* Sign Up Page Button */
+.btn-signup-primary {
+  background: linear-gradient(135deg, #2f5b88, #3a77b8);
+  color: white;
+  border: none;
+  padding: 0.875rem 2rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(47, 91, 136, 0.3);
+}
+
+.btn-signup-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(47, 91, 136, 0.4);
+}
+
+.btn-signup-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Messages */
 .error-message {
     background: #fee;

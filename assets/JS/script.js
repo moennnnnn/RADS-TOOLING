@@ -40,7 +40,7 @@ async function initializeSession() {
         });
 
         const result = await response.json();
-        
+
         if (!result.success || !result.data.user) {
             throw new Error('No valid session');
         }
@@ -52,7 +52,7 @@ async function initializeSession() {
         configureSidebarForRole();
 
         console.log('Session initialized for:', currentUserRole);
-        
+
     } catch (error) {
         console.error('Session check failed:', error);
         throw error;
@@ -75,7 +75,7 @@ function updateUserInterface() {
 
 function configureSidebarForRole() {
     const allNavItems = document.querySelectorAll('.nav-item');
-    
+
     const rolePermissions = {
         'Owner': ['dashboard', 'account', 'customer', 'products', 'orders', 'reports', 'content', 'feedback', 'chat', 'payment'],
         'Admin': ['dashboard', 'account', 'customer', 'products', 'orders', 'reports', 'content', 'feedback', 'chat', 'payment'],
@@ -125,7 +125,7 @@ function initializeProfileActions() {
         await loadCurrentProfile();
         openModal('editProfileModal');
     });
-    
+
     document.getElementById('btnChangePassword')?.addEventListener('click', () => {
         openModal('changePasswordModal');
     });
@@ -154,16 +154,16 @@ async function loadCurrentProfile() {
         });
 
         const result = await response.json();
-        
+
         if (result.success && result.data) {
             const profile = result.data;
             document.getElementById('ep-fullname').value = profile.full_name || '';
             document.getElementById('ep-username').value = profile.username || '';
-            
+
             const avatarImg = document.getElementById('editProfileAvatar');
             if (avatarImg) {
-                avatarImg.src = profile.profile_image ? 
-                    '/RADS-TOOLING/' + profile.profile_image : 
+                avatarImg.src = profile.profile_image ?
+                    '/RADS-TOOLING/' + profile.profile_image :
                     '/RADS-TOOLING/assets/images/profile.png';
             }
         }
@@ -175,7 +175,7 @@ async function loadCurrentProfile() {
 
 async function handleEditProfile(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(e.target);
     const data = {
         full_name: formData.get('full_name'),
@@ -194,16 +194,16 @@ async function handleEditProfile(e) {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification('Profile updated successfully!', 'success');
             closeModal('editProfileModal');
-            
+
             currentUserData.name = data.full_name;
             currentUserData.username = data.username;
-            
+
             updateUserInterface();
-            
+
             showLoadingOverlay();
             setTimeout(async () => {
                 try {
@@ -225,7 +225,7 @@ async function handleEditProfile(e) {
 
 async function handleChangePassword(e) {
     e.preventDefault();
-    
+
     const currentPassword = document.getElementById('cp-old').value;
     const newPassword = document.getElementById('cp-new').value;
     const confirmPassword = document.getElementById('cp-confirm').value;
@@ -253,7 +253,7 @@ async function handleChangePassword(e) {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification('Password changed successfully!', 'success');
             closeModal('changePasswordModal');
@@ -282,13 +282,13 @@ async function handleAvatarUpload(e) {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification('Avatar updated successfully!', 'success');
-            
+
             const avatarImg = document.getElementById('editProfileAvatar');
             const topbarAvatar = document.getElementById('profileIcon');
-            
+
             if (avatarImg && result.data.avatar_url) {
                 avatarImg.src = result.data.avatar_url;
             }
@@ -329,7 +329,7 @@ function initializeAccountManagement() {
 
     const accountNavItem = document.querySelector('[data-section="account"]');
     if (accountNavItem) {
-        accountNavItem.addEventListener('click', function() {
+        accountNavItem.addEventListener('click', function () {
             setTimeout(() => loadUsers(), 100);
         });
     }
@@ -353,7 +353,7 @@ async function loadUsers() {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             displayUsers(result.data.users);
             updateAddUserButton(result.data.permissions);
@@ -406,11 +406,11 @@ function updateAddUserButton(permissions) {
         addButton.style.display = 'none';
     } else {
         addButton.style.display = 'flex';
-        
+
         const roleSelect = document.getElementById('au-role');
         if (roleSelect) {
             roleSelect.innerHTML = '<option value="">Select Role</option>';
-            
+
             if (permissions.can_create_owner) {
                 roleSelect.innerHTML += '<option value="Owner">Owner</option>';
             }
@@ -426,7 +426,7 @@ function updateAddUserButton(permissions) {
 
 async function handleAddUser(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(e.target);
     const data = {
         username: formData.get('username'),
@@ -447,7 +447,7 @@ async function handleAddUser(e) {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification('User created successfully!', 'success');
             closeModal('addUserModal');
@@ -470,7 +470,7 @@ async function resetUserPassword(userId) {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             const user = result.data.users.find(u => u.id === userId);
             if (user) {
@@ -513,7 +513,7 @@ function createResetPasswordModal(user) {
 
 async function handleResetPassword(e) {
     e.preventDefault();
-    
+
     const newPassword = document.getElementById('rp-new-password').value;
     const confirmPassword = document.getElementById('rp-confirm-password').value;
 
@@ -544,7 +544,7 @@ async function handleResetPassword(e) {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification('Password reset successfully!', 'success');
             closeModal('resetPasswordModal');
@@ -565,7 +565,7 @@ async function handleResetPassword(e) {
 function initializeCustomerManagement() {
     const customerNavItem = document.querySelector('[data-section="customer"]');
     if (customerNavItem) {
-        customerNavItem.addEventListener('click', function() {
+        customerNavItem.addEventListener('click', function () {
             setTimeout(() => loadCustomers(), 100);
         });
     }
@@ -573,7 +573,7 @@ function initializeCustomerManagement() {
     const customerSearch = document.getElementById('customer-search');
     if (customerSearch) {
         let searchTimeout;
-        customerSearch.addEventListener('input', function() {
+        customerSearch.addEventListener('input', function () {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 loadCustomers(this.value.trim());
@@ -720,7 +720,7 @@ function closeViewCustomerModal() {
 function initializeOrderManagement() {
     const orderNavItem = document.querySelector('[data-section="orders"]');
     if (orderNavItem) {
-        orderNavItem.addEventListener('click', function() {
+        orderNavItem.addEventListener('click', function () {
             setTimeout(() => loadOrders(), 100);
         });
     }
@@ -728,7 +728,7 @@ function initializeOrderManagement() {
     const orderSearch = document.getElementById('order-search');
     if (orderSearch) {
         let searchTimeout;
-        orderSearch.addEventListener('input', function() {
+        orderSearch.addEventListener('input', function () {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 loadOrders(this.value.trim());
@@ -738,7 +738,7 @@ function initializeOrderManagement() {
 
     const statusFilter = document.getElementById('statusFilter');
     const paymentFilter = document.getElementById('paymentFilter');
-    
+
     [statusFilter, paymentFilter].forEach(filter => {
         if (filter) {
             filter.addEventListener('change', () => loadOrders());
@@ -755,12 +755,12 @@ async function loadOrders(search = '') {
     try {
         const statusFilter = document.getElementById('statusFilter')?.value || '';
         const paymentFilter = document.getElementById('paymentFilter')?.value || '';
-        
+
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (statusFilter) params.append('status', statusFilter);
         if (paymentFilter) params.append('payment_status', paymentFilter);
-        
+
         const url = `/RADS-TOOLING/backend/api/admin_orders.php?action=list&${params.toString()}`;
 
         const response = await fetch(url, {
@@ -769,7 +769,7 @@ async function loadOrders(search = '') {
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
             displayOrders(result.data.orders);
         } else {
@@ -895,7 +895,7 @@ async function loadRecentOrders() {
         });
 
         const result = await response.json();
-        
+
         if (result.success && result.data) {
             const tbody = document.getElementById('dashRecentOrders');
             if (tbody) {
@@ -927,7 +927,7 @@ async function loadRecentFeedback() {
         });
 
         const result = await response.json();
-        
+
         if (result.success && result.data) {
             const ul = document.getElementById('dashFeedbackList');
             if (ul) {
@@ -1087,11 +1087,11 @@ function initializeActionBindings() {
         const btn = e.target.closest('.btn-delete-user');
         if (!btn) return;
         e.preventDefault();
-        
+
         const userId = btn.getAttribute('data-user-id');
         const row = btn.closest('tr');
         const userName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this user';
-        
+
         showConfirm({
             title: 'Delete User',
             message: `Are you sure you want to delete <b>${userName}</b>? This action cannot be undone.`,
@@ -1130,7 +1130,7 @@ function initializeActionBindings() {
         const btn = e.target.closest('.btn-reset-password');
         if (!btn) return;
         e.preventDefault();
-        
+
         const userId = btn.getAttribute('data-user-id');
         resetUserPassword(parseInt(userId));
     });
@@ -1149,11 +1149,11 @@ function initializeActionBindings() {
         const btn = e.target.closest('.btn-delete-customer');
         if (!btn) return;
         e.preventDefault();
-        
+
         const customerId = btn.getAttribute('data-customer-id');
         const row = btn.closest('tr');
         const customerName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this customer';
-        
+
         showConfirm({
             title: 'Delete Customer',
             message: `Are you sure you want to delete <b>${customerName}</b>? This action cannot be undone.`,
@@ -1192,10 +1192,10 @@ function initializeActionBindings() {
         const btn = e.target.closest('.btn-verify');
         if (!btn) return;
         e.preventDefault();
-        
+
         const row = btn.closest('tr');
         const orderId = row?.querySelector('td:first-child')?.textContent?.trim() || 'this order';
-        
+
         showConfirm({
             title: 'Verify Order',
             message: `Mark ${orderId} as verified?`,
@@ -1216,7 +1216,7 @@ function initializeActionBindings() {
         const btn = e.target.closest('.btn-view');
         if (!btn) return;
         e.preventDefault();
-        
+
         const row = btn.closest('tr');
         if (!row) return;
 
@@ -1247,11 +1247,11 @@ function setupLogout() {
             onConfirm: async () => {
                 try {
                     sessionStorage.removeItem('rads_admin_session');
-                    await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', { 
-                        method: 'POST', 
-                        credentials: 'same-origin' 
+                    await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
+                        method: 'POST',
+                        credentials: 'same-origin'
                     });
-                } catch (_) { 
+                } catch (_) {
                     // ignore network errors during logout 
                 }
                 location.href = '/RADS-TOOLING/public/index.php';
@@ -1341,7 +1341,7 @@ function showNotification(message, type = 'info') {
     const el = document.createElement('div');
     el.className = `notification notification-${type}`;
     el.textContent = message;
-    
+
     let backgroundColor;
     switch (type) {
         case 'success': backgroundColor = '#3db36b'; break;
@@ -1390,6 +1390,44 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Check for unread messages and show notification dot
+async function checkUnreadMessages() {
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/chat.php?action=threads', {
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) return;
+
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            const hasUnread = result.data.some(t => t.has_unanswered);
+
+            const chatNav = document.querySelector('.nav-item[data-section="chat"]');
+            if (chatNav) {
+                let dot = chatNav.querySelector('.rt-notification-dot');
+
+                if (hasUnread && !dot) {
+                    dot = document.createElement('span');
+                    dot.className = 'rt-notification-dot';
+                    chatNav.appendChild(dot);
+                } else if (!hasUnread && dot) {
+                    dot.remove();
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Failed to check unread messages:', error);
+    }
+}
+
+// Check every 10 seconds
+if (document.querySelector('.nav-item[data-section="chat"]')) {
+    setInterval(checkUnreadMessages, 10000);
+    checkUnreadMessages(); // Initial check
 }
 
 console.log('Enhanced Admin Dashboard Script Loaded Successfully!');

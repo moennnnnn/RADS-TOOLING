@@ -38,6 +38,7 @@ if (!$isLoggedIn) {
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" />
     <!-- Main CSS -->
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/style.css" />
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-admin.css" />
     <style>
         /* Enhanced modal and loading styles */
         .modal {
@@ -173,6 +174,57 @@ if (!$isLoggedIn) {
             object-fit: cover;
             margin-bottom: 0.5rem;
             border: 3px solid var(--brand);
+        }
+
+        /* ===== CHAT SUPPORT INTEGRATION STYLES ===== */
+
+        /* Override chat container for dashboard */
+        section[data-section="chat"] .rt-admin-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+        }
+
+        /* Adjust chat boxes for dashboard */
+        section[data-section="chat"] .rt-admin-box {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Make thread list scrollable */
+        section[data-section="chat"] .rt-thread-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            section[data-section="chat"] .rt-admin-container {
+                flex-direction: column;
+            }
+
+            section[data-section="chat"] .rt-admin-sidebar {
+                width: 100%;
+            }
+        }
+
+        /* Improve button visibility in dashboard */
+        section[data-section="chat"] .rt-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Smooth transitions */
+        section[data-section="chat"] .rt-thread-item {
+            transition: all 0.2s ease;
+        }
+
+        section[data-section="chat"] .rt-faq-row {
+            transition: background 0.2s ease;
+        }
+
+        section[data-section="chat"] .rt-faq-row:hover {
+            background: #f9fbfd;
         }
     </style>
 </head>
@@ -373,7 +425,9 @@ if (!$isLoggedIn) {
                         </tr>
                     </thead>
                     <tbody id="userTableBody">
-                        <tr><td colspan="6" style="text-align:center;">Loading users...</td></tr>
+                        <tr>
+                            <td colspan="6" style="text-align:center;">Loading users...</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -638,44 +692,6 @@ if (!$isLoggedIn) {
             </div>
         </section>
 
-        <!-- ===== CONTENT MANAGEMENT ===== -->
-        <section class="main-section" data-section="content">
-            <div class="section-header">
-                <h1>Content Management</h1>
-                <button class="btn-add-content" onclick="openModal('addContentModal')">
-                    <span class="material-symbols-rounded">add_circle</span> Add Content
-                </button>
-            </div>
-            <div class="content-controls">
-                <select class="content-filter" id="contentFilter">
-                    <option value="">All Types</option>
-                    <option>Announcement</option>
-                    <option>Gallery</option>
-                    <option>FAQ</option>
-                    <option>Banner</option>
-                </select>
-            </div>
-            <div class="content-table-container">
-                <table class="content-table">
-                    <thead>
-                        <tr>
-                            <th>Content ID</th>
-                            <th>Type</th>
-                            <th>Title/Preview</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contentTableBody">
-                        <tr>
-                            <td colspan="6" style="text-align:center;">Loading content...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
         <!-- ===== FEEDBACK ===== -->
         <section class="main-section" data-section="feedback">
             <div class="section-header">
@@ -706,169 +722,467 @@ if (!$isLoggedIn) {
         <section class="main-section" data-section="chat">
             <div class="section-header">
                 <h1>Chat Support</h1>
+                <div class="rt-user-info" style="font-size: 14px; color: #666;">
+                    Manage customer inquiries and FAQs
+                </div>
             </div>
-            <div id="chatPanel">
-                <p>Chat support system will be integrated here.</p>
+
+            <div class="rt-admin-container" style="padding: 0; margin: 0; max-width: 100%;">
+                <!-- Left: Threads Sidebar -->
+                <aside class="rt-admin-sidebar">
+                    <div class="rt-admin-box">
+                        <h3>Customer Threads</h3>
+                        <input type="text" id="rtThreadSearch" class="rt-admin-search" placeholder="Search threads..." />
+                        <div class="rt-thread-list" id="rtThreadList">
+                            <div style="padding:12px;color:#999;">Loading threads...</div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right: Main Chat Area -->
+                <main class="rt-admin-main">
+                    <!-- Conversation Area -->
+                    <div class="rt-admin-box">
+                        <h3>Conversation</h3>
+                        <div class="rt-admin-conv" id="rtAdminConv"></div>
+                        <div class="rt-input-row">
+                            <input type="text" id="rtAdminMsg" placeholder="Type a reply..." />
+                            <button id="rtAdminSend" class="rt-btn rt-btn-primary">
+                                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">send</span>
+                                Send
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- FAQ Management -->
+                    <div class="rt-admin-box">
+                        <h3>Manage FAQs (Auto-Reply System)</h3>
+                        <div class="rt-input-row">
+                            <input type="text" id="rtFaqQ" placeholder="Question (e.g., Do you deliver?)" style="flex: 1;" />
+                            <input type="text" id="rtFaqA" placeholder="Answer (e.g., Yes, we deliver within Cavite...)" style="flex: 2;" />
+                            <button id="rtFaqSave" class="rt-btn rt-btn-primary">
+                                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span>
+                                Save FAQ
+                            </button>
+                        </div>
+                        <table class="rt-faq-table">
+                            <thead>
+                                <tr>
+                                    <th>Question</th>
+                                    <th style="width:180px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rtFaqTbody">
+                                <tr>
+                                    <td colspan="2" style="text-align: center; padding: 20px; color: #999;">Loading FAQs...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </main>
             </div>
         </section>
-    </div>
 
+        <!-- ===== PAYMENT VERIFICATION ===== -->
+        <section class="main-section" data-section="payment">
+            <div class="section-header">
+                <h1>Payment Verification</h1>
+            </div>
+            <div class="payments-table-container">
+                <table class="payments-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Proof</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center;">Loading payments...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-    <!-- ===== PAYMENT VERIFICATION ===== -->
-    <section class="main-section" data-section="payment">
-        <div class="section-header">
-            <h1>Payment Verification</h1>
+        <!-- ===== MODALS ===== -->
+
+        <!-- Edit Profile Modal -->
+        <div class="modal" id="editProfileModal">
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">×</button>
+                <h2>Edit Profile</h2>
+                <form id="editProfileForm">
+                    <div class="edit-profile-pic-group">
+                        <img id="editProfileAvatar" class="edit-profile-avatar"
+                            src="/RADS-TOOLING/assets/images/profile.png" alt="Avatar" />
+                        <label class="edit-pic-label" for="editProfilePic">Change Photo</label>
+                        <input id="editProfilePic" type="file" accept="image/*" hidden />
+                    </div>
+                    <input id="ep-fullname" name="full_name" placeholder="Full Name" required />
+                    <input id="ep-username" name="username" placeholder="Username" required />
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+                        <button type="submit" class="primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="payments-table-container">
-            <table class="payments-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Customer</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Proof</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="paymentsTableBody">
-                    <tr>
-                        <td colspan="6" style="text-align:center;">Loading payments...</td>
-                    </tr>
-                </tbody>
-            </table>
+
+
+        <!-- Change Password Modal -->
+        <div class="modal" id="changePasswordModal">
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">×</button>
+                <h2>Change Password</h2>
+                <form id="changePasswordForm">
+                    <input id="cp-old" type="password" placeholder="Current Password" required />
+                    <input id="cp-new" type="password" placeholder="New Password" required />
+                    <input id="cp-confirm" type="password" placeholder="Confirm New Password" required />
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+                        <button type="submit" class="primary">Update Password</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </section>
 
-    <!-- ===== MODALS ===== -->
-
-    <!-- Edit Profile Modal -->
-    <div class="modal" id="editProfileModal">
-        <div class="modal-content">
-            <button class="modal-close" aria-label="Close">×</button>
-            <h2>Edit Profile</h2>
-            <form id="editProfileForm">
-                <div class="edit-profile-pic-group">
-                    <img id="editProfileAvatar" class="edit-profile-avatar"
-                        src="/RADS-TOOLING/assets/images/profile.png" alt="Avatar" />
-                    <label class="edit-pic-label" for="editProfilePic">Change Photo</label>
-                    <input id="editProfilePic" type="file" accept="image/*" hidden />
-                </div>
-                <input id="ep-fullname" name="full_name" placeholder="Full Name" required />
-                <input id="ep-username" name="username" placeholder="Username" required />
-                <div style="display:flex;gap:.5rem;justify-content:flex-end">
-                    <button type="submit" class="primary">Save Changes</button>
-                </div>
-            </form>
+        <!-- Add User Modal -->
+        <div class="modal" id="addUserModal">
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">×</button>
+                <h2>Add Staff/Admin</h2>
+                <form id="addUserForm">
+                    <input id="au-username" name="username" placeholder="Username" required />
+                    <input id="au-fullname" name="full_name" placeholder="Full Name" required />
+                    <select id="au-role" name="role" required>
+                        <option value="">Select Role</option>
+                        <option value="Owner">Owner</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Secretary">Secretary</option>
+                    </select>
+                    <input id="au-password" type="password" name="password" placeholder="Temporary Password" required />
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end">
+                        <button type="submit" class="primary">Create User</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
 
-    <!-- Change Password Modal -->
-    <div class="modal" id="changePasswordModal">
-        <div class="modal-content">
-            <button class="modal-close" aria-label="Close">×</button>
-            <h2>Change Password</h2>
-            <form id="changePasswordForm">
-                <input id="cp-old" type="password" placeholder="Current Password" required />
-                <input id="cp-new" type="password" placeholder="New Password" required />
-                <input id="cp-confirm" type="password" placeholder="Confirm New Password" required />
-                <div style="display:flex;gap:.5rem;justify-content:flex-end">
-                    <button type="submit" class="primary">Update Password</button>
-                </div>
-            </form>
+        <!-- Add Product Modal (skeleton) -->
+        <div class="modal" id="addProductModal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeModal('addProductModal')">×</button>
+                <h2>Add Product</h2>
+                <form id="addProductForm">
+                    <input id="ap-name" name="name" placeholder="Product Name" required />
+                    <input id="ap-type" name="category" placeholder="Type/Category" />
+                    <textarea id="ap-desc" name="description" placeholder="Description"></textarea>
+                    <input id="ap-price" name="price" type="number" step="0.01" placeholder="Price" required />
+                    <input id="ap-stock" name="stock" type="number" placeholder="Stock" required />
+                    <label class="edit-pic-label" for="ap-image">Upload Photo</label>
+                    <input id="ap-image" name="image" type="file" accept="image/*" hidden />
+                    <button type="submit">Save Product</button>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <!-- Add User Modal -->
-    <div class="modal" id="addUserModal">
-        <div class="modal-content">
-            <button class="modal-close" aria-label="Close">×</button>
-            <h2>Add Staff/Admin</h2>
-            <form id="addUserForm">
-                <input id="au-username" name="username" placeholder="Username" required />
-                <input id="au-fullname" name="full_name" placeholder="Full Name" required />
-                <select id="au-role" name="role" required>
-                    <option value="">Select Role</option>
-                    <option value="Owner">Owner</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Secretary">Secretary</option>
-                </select>
-                <input id="au-password" type="password" name="password" placeholder="Temporary Password" required />
-                <div style="display:flex;gap:.5rem;justify-content:flex-end">
-                    <button type="submit" class="primary">Create User</button>
-                </div>
-            </form>
+        <!-- Manage Customization Modal (placeholder) -->
+        <div class="modal" id="manageCustomizationModal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeModal('manageCustomizationModal')">×</button>
+                <h2>Manage Customization Options</h2>
+                <div id="customizationPanel"><!-- DB-READY --></div>
+            </div>
         </div>
-    </div>
 
-
-    <!-- Add Product Modal (skeleton) -->
-    <div class="modal" id="addProductModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('addProductModal')">×</button>
-            <h2>Add Product</h2>
-            <form id="addProductForm">
-                <input id="ap-name" name="name" placeholder="Product Name" required />
-                <input id="ap-type" name="category" placeholder="Type/Category" />
-                <textarea id="ap-desc" name="description" placeholder="Description"></textarea>
-                <input id="ap-price" name="price" type="number" step="0.01" placeholder="Price" required />
-                <input id="ap-stock" name="stock" type="number" placeholder="Stock" required />
-                <label class="edit-pic-label" for="ap-image">Upload Photo</label>
-                <input id="ap-image" name="image" type="file" accept="image/*" hidden />
-                <button type="submit">Save Product</button>
-            </form>
+        <!-- View Order Modal (skeleton targets) -->
+        <div class="modal" id="viewOrderModal">
+            <div class="modal-content">
+                <button class="modal-close" aria-label="Close">×</button>
+                <h2>Order Details</h2>
+                <p>Order: <span id="vo-code">—</span></p>
+                <p>Customer: <span id="vo-customer">—</span></p>
+                <p>Date: <span id="vo-date">—</span></p>
+                <p>Total: <span id="vo-total">₱0</span></p>
+                <p>Status: <span id="vo-status">—</span></p>
+                <p>Payment: <span id="vo-payment">—</span></p>
+            </div>
         </div>
-    </div>
 
-    <!-- Manage Customization Modal (placeholder) -->
-    <div class="modal" id="manageCustomizationModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('manageCustomizationModal')">×</button>
-            <h2>Manage Customization Options</h2>
-            <div id="customizationPanel"><!-- DB-READY --></div>
+        <!-- Universal Confirm Modal (instant, no cancel) -->
+        <div class="modal" id="confirmModal">
+            <div class="modal-content" style="max-width:360px;text-align:center;">
+                <button class="modal-close" aria-label="Close">×</button>
+                <h2 id="confirmTitle">Confirm</h2>
+                <p id="confirmMessage">Are you sure?</p>
+                <button id="confirmOkBtn" class="primary" type="button">OK</button>
+            </div>
         </div>
-    </div>
 
-    <!-- View Order Modal (skeleton targets) -->
-    <div class="modal" id="viewOrderModal">
-        <div class="modal-content">
-            <button class="modal-close" aria-label="Close">×</button>
-            <h2>Order Details</h2>
-            <p>Order: <span id="vo-code">—</span></p>
-            <p>Customer: <span id="vo-customer">—</span></p>
-            <p>Date: <span id="vo-date">—</span></p>
-            <p>Total: <span id="vo-total">₱0</span></p>
-            <p>Status: <span id="vo-status">—</span></p>
-            <p>Payment: <span id="vo-payment">—</span></p>
-        </div>
-    </div>
+        <!-- ===== Scripts ===== -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="/RADS-TOOLING/assets/JS/script.js"></script>
+        <script src="RADS-TOOLING/assets/JS/chat_admin.js"></script>
+        <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
 
-    <!-- Universal Confirm Modal (instant, no cancel) -->
-    <div class="modal" id="confirmModal">
-        <div class="modal-content" style="max-width:360px;text-align:center;">
-            <button class="modal-close" aria-label="Close">×</button>
-            <h2 id="confirmTitle">Confirm</h2>
-            <p id="confirmMessage">Are you sure?</p>
-            <button id="confirmOkBtn" class="primary" type="button">OK</button>
-        </div>
-    </div>
+        <script>
+            (function() {
+                let chatScriptLoaded = false;
 
-    <!-- ===== Scripts ===== -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/script.js"></script>
+                // Function to load chat script
+                function loadChatScript() {
+                    if (chatScriptLoaded) return;
 
-    <script>
-        // Hide loading overlay once everything is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                const loadingOverlay = document.getElementById('loadingOverlay');
-                if (loadingOverlay) {
-                    loadingOverlay.style.display = 'none';
+                    const script = document.createElement('script');
+                    script.src = '/RADS-TOOLING/assets/JS/chat_admin.js';
+                    script.onload = () => {
+                        console.log('Chat admin script loaded');
+                        chatScriptLoaded = true;
+                    };
+                    script.onerror = () => {
+                        console.error('Failed to load chat admin script');
+                    };
+                    document.body.appendChild(script);
                 }
-            }, 1000); // Small delay to ensure proper initialization
-        });
-    </script>
+
+                // Watch for chat section activation
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.target.classList && mutation.target.classList.contains('show')) {
+                            const section = mutation.target.getAttribute('data-section');
+                            if (section === 'chat') {
+                                loadChatScript();
+                            }
+                        }
+                    });
+                });
+
+                // Observe all main sections
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.querySelectorAll('.main-section[data-section="chat"]').forEach((section) => {
+                        observer.observe(section, {
+                            attributes: true,
+                            attributeFilter: ['class']
+                        });
+                    });
+
+                    // If chat section is already active on load
+                    const chatSection = document.querySelector('.main-section[data-section="chat"]');
+                    if (chatSection && chatSection.classList.contains('show')) {
+                        loadChatScript();
+                    }
+                });
+            })();
+        </script>
+
+        <script>
+            // Hide loading overlay once everything is loaded
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(() => {
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    if (loadingOverlay) {
+                        loadingOverlay.style.display = 'none';
+                    }
+                }, 1000); // Small delay to ensure proper initialization
+            });
+        </script>
+
+        <!-- Chat-specific modals -->
+        <div class="modal" id="chatDeleteModal" style="display:none;">
+            <div class="modal-content modal-small">
+                <button class="modal-close" onclick="closeChatModal('chatDeleteModal')">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+                <div class="modal-icon-wrapper">
+                    <div class="modal-icon warning">
+                        <span class="material-symbols-rounded">delete</span>
+                    </div>
+                </div>
+                <h2 class="modal-title">Delete FAQ</h2>
+                <p class="modal-message">Delete this FAQ permanently? This action cannot be undone.</p>
+                <div class="modal-actions">
+                    <button onclick="closeChatModal('chatDeleteModal')" class="btn-modal-secondary">Cancel</button>
+                    <button id="chatDeleteConfirm" class="btn-modal-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="chatSuccessModal" style="display:none;">
+            <div class="modal-content modal-small">
+                <button class="modal-close" onclick="closeChatModal('chatSuccessModal')">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+                <div class="modal-icon-wrapper">
+                    <div class="modal-icon success">
+                        <span class="material-symbols-rounded">check_circle</span>
+                    </div>
+                </div>
+                <h2 class="modal-title" id="chatSuccessTitle">Success</h2>
+                <p class="modal-message" id="chatSuccessMessage">Operation completed successfully</p>
+                <div class="modal-actions">
+                    <button onclick="closeChatModal('chatSuccessModal')" class="btn-modal-primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="chatErrorModal" style="display:none;">
+            <div class="modal-content modal-small">
+                <button class="modal-close" onclick="closeChatModal('chatErrorModal')">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+                <div class="modal-icon-wrapper">
+                    <div class="modal-icon error">
+                        <span class="material-symbols-rounded">error</span>
+                    </div>
+                </div>
+                <h2 class="modal-title">Error</h2>
+                <p class="modal-message" id="chatErrorMessage">An error occurred</p>
+                <div class="modal-actions">
+                    <button onclick="closeChatModal('chatErrorModal')" class="btn-modal-primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .modal-icon-wrapper {
+                text-align: center;
+                margin-bottom: 1rem;
+            }
+
+            .modal-icon {
+                display: inline-flex;
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto;
+            }
+
+            .modal-icon.warning {
+                background: #fff3cd;
+            }
+
+            .modal-icon.warning .material-symbols-rounded {
+                color: #f7b731;
+                font-size: 32px;
+            }
+
+            .modal-icon.success {
+                background: #d4edda;
+            }
+
+            .modal-icon.success .material-symbols-rounded {
+                color: #3db36b;
+                font-size: 32px;
+            }
+
+            .modal-icon.error {
+                background: #f8d7da;
+            }
+
+            .modal-icon.error .material-symbols-rounded {
+                color: #e14d4d;
+                font-size: 32px;
+            }
+
+            .modal-small {
+                max-width: 400px;
+            }
+
+            .modal-title {
+                text-align: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .modal-message {
+                text-align: center;
+                color: #666;
+                margin-bottom: 1.5rem;
+            }
+
+            .modal-actions {
+                display: flex;
+                gap: 0.5rem;
+                justify-content: center;
+            }
+
+            .btn-modal-primary {
+                background: #2f5b88;
+                color: #fff;
+                border: none;
+                padding: 10px 24px;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .btn-modal-primary:hover {
+                background: #17416d;
+            }
+
+            .btn-modal-secondary {
+                background: #e0e0e0;
+                color: #333;
+                border: none;
+                padding: 10px 24px;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .btn-modal-secondary:hover {
+                background: #d0d0d0;
+            }
+
+            .btn-modal-danger {
+                background: #e14d4d;
+                color: #fff;
+                border: none;
+                padding: 10px 24px;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .btn-modal-danger:hover {
+                background: #c93030;
+            }
+        </style>
+
+        <script>
+            function closeChatModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+
+            function showChatSuccess(title, message) {
+                const modal = document.getElementById('chatSuccessModal');
+                const titleEl = document.getElementById('chatSuccessTitle');
+                const messageEl = document.getElementById('chatSuccessMessage');
+
+                if (titleEl) titleEl.textContent = title;
+                if (messageEl) messageEl.textContent = message;
+                if (modal) modal.style.display = 'flex';
+            }
+
+            function showChatError(message) {
+                const modal = document.getElementById('chatErrorModal');
+                const messageEl = document.getElementById('chatErrorMessage');
+
+                if (messageEl) messageEl.textContent = message;
+                if (modal) modal.style.display = 'flex';
+            }
+        </script>
 </body>
 
 </html>

@@ -20,6 +20,7 @@ if ($isCustomer) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RADS TOOLING - Custom Cabinet Solutions</title>
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -66,11 +67,11 @@ if ($isCustomer) {
       </nav>
     </header>
 
-   <main>
+    <main>
       <!-- HERO SECTION -->
       <section class="hero-section">
-        <div class="hero-content">
-          <div class="hero-text">
+        <div class="hero-content-wrapper">
+          <div class="hero-text-content">
             <h1>
               <span class="big-blue-italic">C</span>ustomize Your Dream Cabinets
             </h1>
@@ -78,7 +79,7 @@ if ($isCustomer) {
               Design, visualize, and order premium custom cabinets online.
               Choose your style, materials, and finishes with our 360° preview tool.
             </p>
-            <div class="hero-cta">
+            <div class="hero-actions">
               <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary">
                 <i class="fas fa-rocket"></i> Get Started Free
               </a>
@@ -103,271 +104,293 @@ if ($isCustomer) {
               </div>
             </div>
           </div>
-          <div class="hero-image">
-            <img src="/RADS-TOOLING/assets/images/cabinet-hero.jpg" alt="Premium Custom Cabinets" />
+          <div class="hero-image-content">
+            <img src="/RADS-TOOLING/assets/images/cabinet-hero.jpg" alt="Custom Cabinets">
           </div>
         </div>
-      </section>
+  </div>
+  </section>
 
-      <!-- FEATURES SECTION -->
-      <section class="features-section">
-        <div class="section-header">
-          <h2>Why Choose <span class="highlight">RADS TOOLING</span>?</h2>
-          <p>Everything you need to create your perfect cabinet</p>
+  <!-- FEATURES SECTION -->
+  <section class="features-section">
+    <div class="section-header">
+      <h2>Why Choose <span class="highlight">RADS TOOLING</span>?</h2>
+      <p>Everything you need to create your perfect cabinet</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="fas fa-cube"></i>
         </div>
+        <h3>3D Customization</h3>
+        <p>Visualize your cabinet in real-time with our 360° preview tool. Choose colors, materials, and dimensions.</p>
+        <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Start Customizing →</a>
+      </div>
 
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-cube"></i>
-            </div>
-            <h3>3D Customization</h3>
-            <p>Visualize your cabinet in real-time with our 360° preview tool. Choose colors, materials, and dimensions.</p>
-            <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Start Customizing →</a>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-shipping-fast"></i>
-            </div>
-            <h3>Track Your Orders</h3>
-            <p>Monitor every step from production to delivery with real-time status updates.</p>
-            <a href="/RADS-TOOLING/customer/cust_login.php" class="feature-link">Login to Track →</a>
-          </div>
-
-          <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-credit-card"></i>
-            </div>
-            <h3>Fast Checkout</h3>
-            <p>Secure payment via GCash QR code. Pay 30% down payment to start production.</p>
-            <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Create Account →</a>
-          </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="fas fa-shipping-fast"></i>
         </div>
-      </section>
+        <h3>Track Your Orders</h3>
+        <p>Monitor every step from production to delivery with real-time status updates.</p>
+        <a href="/RADS-TOOLING/customer/cust_login.php" class="feature-link">Login to Track →</a>
+      </div>
 
-      <!-- CABINETS GALLERY CAROUSEL -->
-      <section class="cabinets-section">
-        <div class="section-header">
-          <h2>Featured <span class="highlight">Cabinets</span></h2>
-          <p>Explore our collection of premium custom cabinets</p>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <i class="fas fa-credit-card"></i>
         </div>
+        <h3>Fast Checkout</h3>
+        <p>Secure payment via GCash QR code. Pay 30% down payment to start production.</p>
+        <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Create Account →</a>
+      </div>
+    </div>
+  </section>
 
-        <div class="carousel-container">
-          <button class="carousel-btn prev" type="button" aria-label="Previous">
-            <span class="material-symbols-rounded">chevron_left</span>
-          </button>
+  <!-- CABINETS GALLERY CAROUSEL -->
+  <section class="cabinets-section">
+    <div class="section-header">
+      <h2>Featured <span class="highlight">Cabinets</span></h2>
+      <p>Explore our collection of premium custom cabinets</p>
+    </div>
 
-          <div class="carousel-track">
-            <div class="carousel-item">
-              <img src="/RADS-TOOLING/assets/images/cabs/cab1.jpg" alt="Modern Kitchen Cabinet"
-                onerror="this.src='https://via.placeholder.com/400x450?text=Kitchen+Cabinet'">
-              <div class="carousel-caption">
-                <h4>Modern Kitchen</h4>
-                <p>Contemporary design with premium finishes</p>
-              </div>
-            </div>
-
-            <div class="carousel-item">
-              <img src="/RADS-TOOLING/assets/images/cabs/cab2.jpg" alt="Bedroom Wardrobe"
-                onerror="this.src='https://via.placeholder.com/400x450?text=Wardrobe'">
-              <div class="carousel-caption">
-                <h4>Bedroom Wardrobe</h4>
-                <p>Spacious storage with elegant styling</p>
-              </div>
-            </div>
-
-            <div class="carousel-item">
-              <img src="/RADS-TOOLING/assets/images/cabs/cab3.jpg" alt="Living Room Cabinet"
-                onerror="this.src='https://via.placeholder.com/400x450?text=Living+Room'">
-              <div class="carousel-caption">
-                <h4>Living Room Display</h4>
-                <p>Showcase your style with custom shelving</p>
-              </div>
-            </div>
-
-            <div class="carousel-item">
-              <img src="/RADS-TOOLING/assets/images/cabs/cab4.jpg" alt="Bathroom Vanity"
-                onerror="this.src='https://via.placeholder.com/400x450?text=Bathroom+Vanity'">
-              <div class="carousel-caption">
-                <h4>Bathroom Vanity</h4>
-                <p>Water-resistant premium materials</p>
-              </div>
-            </div>
-
-            <div class="carousel-item">
-              <img src="/RADS-TOOLING/assets/images/cabs/cab5.jpg" alt="Office Storage"
-                onerror="this.src='https://via.placeholder.com/400x450?text=Office+Cabinet'">
-              <div class="carousel-caption">
-                <h4>Office Storage</h4>
-                <p>Professional workspace solutions</p>
-              </div>
-            </div>
-          </div>
-
-          <button class="carousel-btn next" type="button" aria-label="Next">
-            <span class="material-symbols-rounded">chevron_right</span>
-          </button>
-        </div>
-
-        <div class="carousel-dots"></div>
-      </section>
-
-      <!-- VIDEO SECTION -->
-      <section class="video-section">
-        <div class="video-content">
-          <div class="video-text">
-            <h2>
-              <span class="big-blue-italic">C</span>rafted with Passion & Precision
-            </h2>
-            <p class="video-subtitle">
-              Every cabinet is handcrafted by skilled artisans using premium materials.
-              Watch our craftsmen bring your vision to life.
-            </p>
-            <ul class="video-features">
-              <li><i class="fas fa-check"></i> Premium hardwood materials</li>
-              <li><i class="fas fa-check"></i> Expert craftsmanship</li>
-              <li><i class="fas fa-check"></i> Quality assurance tested</li>
-              <li><i class="fas fa-check"></i> Custom finishing options</li>
-            </ul>
-          </div>
-
-          <div class="video-wrapper">
-            <video controls playsinline poster="/RADS-TOOLING/assets/images/video-poster.jpg">
-              <source src="/RADS-TOOLING/assets/videos/crafting.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </div>
-        </div>
-      </section>
-
-      <!-- TESTIMONIALS SECTION -->
-      <section class="testimonials-section" id="testimonials">
-        <div class="section-header">
-          <h2>What Our <span class="highlight">Customers Say</span></h2>
-          <p>Real feedback from satisfied clients</p>
-        </div>
-
-        <div class="testimonials-grid" id="testimonialsContainer">
-          <!-- Testimonials will be loaded here via JavaScript -->
-          <div class="loading">
-            <i class="fas fa-spinner fa-spin"></i> Loading testimonials...
-          </div>
-        </div>
-      </section>
-
-      <!-- CTA BANNER -->
-      <section class="cta-banner">
-        <div class="cta-content">
-          <h2>Ready to Design Your Dream Cabinet?</h2>
-          <p>Join hundreds of satisfied customers who transformed their spaces</p>
-          <div class="cta-buttons">
-            <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary btn-large">
-              <i class="fas fa-user-plus"></i> Create Free Account
-            </a>
-            <a href="/RADS-TOOLING/public/products.php" class="btn-cta-secondary btn-large">
-              <i class="fas fa-images"></i> View Gallery
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <!-- CHAT SUPPORT BUTTON -->
-      <button class="chat-fab" id="chatBtn" aria-label="Chat Support">
-        <i class="fas fa-comments"></i>
+    <div class="carousel-container">
+      <button class="carousel-btn prev" type="button" aria-label="Previous">
+        <span class="material-symbols-rounded">chevron_left</span>
       </button>
 
-      <!-- CHAT POPUP (Only shown after login) -->
-      <div id="chatPopup" class="chat-popup" role="dialog" aria-modal="true" aria-label="Support Chat" style="display:none;">
-        <div class="chat-header">
-          <span>Chat Support</span>
-          <button id="chatClose" class="chat-close-btn" aria-label="Close chat">
-            <i class="fas fa-times"></i>
-          </button>
+      <div class="carousel-track">
+        <div class="carousel-item">
+          <img src="/RADS-TOOLING/assets/images/cab1.jpg" alt="Modern Kitchen Cabinet">
+          <div class="carousel-caption">
+            <h4>Modern Kitchen</h4>
+            <p>Contemporary design with premium finishes</p>
+          </div>
         </div>
-        <div class="chat-body">
-          <div class="chat-message system">
-            <p>Please login to chat with our support team.</p>
-            <a href="/RADS-TOOLING/customer/cust_login.php" class="btn-primary btn-small">Login Now</a>
+
+        <div class="carousel-item">
+          <img src="/RADS-TOOLING/assets/images/cab2.jpg" alt="Bedroom Wardrobe">
+          <div class="carousel-caption">
+            <h4>Bedroom Wardrobe</h4>
+            <p>Spacious storage with elegant styling</p>
+          </div>
+        </div>
+
+        <div class="carousel-item">
+          <img src="/RADS-TOOLING/assets/images/cab3.jpg" alt="Living Room Cabinet">
+          <div class="carousel-caption">
+            <h4>Living Room Display</h4>
+            <p>Showcase your style with custom shelving</p>
+          </div>
+        </div>
+
+        <div class="carousel-item">
+          <img src="/RADS-TOOLING/assets/images/cab4.jpg" alt="Bathroom Vanity">
+          <div class="carousel-caption">
+            <h4>Bathroom Vanity</h4>
+            <p>Water-resistant premium materials</p>
+          </div>
+        </div>
+
+        <div class="carousel-item">
+          <img src="/RADS-TOOLING/assets/images/cab5.jpg" alt="Office Storage">
+          <div class="carousel-caption">
+            <h4>Office Storage</h4>
+            <p>Professional workspace solutions</p>
           </div>
         </div>
       </div>
-    </main>
 
-    <!-- FOOTER -->
- <footer class="footer">
-  <div class="footer-content">
-    <!-- About Section -->
-    <div class="footer-section">
-      <h3>About RADS TOOLING</h3>
-      <p class="footer-description">
-        Premium custom cabinet manufacturer serving clients since 2007. 
-        Quality craftsmanship, affordable prices, and exceptional service.
+      <button class="carousel-btn next" type="button" aria-label="Next">
+        <span class="material-symbols-rounded">chevron_right</span>
+      </button>
+    </div>
+
+    <div class="carousel-dots"></div>
+  </section>
+
+  <!-- VIDEO SECTION -->
+  <section class="video-section">
+    <div class="video-content">
+      <div class="video-text">
+        <h2>
+          <span class="big-blue-italic">C</span>rafted with Passion & Precision
+        </h2>
+        <p class="video-subtitle">
+          Every cabinet is handcrafted by skilled artisans using premium materials.
+          Watch our craftsmen bring your vision to life.
+        </p>
+        <ul class="video-features">
+          <li><i class="fas fa-check"></i> Premium hardwood materials</li>
+          <li><i class="fas fa-check"></i> Expert craftsmanship</li>
+          <li><i class="fas fa-check"></i> Quality assurance tested</li>
+          <li><i class="fas fa-check"></i> Custom finishing options</li>
+        </ul>
+      </div>
+
+      <div class="video-wrapper">
+        <video controls playsinline poster="/RADS-TOOLING/assets/images/video-poster.jpg">
+          <source src="/RADS-TOOLING/assets/videos/crafting.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS SECTION -->
+  <section class="testimonials-section" id="testimonials">
+    <div class="section-header">
+      <h2>What Our <span class="highlight">Customers Say</span></h2>
+      <p>Real feedback from satisfied clients</p>
+    </div>
+
+    <div class="testimonials-grid" id="testimonialsContainer">
+      <!-- Testimonials will be loaded here via JavaScript -->
+      <div class="loading">
+        <i class="fas fa-spinner fa-spin"></i> Loading testimonials...
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <section class="cta-banner">
+    <div class="cta-content">
+      <h2>Ready to Design Your Dream Cabinet?</h2>
+      <p>Join hundreds of satisfied customers who transformed their spaces</p>
+      <div class="cta-buttons">
+        <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary btn-large">
+          <i class="fas fa-user-plus"></i> Create Free Account
+        </a>
+        <a href="/RADS-TOOLING/public/products.php" class="btn-cta-secondary btn-large">
+          <i class="fas fa-images"></i> View Gallery
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- RADS-TOOLING Chat Support Widget (Guest Mode) -->
+  <button id="rtChatBtn" class="rt-chat-btn">
+    <span class="material-symbols-rounded">chat</span>
+    Need Help?
+  </button>
+
+  <div id="rtChatPopup" class="rt-chat-popup">
+    <div class="rt-chat-header">
+      <span>Rads Tooling - Chat Support</span>
+    </div>
+
+    <!-- Message: Please Login -->
+    <div class="rt-chat-messages" style="padding: 40px 20px; text-align: center;">
+      <div style="margin-bottom: 20px;">
+        <i class="fas fa-lock" style="font-size: 48px; color: #1f4e74; opacity: 0.6;"></i>
+      </div>
+      <h3 style="color: #333; margin-bottom: 10px;">Chat Support Unavailable</h3>
+      <p style="color: #666; margin-bottom: 20px;">
+        Please login or create an account to chat with our support team and get instant answers to your questions.
       </p>
-      <div class="footer-social">
-        <a href="#" class="social-icon" aria-label="Facebook">
-          <span class="material-symbols-rounded">facebook</span>
-        </a>
-        <a href="#" class="social-icon" aria-label="Instagram">
-          <span class="material-symbols-rounded">photo_camera</span>
-        </a>
-        <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+      <a href="/RADS-TOOLING/customer/cust_login.php"
+        style="display: inline-block; padding: 12px 24px; background: #1f4e74; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+        <i class="fas fa-sign-in-alt"></i> Login Now
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Simple toggle for public page (no chat functionality until login)
+    document.addEventListener('DOMContentLoaded', function() {
+      const chatBtn = document.getElementById('rtChatBtn');
+      const chatPopup = document.getElementById('rtChatPopup');
+      const chatClose = document.getElementById('rtChatClose');
+
+      if (chatBtn && chatPopup && chatClose) {
+        chatBtn.addEventListener('click', function() {
+          chatPopup.style.display = 'flex';
+          chatBtn.style.display = 'none';
+        });
+
+        chatClose.addEventListener('click', function() {
+          chatPopup.style.display = 'none';
+          chatBtn.style.display = 'flex';
+        });
+      }
+    });
+  </script>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-content">
+      <!-- About Section -->
+      <div class="footer-section">
+        <h3>About RADS TOOLING</h3>
+        <p class="footer-description">
+          Premium custom cabinet manufacturer serving clients since 2007.
+          Quality craftsmanship, affordable prices, and exceptional service.
+        </p>
+        <div class="footer-social">
+          <a href="#" class="social-icon" aria-label="Facebook">
+            <span class="material-symbols-rounded">facebook</span>
+          </a>
+          <a href="#" class="social-icon" aria-label="Instagram">
+            <span class="material-symbols-rounded">photo_camera</span>
+          </a>
+          <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+            <span class="material-symbols-rounded">mail</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="footer-section">
+        <h3>Quick Links</h3>
+        <ul class="footer-links">
+          <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+          <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
+          <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
+        </ul>
+      </div>
+
+      <!-- Categories -->
+      <div class="footer-section">
+        <h3>Categories</h3>
+        <ul class="footer-links">
+          <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact Info -->
+      <div class="footer-section">
+        <h3>Contact Info</h3>
+        <div class="contact-info-item">
+          <span class="material-symbols-rounded">location_on</span>
+          <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+        </div>
+        <div class="contact-info-item">
           <span class="material-symbols-rounded">mail</span>
-        </a>
+          <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+        </div>
+        <div class="contact-info-item">
+          <span class="material-symbols-rounded">schedule</span>
+          <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+        </div>
       </div>
     </div>
 
-    <!-- Quick Links -->
-    <div class="footer-section">
-      <h3>Quick Links</h3>
-      <ul class="footer-links">
-        <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
-        <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
-        <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
-      </ul>
-    </div>
-
-    <!-- Categories -->
-    <div class="footer-section">
-      <h3>Categories</h3>
-      <ul class="footer-links">
-        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
-        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
-        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
-        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
-        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
-      </ul>
-    </div>
-
-    <!-- Contact Info -->
-    <div class="footer-section">
-      <h3>Contact Info</h3>
-      <div class="contact-info-item">
-        <span class="material-symbols-rounded">location_on</span>
-        <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
-      </div>
-      <div class="contact-info-item">
-        <span class="material-symbols-rounded">mail</span>
-        <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
-      </div>
-      <div class="contact-info-item">
-        <span class="material-symbols-rounded">schedule</span>
-        <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+    <div class="footer-bottom">
+      <p class="footer-copyright">
+        © 2025 RADS TOOLING INC. All rights reserved.
+      </p>
+      <div class="footer-legal">
+        <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
+        <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
       </div>
     </div>
-  </div>
-
-  <div class="footer-bottom">
-    <p class="footer-copyright">
-      © 2025 RADS TOOLING INC. All rights reserved.
-    </p>
-    <div class="footer-legal">
-      <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
-      <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
-    </div>
-  </div>
-</footer>
+  </footer>
 
   </div><!-- /.page-wrapper -->
 
@@ -475,23 +498,6 @@ if ($isCustomer) {
       }
     })();
 
-    // ========== CHAT BUTTON ==========
-    (function() {
-      const chatBtn = document.getElementById('chatBtn');
-      const chatPopup = document.getElementById('chatPopup');
-      const chatClose = document.getElementById('chatClose');
-
-      chatBtn?.addEventListener('click', () => {
-        chatPopup.style.display = 'flex';
-        chatBtn.style.display = 'none';
-      });
-
-      chatClose?.addEventListener('click', () => {
-        chatPopup.style.display = 'none';
-        chatBtn.style.display = 'flex';
-      });
-    })();
-
     // ========== SMOOTH SCROLL ==========
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function(e) {
@@ -506,6 +512,10 @@ if ($isCustomer) {
       });
     });
   </script>
+
+  <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+  <script src="/RADS-TOOLING/assets/js/policy.js"></script>
+
 </body>
 
 </html>

@@ -13,6 +13,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Customer Registration | Rads Tooling</title>
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/login.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
   <style>
     .auth-form.register-form {
       max-width: 800px;
