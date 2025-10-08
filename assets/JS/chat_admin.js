@@ -133,7 +133,7 @@
     if (conv) conv.innerHTML = '';
     if (pollTimer) clearInterval(pollTimer);
 
-    // CRITICAL: Remove unread badge immediately when thread is opened
+    // CRITICAL: Remove unread badge immediately in UI
     const threadItem = document.querySelector(`.rt-thread-item[data-code="${code}"]`);
     if (threadItem) {
       threadItem.classList.remove('rt-has-unread');
@@ -141,61 +141,20 @@
       if (badge) badge.remove();
     }
 
-    await poll();
-    pollTimer = setInterval(poll, 2000);
-  }
-
-  async function poll() {
-    if (!selectedCode) return;
+    // CRITICAL: Mark as read in database (persistent)
     try {
-      const r = await fetch(`${API_BASE}?action=messages_fetch&thread_code=${encodeURIComponent(selectedCode)}&after_id=${lastId}`, {
-        credentials: 'same-origin'
-      });
-
-      if (!r.ok) return;
-
-      const j = await r.json();
-      if (!j.success || !j.data) return;
-
-      j.data.forEach(m => {
-        lastId = Math.max(lastId, Number(m.id));
-        appendIfNew(m.sender_type, m.body);
-      });
-    } catch (err) {
-      console.error('Poll error:', err);
-    }
-  }
-
-  async function send() {
-    const input = document.getElementById('rtAdminMsg');
-    if (!input) return;
-
-    const text = input.value.trim();
-    if (!text || !selectedCode) return;
-
-    input.value = '';
-    appendIfNew('admin', text);
-
-    try {
-      const r = await fetch(`${API_BASE}?action=send_admin`, {
+      await fetch(`${API_BASE}?action=mark_read`, {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          thread_code: selectedCode,
-          body: text
-        })
+        body: JSON.stringify({ thread_code: code })
       });
-
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-
-      const j = await r.json();
-      if (!j.success) {
-        console.error('Send failed:', j.message);
-      }
-    } catch (err) {
-      console.error('Send error:', err);
+    } catch (error) {
+      console.error('Mark read error:', error);
     }
+
+    await poll();
+    pollTimer = setInterval(poll, 2000);
   }
 
   // ========== FAQs ==========

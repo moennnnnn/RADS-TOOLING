@@ -926,8 +926,7 @@ if (!$isLoggedIn) {
         <!-- ===== Scripts ===== -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="/RADS-TOOLING/assets/JS/script.js"></script>
-        <script src="RADS-TOOLING/assets/JS/chat_admin.js"></script>
-        <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
+
 
         <script>
             (function() {
@@ -1183,6 +1182,9 @@ if (!$isLoggedIn) {
                 if (modal) modal.style.display = 'flex';
             }
         </script>
+        
+        <script src="RADS-TOOLING/assets/JS/chat_admin.js"></script>
+        <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
 </body>
 
 </html>

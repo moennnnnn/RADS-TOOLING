@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../../chat_errors.log');
+ini_set('error_log', __DIR__ . '/RADS-TOOLING/backend/logs/chat_errors.log');
 
 ob_start();
 
@@ -230,6 +230,7 @@ try {
                 t.status,
                 t.last_message_at,
                 t.created_at,
+                t.admin_last_read,
                 COALESCE(
                     c.full_name,
                     t.customer_name,
@@ -243,13 +244,7 @@ try {
                     FROM rt_chat_messages m 
                     WHERE m.thread_id = t.id 
                     AND m.sender_type = 'customer'
-                    AND m.created_at > COALESCE(
-                        (SELECT MAX(created_at) 
-                         FROM rt_chat_messages 
-                         WHERE thread_id = t.id 
-                         AND sender_type = 'admin'),
-                        '1970-01-01'
-                    )
+                    AND m.created_at > COALESCE(t.admin_last_read, '1970-01-01')
                 ) as unread_count
             FROM rt_chat_threads t
             LEFT JOIN customers c ON t.customer_id = c.id
@@ -264,8 +259,6 @@ try {
                     $thread['unread_count'] = (int)$thread['unread_count'];
                     $thread['has_unread'] = $thread['unread_count'] > 0;
                 }
-
-                error_log('Fetched ' . count($threads) . ' threads');
 
                 jsonResponse(true, $threads);
             } catch (PDOException $e) {
@@ -285,17 +278,14 @@ try {
             }
 
             try {
-                // Get thread ID
-                $stmt = $pdo->prepare("SELECT id FROM rt_chat_threads WHERE thread_code = ?");
+                // Update admin_last_read timestamp
+                $stmt = $pdo->prepare("
+            UPDATE rt_chat_threads 
+            SET admin_last_read = NOW() 
+            WHERE thread_code = ?
+        ");
                 $stmt->execute([$threadCode]);
-                $thread = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if (!$thread) {
-                    jsonResponse(false, [], 'Thread not found', 404);
-                }
-
-                // Insert a "read marker" by updating last admin message time
-                // Or you can add a "read_at" column, but this is simpler
                 jsonResponse(true, [], 'Thread marked as read');
             } catch (PDOException $e) {
                 error_log('Mark read error: ' . $e->getMessage());
@@ -564,21 +554,21 @@ try {
                     jsonResponse(false, [], 'Thread not found or unauthorized', 404);
                 }
 
-                // Get count for UI feedback
+                // Count messages before "clearing"
                 $stmt = $pdo->prepare("
             SELECT COUNT(*) as count 
             FROM rt_chat_messages 
             WHERE thread_id = ?
         ");
                 $stmt->execute([$thread['id']]);
-                $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+                $messageCount = (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
-                // DON'T delete from database - just return success
-                // Customer's UI will clear, but admin still sees everything
+                // DON'T delete from database - admin needs to see history
+                // Just return success so customer's UI can clear
+
                 jsonResponse(true, [
-                    'message_count' => (int)$count,
-                    'note' => 'Cleared from your view only. Admin retains full history.'
-                ], 'Chat cleared successfully');
+                    'message_count' => $messageCount
+                ], 'Chat cleared from your view');
             } catch (PDOException $e) {
                 error_log('Clear chat error: ' . $e->getMessage());
                 jsonResponse(false, [], 'Failed to clear chat', 500);
@@ -587,6 +577,7 @@ try {
 
         // ========== SEND ADMIN MESSAGE ==========
         case 'send_admin':
+
             $input = json_decode(file_get_contents('php://input'), true) ?: [];
             $threadCode = trim($input['thread_code'] ?? '');
             $body = trim($input['body'] ?? '');

@@ -84,7 +84,6 @@
     }
 
     try {
-      // Call backend to delete from database
       const response = await fetch(`${API_BASE}?action=clear_chat`, {
         method: 'POST',
         credentials: 'same-origin',
@@ -103,14 +102,21 @@
         return;
       }
 
-      // Clear UI
+      // CRITICAL: Actually clear the UI
       if (chatMessages) {
         chatMessages.innerHTML = '';
       }
       displayedMessages.clear();
       lastMsgId = 0;
 
-      appendSystemMsg(`✓ Chat history cleared (${result.data.deleted_count} messages deleted)`);
+      // Show success message with count
+      const count = result.data?.message_count || result.data?.cleared_count || 0;
+      appendSystemMsg(`✓ Chat history cleared (${count} messages removed from your view)`);
+
+      // Note about admin
+      setTimeout(() => {
+        appendSystemMsg('💡 Note: Admins can still see the full conversation history');
+      }, 1000);
 
     } catch (error) {
       console.error('Clear chat error:', error);
