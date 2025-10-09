@@ -8,7 +8,11 @@ ini_set('session.cookie_samesite', 'Lax');                   // 'Strict' if you 
 ini_set('session.cookie_secure', isset($_SERVER['HTTPS']) ? '1' : '0');
 
 session_name('rads_sid');
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
 
 // CSRF: issue token once per session
 if (empty($_SESSION['csrf'])) {

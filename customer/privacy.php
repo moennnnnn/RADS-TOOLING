@@ -1,7 +1,12 @@
 <?php
 // /RADS-TOOLING/customer/homepage.php - Customer homepage with full access
 require_once __DIR__ . '/../backend/config/app.php';
-session_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
 
 // Ensure user is logged in as customer
 $user = $_SESSION['user'] ?? null;

@@ -2,7 +2,12 @@
 // Password reset API for customers
 declare(strict_types=1);
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');

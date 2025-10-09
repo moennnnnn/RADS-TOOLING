@@ -1,7 +1,9 @@
 <?php
 // /public/index.php – PUBLIC landing page (no auth required)
 require_once __DIR__ . '/../backend/config/app.php';
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $user = $_SESSION['user'] ?? null;
 $isCustomer = $user && (($user['aud'] ?? '') === 'customer');

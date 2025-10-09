@@ -29,7 +29,8 @@
     'pak', 'peste', 'hinayupak', 'walanghiya', 'walang hiya',
     'putcha', 'yawa', 'pisting', 'lintik', 'buwisit',
     'fvck', 'fck', 'fuk', 'fuc', 'phuck', 'sht', 'shyt',
-    'btch', 'azz', 'fucc', 'p*ta', 'p*tang', 'tang*na'
+    'btch', 'azz', 'fucc', 'p*ta', 'p*tang', 'tang*na', 'nigger',
+    'nigga', 'nigg', 'niggster', 'nigg4', 'nigg3r'
   ];
 
   // DOM Elements
@@ -102,18 +103,19 @@
         return;
       }
 
-      // CRITICAL: Actually clear the UI
+      // CRITICAL: Clear UI completely
       if (chatMessages) {
         chatMessages.innerHTML = '';
       }
       displayedMessages.clear();
-      lastMsgId = 0;
 
-      // Show success message with count
-      const count = result.data?.message_count || result.data?.cleared_count || 0;
+      // IMPORTANT: Don't reset lastMsgId to 0
+      // Keep it so polling only fetches NEW messages
+      // lastMsgId stays at current value
+
+      const count = result.data?.message_count || 0;
       appendSystemMsg(`✓ Chat history cleared (${count} messages removed from your view)`);
 
-      // Note about admin
       setTimeout(() => {
         appendSystemMsg('💡 Note: Admins can still see the full conversation history');
       }, 1000);

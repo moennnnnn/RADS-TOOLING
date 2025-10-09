@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/../backend/config/app.php';
-session_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
+
 if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? '') === 'customer') {
   header('Location: /RADS-TOOLING/customer/homepage.php'); exit;
 }

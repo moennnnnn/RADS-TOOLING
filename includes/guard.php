@@ -11,7 +11,9 @@ if (session_status() === PHP_SESSION_NONE) {
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
+    if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
 }
 
 /** Call right after a successful login (in your auth.php). */
@@ -54,9 +56,9 @@ function guard_require_login(string $redirect = '/customer/login.php'): void {
 }
 
 function guard_require_staff(): void {
-    guard_require_login('/admin/login.php');
+    guard_require_login('/RADS-TOOLING/admin/login.php');
     if (($_SESSION['user']['aud'] ?? '') !== 'staff') {
-        header('Location: /customer/index.php');
+        header('Location: /RADS-TOOLING/public/index.php');
         exit;
     }
 }
@@ -83,7 +85,7 @@ function guard_require_customer_api(string $loginUrl = '/customer/login.php'): v
     header('Content-Type: application/json');
     if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? null) !== 'customer') {
         http_response_code(401);
-        $next = $_SERVER['REQUEST_URI'] ?? '/customer/index.php';
+        $next = $_SERVER['REQUEST_URI'] ?? '/customer/homepage.php';
         echo json_encode([
             'success'  => false,
             'code'     => 'AUTH',

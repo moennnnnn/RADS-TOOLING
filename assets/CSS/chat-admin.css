@@ -134,6 +134,9 @@
 
 /* ========== CONVERSATION ========== */
 .rt-admin-conv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-height: 400px;
   max-height: 500px;
   overflow-y: auto;
@@ -153,6 +156,42 @@
   font-style: italic;
 }
 
+/* ========== MESSAGE BUBBLES (.rt-msg style) ========== */
+.rt-msg {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-wrap: break-word;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  margin: 4px 0;
+}
+
+.rt-msg-customer {
+  align-self: flex-start;
+  background: #e3edfb;
+  color: #1565c0;
+  border-bottom-left-radius: 4px;
+}
+
+.rt-msg-admin {
+  align-self: flex-end;
+  background: #2f5b88;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.rt-msg-bot {
+  align-self: flex-start;
+  background: #fff9e6;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+  border-bottom-left-radius: 4px;
+}
+
+/* ========== LEGACY BUBBLE WRAPPER SUPPORT ========== */
+/* Keep these for backwards compatibility if needed */
 .rt-admin-conv .rt-bubble-wrap {
   display: flex;
   margin: 8px 0;
@@ -268,6 +307,21 @@
 
 .rt-btn:active {
   transform: translateY(1px);
+}
+
+.rt-btn-warning {
+  background: #f39c12;
+  color: #fff;
+  border-color: #f39c12;
+}
+
+.rt-btn-warning:hover {
+  background: #e67e22;
+}
+
+.rt-btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
 /* ========== FAQ TABLE ========== */

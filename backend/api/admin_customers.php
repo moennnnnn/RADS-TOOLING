@@ -3,7 +3,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Don't display errors in production
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');

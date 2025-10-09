@@ -1,7 +1,12 @@
 <?php
 // backend/api/dashboard.php - Admin dashboard data (JSON only)
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
+
 header('Content-Type: application/json');
 
 // CORS: only keep this if you are calling from a different origin

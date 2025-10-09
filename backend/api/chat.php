@@ -16,7 +16,9 @@ ini_set('error_log', __DIR__ . '/RADS-TOOLING/backend/logs/chat_errors.log');
 ob_start();
 
 // Start session first
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Headers
 header('Content-Type: application/json; charset=utf-8');
@@ -33,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Initialize database connection
 require_once __DIR__ . '/../config/database.php';
 
-try {
+/* try {
     $db = new Database();
     $pdo = $db->getConnection();
 } catch (Exception $e) {
@@ -44,6 +46,17 @@ try {
         'error' => $e->getMessage()
     ]);
     exit;
+} */
+
+try {
+    $database = new Database();
+    $pdo = $database->getConnection();
+
+    // CRITICAL: Ensure autocommit is enabled
+    $pdo->setAttribute(PDO::ATTR_AUTOCOMMIT, 1);
+} catch (Throwable $e) {
+    error_log('Database connection failed: ' . $e->getMessage());
+    jsonResponse(false, [], 'Database connection failed', 500);
 }
 
 // Get action
@@ -59,6 +72,14 @@ function jsonResponse($success, $data = [], $message = '', $code = 200)
         'message' => $message
     ], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+function requireAdmin(): void
+{
+    // Check if user is logged in as admin
+    if (empty($_SESSION['admin_logged_in'])) {
+        jsonResponse(false, [], 'Unauthorized: Admin access required', 403);
+    }
 }
 
 function generateThreadCode(): string
@@ -217,6 +238,7 @@ try {
 
         // ========== THREADS LIST (Admin Only) ==========
         case 'threads':
+            requireAdmin();
 
             try {
                 $stmt = $pdo->query("
@@ -269,6 +291,7 @@ try {
 
         // ========== MARK THREAD AS READ (Admin) ==========
         case 'mark_read':
+            requireAdmin();
 
             $input = json_decode(file_get_contents('php://input'), true) ?: [];
             $threadCode = trim($input['thread_code'] ?? '');
@@ -371,7 +394,11 @@ try {
             }
 
             try {
-                $stmt = $pdo->prepare("SELECT id, customer_id FROM rt_chat_threads WHERE thread_code = ?");
+                $stmt = $pdo->prepare("
+            SELECT id, customer_id, customer_cleared_at 
+            FROM rt_chat_threads 
+            WHERE thread_code = ?
+        ");
                 $stmt->execute([$threadCode]);
                 $thread = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -380,7 +407,7 @@ try {
                 }
 
                 // Check authorization
-                $isAdmin = !empty($_SESSION['admin_logged_in']);
+                $isAdmin = !empty($_SESSION['admin_logged_in']) || !empty($_SESSION['staff']);
                 $isOwner = !empty($_SESSION['user']['id']) &&
                     $_SESSION['user']['id'] == $thread['customer_id'];
 
@@ -388,20 +415,57 @@ try {
                     jsonResponse(false, [], 'Unauthorized', 403);
                 }
 
-                // Fetch ALL messages (customer, bot, admin)
-                $stmt = $pdo->prepare("
-            SELECT 
-                id,
-                sender_type,
-                sender_id,
-                body,
-                created_at
-            FROM rt_chat_messages 
-            WHERE thread_id = ? 
-            AND id > ?
-            ORDER BY created_at ASC, id ASC
-        ");
-                $stmt->execute([$thread['id'], $afterId]);
+                // CRITICAL: Admin sees ALL messages, customer sees filtered messages
+                if ($isAdmin) {
+                    // ===== ADMIN: See ALL messages (no filtering by customer_cleared_at) =====
+                    $stmt = $pdo->prepare("
+                SELECT 
+                    id,
+                    sender_type,
+                    sender_id,
+                    body,
+                    created_at
+                FROM rt_chat_messages 
+                WHERE thread_id = ? 
+                AND id > ?
+                ORDER BY created_at ASC, id ASC
+            ");
+                    $stmt->execute([$thread['id'], $afterId]);
+                } else {
+                    // ===== CUSTOMER: Only see messages AFTER they cleared (if they did) =====
+                    if ($thread['customer_cleared_at']) {
+                        // Customer cleared - only show new messages
+                        $stmt = $pdo->prepare("
+                    SELECT 
+                        id,
+                        sender_type,
+                        sender_id,
+                        body,
+                        created_at
+                    FROM rt_chat_messages 
+                    WHERE thread_id = ? 
+                    AND id > ?
+                    AND created_at > ?
+                    ORDER BY created_at ASC, id ASC
+                ");
+                        $stmt->execute([$thread['id'], $afterId, $thread['customer_cleared_at']]);
+                    } else {
+                        // Customer hasn't cleared - show all messages
+                        $stmt = $pdo->prepare("
+                    SELECT 
+                        id,
+                        sender_type,
+                        sender_id,
+                        body,
+                        created_at
+                    FROM rt_chat_messages 
+                    WHERE thread_id = ? 
+                    AND id > ?
+                    ORDER BY created_at ASC, id ASC
+                ");
+                        $stmt->execute([$thread['id'], $afterId]);
+                    }
+                }
 
                 $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -412,110 +476,100 @@ try {
             }
             break;
 
-        // ========== SEND CUSTOMER MESSAGE ==========
+        // ========== SEND MESSAGE (Customer) ==========
         case 'send_customer':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                jsonResponse(false, [], 'Method not allowed', 405);
+            }
+
+            $customerId = $_SESSION['user']['id'] ?? null;
+
+            if (!$customerId) {
+                jsonResponse(false, [], 'Not authenticated', 401);
+            }
+
             $input = json_decode(file_get_contents('php://input'), true) ?: [];
             $threadCode = trim($input['thread_code'] ?? '');
             $body = trim($input['body'] ?? '');
 
             if (empty($threadCode) || empty($body)) {
-                jsonResponse(false, [], 'Missing thread_code or body', 400);
+                jsonResponse(false, [], 'Thread code and message required', 400);
             }
-
-            $stmt = $pdo->prepare("SELECT id, customer_id FROM rt_chat_threads WHERE thread_code = ?");
-            $stmt->execute([$threadCode]);
-            $thread = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$thread) {
-                jsonResponse(false, [], 'Thread not found', 404);
-            }
-
-            $threadId = $thread['id'];
-            $customerId = $thread['customer_id'];
 
             try {
-                // Insert customer message
+                // Get thread
+                $stmt = $pdo->prepare("
+            SELECT id, customer_id 
+            FROM rt_chat_threads 
+            WHERE thread_code = ?
+        ");
+                $stmt->execute([$threadCode]);
+                $thread = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$thread) {
+                    jsonResponse(false, [], 'Thread not found', 404);
+                }
+
+                // Verify ownership
+                if ($thread['customer_id'] != $customerId) {
+                    jsonResponse(false, [], 'Unauthorized', 403);
+                }
+
+                // Save customer message (NO transaction - let autocommit handle it)
                 $stmt = $pdo->prepare("
             INSERT INTO rt_chat_messages (thread_id, sender_type, sender_id, body, created_at) 
             VALUES (?, 'customer', ?, ?, NOW())
         ");
-                $stmt->execute([$threadId, $customerId, $body]);
-                $messageId = $pdo->lastInsertId();
+                $stmt->execute([$thread['id'], $customerId, $body]);
+                $customerMsgId = $pdo->lastInsertId();
 
-                // Update thread timestamp
-                $stmt = $pdo->prepare("UPDATE rt_chat_threads SET last_message_at = NOW() WHERE id = ?");
-                $stmt->execute([$threadId]);
+                error_log("CUSTOMER MSG SAVED: ID={$customerMsgId}, Thread={$thread['id']}, Body={$body}");
 
-                // FAQ MATCHING - Improved Algorithm
-                $autoReply = null;
-                $stmt = $pdo->query("SELECT question, answer FROM rt_faqs WHERE is_active = 1");
-                $faqs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Update thread last_message_at
+                $stmt = $pdo->prepare("
+            UPDATE rt_chat_threads 
+            SET last_message_at = NOW() 
+            WHERE id = ?
+        ");
+                $stmt->execute([$thread['id']]);
 
-                if ($faqs) {
-                    $bestMatch = null;
-                    $highestScore = 0;
+                // Check for FAQ match
+                $stmt = $pdo->prepare("
+            SELECT answer 
+            FROM rt_faqs 
+            WHERE is_active = 1 
+            AND LOWER(?) LIKE CONCAT('%', LOWER(question), '%')
+            LIMIT 1
+        ");
+                $stmt->execute([$body]);
+                $faq = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    $bodyLower = strtolower($body);
+                $botMsgId = null;
+                $botResponse = null;
 
-                    foreach ($faqs as $faq) {
-                        $questionLower = strtolower($faq['question']);
+                if ($faq) {
+                    // Save bot response (separate query, autocommit handles it)
+                    $stmt = $pdo->prepare("
+                INSERT INTO rt_chat_messages (thread_id, sender_type, sender_id, body, created_at) 
+                VALUES (?, 'bot', NULL, ?, NOW())
+            ");
+                    $stmt->execute([$thread['id'], $faq['answer']]);
+                    $botMsgId = $pdo->lastInsertId();
+                    $botResponse = $faq['answer'];
 
-                        // Method 1: Exact match
-                        if ($bodyLower === $questionLower) {
-                            $bestMatch = $faq;
-                            break;
-                        }
-
-                        // Method 2: Contains check (either way)
-                        if (strpos($bodyLower, $questionLower) !== false || strpos($questionLower, $bodyLower) !== false) {
-                            $bestMatch = $faq;
-                            break;
-                        }
-
-                        // Method 3: Word matching
-                        $bodyWords = preg_split('/\s+/', $bodyLower);
-                        $questionWords = preg_split('/\s+/', $questionLower);
-
-                        $matchCount = 0;
-                        foreach ($bodyWords as $word) {
-                            if (strlen($word) >= 3) { // Only count words with 3+ chars
-                                foreach ($questionWords as $qWord) {
-                                    if (strlen($qWord) >= 3 && strpos($qWord, $word) !== false) {
-                                        $matchCount++;
-                                    }
-                                }
-                            }
-                        }
-
-                        $score = $matchCount / max(count($bodyWords), count($questionWords));
-
-                        if ($score > $highestScore && $score >= 0.3) { // Lower threshold
-                            $highestScore = $score;
-                            $bestMatch = $faq;
-                        }
-                    }
-
-                    if ($bestMatch) {
-                        $autoReply = $bestMatch['answer'];
-
-                        // Insert bot response
-                        $stmt = $pdo->prepare("
-                    INSERT INTO rt_chat_messages (thread_id, sender_type, sender_id, body, created_at) 
-                    VALUES (?, 'bot', NULL, ?, NOW())
-                ");
-                        $stmt->execute([$threadId, $autoReply]);
-
-                        $stmt = $pdo->prepare("UPDATE rt_chat_threads SET last_message_at = NOW() WHERE id = ?");
-                        $stmt->execute([$threadId]);
-                    }
+                    error_log("BOT MSG SAVED: ID={$botMsgId}, Thread={$thread['id']}, Answer={$faq['answer']}");
+                } else {
+                    error_log("NO FAQ MATCH for: {$body}");
                 }
 
+                // Return both message IDs
                 jsonResponse(true, [
-                    'message_id' => (int)$messageId,
-                    'auto_reply' => $autoReply
+                    'customer_msg_id' => $customerMsgId,
+                    'bot_msg_id' => $botMsgId,
+                    'bot_response' => $botResponse
                 ], 'Message sent');
             } catch (PDOException $e) {
-                error_log('Send customer error: ' . $e->getMessage());
+                error_log('Send customer message error: ' . $e->getMessage());
                 jsonResponse(false, [], 'Failed to send message', 500);
             }
             break;
@@ -554,7 +608,7 @@ try {
                     jsonResponse(false, [], 'Thread not found or unauthorized', 404);
                 }
 
-                // Count messages before "clearing"
+                // Count messages before clearing
                 $stmt = $pdo->prepare("
             SELECT COUNT(*) as count 
             FROM rt_chat_messages 
@@ -563,11 +617,18 @@ try {
                 $stmt->execute([$thread['id']]);
                 $messageCount = (int)$stmt->fetch(PDO::FETCH_ASSOC)['count'];
 
-                // DON'T delete from database - admin needs to see history
-                // Just return success so customer's UI can clear
+                // CRITICAL: Set customer_cleared_at timestamp
+                // Customer won't see messages before this time
+                $stmt = $pdo->prepare("
+            UPDATE rt_chat_threads 
+            SET customer_cleared_at = NOW() 
+            WHERE id = ?
+        ");
+                $stmt->execute([$thread['id']]);
 
                 jsonResponse(true, [
-                    'message_count' => $messageCount
+                    'message_count' => $messageCount,
+                    'cleared_at' => date('Y-m-d H:i:s')
                 ], 'Chat cleared from your view');
             } catch (PDOException $e) {
                 error_log('Clear chat error: ' . $e->getMessage());
@@ -577,6 +638,7 @@ try {
 
         // ========== SEND ADMIN MESSAGE ==========
         case 'send_admin':
+            requireAdmin();
 
             $input = json_decode(file_get_contents('php://input'), true) ?: [];
             $threadCode = trim($input['thread_code'] ?? '');
@@ -608,6 +670,119 @@ try {
             jsonResponse(true, [], 'Message sent');
             break;
 
+        // ========== FAQs LIST (Admin) ==========
+        case 'faqs_list_admin':
+            requireAdmin();
+
+            try {
+                $stmt = $pdo->query("
+            SELECT id, question, answer, is_active 
+            FROM rt_faqs 
+            WHERE is_active = 1
+            ORDER BY created_at DESC
+        ");
+
+                $faqs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                jsonResponse(true, $faqs);
+            } catch (PDOException $e) {
+                error_log('FAQs list error: ' . $e->getMessage());
+                jsonResponse(false, [], 'Failed to load FAQs', 500);
+            }
+            break;
+
+        // ========== UPDATE FAQ (Admin) ==========
+        case 'faq_update':
+            requireAdmin();
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                jsonResponse(false, [], 'Method not allowed', 405);
+            }
+
+            $input = json_decode(file_get_contents('php://input'), true) ?: [];
+            $faqId = (int)($input['faq_id'] ?? 0);
+            $question = trim($input['question'] ?? '');
+            $answer = trim($input['answer'] ?? '');
+
+            if ($faqId <= 0) {
+                jsonResponse(false, [], 'Invalid FAQ ID', 400);
+            }
+
+            if (empty($question) || empty($answer)) {
+                jsonResponse(false, [], 'Question and answer required', 400);
+            }
+
+            try {
+                $stmt = $pdo->prepare("
+            UPDATE rt_faqs 
+            SET question = ?, answer = ?, updated_at = NOW() 
+            WHERE id = ?
+        ");
+                $stmt->execute([$question, $answer, $faqId]);
+
+                jsonResponse(true, [], 'FAQ updated successfully');
+            } catch (PDOException $e) {
+                error_log('Update FAQ error: ' . $e->getMessage());
+                jsonResponse(false, [], 'Failed to update FAQ', 500);
+            }
+            break;
+
+        // ========== SAVE FAQ (Admin) ==========
+        case 'faq_save':
+            requireAdmin();
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                jsonResponse(false, [], 'Method not allowed', 405);
+            }
+
+            $input = json_decode(file_get_contents('php://input'), true) ?: [];
+            $question = trim($input['question'] ?? '');
+            $answer = trim($input['answer'] ?? '');
+
+            if (empty($question) || empty($answer)) {
+                jsonResponse(false, [], 'Question and answer required', 400);
+            }
+
+            try {
+                $stmt = $pdo->prepare("
+            INSERT INTO rt_faqs (question, answer, is_active) 
+            VALUES (?, ?, 1)
+        ");
+                $stmt->execute([$question, $answer]);
+
+                jsonResponse(true, ['id' => $pdo->lastInsertId()], 'FAQ saved successfully');
+            } catch (PDOException $e) {
+                error_log('Save FAQ error: ' . $e->getMessage());
+                jsonResponse(false, [], 'Failed to save FAQ', 500);
+            }
+            break;
+
+        // ========== DELETE FAQ (Admin) ==========
+        case 'faq_delete':
+            requireAdmin();
+
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                jsonResponse(false, [], 'Method not allowed', 405);
+            }
+
+            $input = json_decode(file_get_contents('php://input'), true) ?: [];
+            $faqId = (int)($input['faq_id'] ?? 0);
+
+            if ($faqId <= 0) {
+                jsonResponse(false, [], 'Invalid FAQ ID', 400);
+            }
+
+            try {
+                $stmt = $pdo->prepare("DELETE FROM rt_faqs WHERE id = ?");
+                $stmt->execute([$faqId]);
+
+                jsonResponse(true, [], 'FAQ deleted successfully');
+            } catch (PDOException $e) {
+                error_log('Delete FAQ error: ' . $e->getMessage());
+                jsonResponse(false, [], 'Failed to delete FAQ', 500);
+            }
+            break;
+
         default:
             jsonResponse(false, [], 'Invalid action: ' . $action, 400);
     }
@@ -624,3 +799,16 @@ $output = ob_get_clean();
 if (!empty($output)) {
     error_log('Unexpected output before JSON: ' . $output);
 }
+
+// After saving customer message
+error_log("CUSTOMER MSG SAVED: ID={$customerMsgId}, Thread={$thread['id']}, Body={$body}");
+
+// After saving bot response
+if ($faq) {
+    error_log("BOT MSG SAVED: ID={$botMsgId}, Thread={$thread['id']}, Answer={$faq['answer']}");
+} else {
+    error_log("NO FAQ MATCH for: {$body}");
+}
+
+// After commit
+error_log("TRANSACTION COMMITTED for thread {$thread['id']}");

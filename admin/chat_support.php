@@ -1,7 +1,10 @@
 <?php
 // RADS-TOOLING Admin Chat Support
-session_start();
-
+if (session_status() === PHP_SESSION_NONE) {
+    if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+}
 // Check admin authentication
 if (!isset($_SESSION['admin_id']) || $_SESSION['admin_id'] <= 0) {
     header('Location: /RADS-TOOLING/admin/login.php');

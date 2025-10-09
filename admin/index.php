@@ -36,9 +36,13 @@ if (!$isLoggedIn) {
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" />
-    <!-- Main CSS -->
+    <!-- Quill Rich Text Editor (No API Key Required) -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+        <!-- Main CSS -->
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/style.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-admin.css" />
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/content_mgmt.css" />
     <style>
         /* Enhanced modal and loading styles */
         .modal {
@@ -558,37 +562,43 @@ if (!$isLoggedIn) {
         <section class="main-section" data-section="content">
             <div class="section-header">
                 <h1>Content Management</h1>
-                <button class="btn-add-content" onclick="openModal('addContentModal')">
-                    <span class="material-symbols-rounded">add_circle</span> Add Content
+                <button class="btn-edit-content" id="btnEditContent">
+                    <span class="material-symbols-rounded">edit</span> Edit Content
                 </button>
             </div>
-            <div class="content-controls">
-                <select class="content-filter" id="contentFilter">
-                    <option value="">All Types</option>
-                    <option>Announcement</option>
-                    <option>Gallery</option>
-                    <option>FAQ</option>
-                    <option>Banner</option>
-                </select>
+
+            <!-- Tab Navigation -->
+            <div class="cm-tabs">
+                <button class="cm-tab active" data-page="home">
+                    <span class="material-symbols-rounded">home</span>
+                    Homepage
+                </button>
+                <button class="cm-tab" data-page="about">
+                    <span class="material-symbols-rounded">info</span>
+                    About Us
+                </button>
+                <button class="cm-tab" data-page="privacy">
+                    <span class="material-symbols-rounded">shield</span>
+                    Privacy Policy
+                </button>
+                <button class="cm-tab" data-page="terms">
+                    <span class="material-symbols-rounded">gavel</span>
+                    Terms & Conditions
+                </button>
+                <button class="cm-tab" data-page="global">
+                    <span class="material-symbols-rounded">settings</span>
+                    Navbar & Footer
+                </button>
             </div>
-            <div class="content-table-container">
-                <table class="content-table">
-                    <thead>
-                        <tr>
-                            <th>Content ID</th>
-                            <th>Type</th>
-                            <th>Title/Preview</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contentTableBody">
-                        <tr>
-                            <td colspan="6" style="text-align:center;">Loading content...</td>
-                        </tr>
-                    </tbody>
-                </table>
+
+            <!-- Content Preview Area -->
+            <div class="cm-preview-container">
+                <div class="cm-preview-card" id="previewCard">
+                    <div class="preview-loading">
+                        <div class="spinner"></div>
+                        <p>Loading preview...</p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -927,57 +937,6 @@ if (!$isLoggedIn) {
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="/RADS-TOOLING/assets/JS/script.js"></script>
 
-
-        <script>
-            (function() {
-                let chatScriptLoaded = false;
-
-                // Function to load chat script
-                function loadChatScript() {
-                    if (chatScriptLoaded) return;
-
-                    const script = document.createElement('script');
-                    script.src = '/RADS-TOOLING/assets/JS/chat_admin.js';
-                    script.onload = () => {
-                        console.log('Chat admin script loaded');
-                        chatScriptLoaded = true;
-                    };
-                    script.onerror = () => {
-                        console.error('Failed to load chat admin script');
-                    };
-                    document.body.appendChild(script);
-                }
-
-                // Watch for chat section activation
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.target.classList && mutation.target.classList.contains('show')) {
-                            const section = mutation.target.getAttribute('data-section');
-                            if (section === 'chat') {
-                                loadChatScript();
-                            }
-                        }
-                    });
-                });
-
-                // Observe all main sections
-                document.addEventListener('DOMContentLoaded', () => {
-                    document.querySelectorAll('.main-section[data-section="chat"]').forEach((section) => {
-                        observer.observe(section, {
-                            attributes: true,
-                            attributeFilter: ['class']
-                        });
-                    });
-
-                    // If chat section is already active on load
-                    const chatSection = document.querySelector('.main-section[data-section="chat"]');
-                    if (chatSection && chatSection.classList.contains('show')) {
-                        loadChatScript();
-                    }
-                });
-            })();
-        </script>
-
         <script>
             // Hide loading overlay once everything is loaded
             document.addEventListener('DOMContentLoaded', function() {
@@ -985,6 +944,11 @@ if (!$isLoggedIn) {
                     const loadingOverlay = document.getElementById('loadingOverlay');
                     if (loadingOverlay) {
                         loadingOverlay.style.display = 'none';
+                    } else if (targetSection === 'content') {
+                        // Initialize Content Management module when tab is clicked
+                        if (typeof CM !== 'undefined') {
+                            setTimeout(() => CM.init(), 100);
+                        }
                     }
                 }, 1000); // Small delay to ensure proper initialization
             });
@@ -1182,9 +1146,159 @@ if (!$isLoggedIn) {
                 if (modal) modal.style.display = 'flex';
             }
         </script>
-        
-        <script src="RADS-TOOLING/assets/JS/chat_admin.js"></script>
+
+        <!-- ===== CONTENT MANAGEMENT EDIT MODAL ===== -->
+        <div class="cm-modal" id="editModal">
+            <div class="cm-modal-content">
+                <!-- Modal Header -->
+                <div class="cm-modal-header">
+                    <h2 id="modalTitle">Edit Homepage</h2>
+                    <div class="cm-modal-actions">
+                        <button class="btn-modal-action" id="btnSaveDraft" title="Save as draft">
+                            <span class="material-symbols-rounded">save</span> Save Draft
+                        </button>
+                        <button class="btn-modal-action btn-publish" id="btnPublish" title="Publish changes">
+                            <span class="material-symbols-rounded">publish</span> Publish
+                        </button>
+                        <button class="btn-modal-action" id="btnReset" title="Reset to published version">
+                            <span class="material-symbols-rounded">refresh</span> Reset
+                        </button>
+                        <button class="btn-modal-close" id="btnCloseModal" title="Close editor">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body: Two-column layout -->
+                <div class="cm-modal-body">
+                    <!-- Left Column: Form Controls -->
+                    <div class="cm-editor-panel">
+                        <!-- Homepage Editor -->
+                        <div class="cm-page-editor" id="editor-home">
+                            <div class="editor-section">
+                                <h3>Hero Section</h3>
+                                <p class="helper-text">Main heading and subheading shown at the top of the homepage</p>
+                                <label>Hero Headline</label>
+                                <textarea id="home_hero_headline" class="wysiwyg-editor"></textarea>
+
+                                <label>Hero Subtext</label>
+                                <textarea id="home_hero_subtext" class="wysiwyg-editor"></textarea>
+                            </div>
+
+                            <div class="editor-section">
+                                <h3>Promo Strip</h3>
+                                <p class="helper-text">Promotional text shown below the hero section</p>
+                                <textarea id="home_promo_text" class="wysiwyg-editor"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- About Us Editor -->
+                        <div class="cm-page-editor" id="editor-about" style="display:none;">
+                            <div class="editor-section">
+                                <h3>Mission Statement</h3>
+                                <textarea id="about_mission" class="wysiwyg-editor"></textarea>
+                            </div>
+
+                            <div class="editor-section">
+                                <h3>Vision Statement</h3>
+                                <textarea id="about_vision" class="wysiwyg-editor"></textarea>
+                            </div>
+
+                            <div class="editor-section">
+                                <h3>Our Story</h3>
+                                <textarea id="about_narrative" class="wysiwyg-editor"></textarea>
+                            </div>
+
+                            <div class="editor-section">
+                                <h3>Contact Information</h3>
+                                <label>Address</label>
+                                <input type="text" id="about_address" placeholder="Street address, city, province">
+
+                                <label>Phone</label>
+                                <input type="text" id="about_phone" placeholder="+63 (XXX) XXX-XXXX">
+
+                                <label>Email</label>
+                                <input type="email" id="about_email" placeholder="email@example.com">
+
+                                <label>Operating Hours</label>
+                                <input type="text" id="about_hours_weekday" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+                                <input type="text" id="about_hours_sunday" placeholder="Sunday: Closed">
+                            </div>
+                        </div>
+
+                        <!-- Privacy Policy Editor -->
+                        <div class="cm-page-editor" id="editor-privacy" style="display:none;">
+                            <div class="editor-section">
+                                <h3>Privacy Policy Content</h3>
+                                <textarea id="privacy_content" class="wysiwyg-editor"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Terms & Conditions Editor -->
+                        <div class="cm-page-editor" id="editor-terms" style="display:none;">
+                            <div class="editor-section">
+                                <h3>Terms & Conditions Content</h3>
+                                <textarea id="terms_content" class="wysiwyg-editor"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Global (Navbar & Footer) Editor -->
+                        <div class="cm-page-editor" id="editor-global" style="display:none;">
+                            <div class="editor-section">
+                                <h3>Navigation Labels</h3>
+                                <label>Home Label</label>
+                                <input type="text" id="nav_home" placeholder="Home">
+
+                                <label>About Label</label>
+                                <input type="text" id="nav_about" placeholder="About">
+
+                                <label>Products Label</label>
+                                <input type="text" id="nav_products" placeholder="Products">
+                            </div>
+
+                            <div class="editor-section">
+                                <h3>Contact Information</h3>
+                                <label>Support Phone</label>
+                                <input type="text" id="global_phone" placeholder="+63 (XXX) XXX-XXXX">
+
+                                <label>Support Email</label>
+                                <input type="email" id="global_email" placeholder="support@example.com">
+                            </div>
+
+                            <div class="editor-section">
+                                <h3>Footer Content</h3>
+                                <label>About Section</label>
+                                <textarea id="footer_about" class="wysiwyg-editor"></textarea>
+
+                                <label>Copyright Text</label>
+                                <input type="text" id="footer_copyright" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Live Preview -->
+                    <div class="cm-preview-panel">
+                        <div class="preview-header">
+                            <h3>Live Preview</h3>
+                            <span class="preview-status" id="previewStatus">Not saved</span>
+                        </div>
+                        <div class="preview-frame" id="livePreview">
+                            <div class="preview-placeholder">
+                                <span class="material-symbols-rounded">visibility</span>
+                                <p>Preview will appear here as you edit</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification Container for Content Management -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <script src="/RADS-TOOLING/assets/JS/chat_admin.js"></script>
         <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
+        <script src="/RADS-TOOLING/assets/JS/content_mgmt.js"></script>
 </body>
 
 </html>
