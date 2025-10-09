@@ -5,7 +5,7 @@
 /* Chat button */
 .rt-chat-btn {
   position: fixed;
-  bottom: 24px;
+  bottom: 55px;
   right: 24px;
   background: linear-gradient(135deg, #1f4e74, #2f5b88);
   color: #fff;
@@ -35,7 +35,7 @@
 /* Chat popup */
 .rt-chat-popup {
   position: fixed;
-  bottom: 90px;
+  bottom: 120px;
   right: 24px;
   width: 380px;
   max-height: 600px;

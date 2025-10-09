@@ -551,7 +551,6 @@ $customerId = $user['id'] ?? 0;
   </script>
 
   <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
-  <script src="/RADS-TOOLING/assets/js/policy.js"></script>
 </body>
 
 </html>

@@ -427,6 +427,7 @@ $customerId = $user['id'] ?? 0;
                 </p>
                 <div class="footer-legal">
                     <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
+                    <a href="/RADS-TOOLING/customer/terms.php">Terms & Conditions</a>
                 </div>
             </div>
         </footer>
@@ -654,7 +655,6 @@ $customerId = $user['id'] ?? 0;
         </script>
 
         <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
-        <script src="/RADS-TOOLING/assets/js/policy.js"></script>
 </body>
 
 </html>
