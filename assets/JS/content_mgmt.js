@@ -1,24 +1,40 @@
-// Content Management Module
+// REPLACE THE ENTIRE FILE
+
 const CM = {
-    currentPage: 'home',
-    editors: {},
+    currentPage: 'home_public',
+    currentContent: {},
+    quillEditors: {},
     apiBaseUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
+    previewUrl: '/RADS-TOOLING/backend/api/cms_preview.php',
 
-    // Initialize the content management system
     init() {
-        console.log('Initializing Content Management...');
+        console.log('CM.init() called');
 
-        // Set up event listeners
+        // Check if preview iframe exists
+        const previewIframe = document.getElementById('previewIframe');
+        if (!previewIframe) {
+            console.error('Preview iframe not found!');
+            return;
+        }
+
+        console.log('Preview iframe found:', previewIframe);
+
         this.setupEventListeners();
-
-        // Load initial content
-        this.loadPageContent('home');
-
-        console.log('CM initialized successfully');
+        this.loadPreview();
+        console.log('CMS initialized successfully');
     },
 
-    // Set up all event listeners
     setupEventListeners() {
+        // Homepage type selector
+        const typeSelect = document.getElementById('homepageType');
+        if (typeSelect) {
+            typeSelect.addEventListener('change', (e) => {
+                this.currentPage = e.target.value;
+                this.updateActiveTab();
+                this.loadPreview();
+            });
+        }
+
         // Tab switching
         document.querySelectorAll('.cm-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -50,225 +66,83 @@ const CM = {
             btnPublish.addEventListener('click', () => this.publish());
         }
 
-        const btnReset = document.getElementById('btnReset');
-        if (btnReset) {
-            btnReset.addEventListener('click', () => this.resetToPublished());
-        }
-
-        // Close modal on outside click
-        const modal = document.getElementById('editModal');
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeEditModal();
-                }
-            });
+        const btnDiscard = document.getElementById('btnDiscard');
+        if (btnDiscard) {
+            btnDiscard.addEventListener('click', () => this.discardDraft());
         }
     },
 
-    // Switch between content tabs
-    switchTab(page) {
-        console.log(`Switching to tab: ${page}`);
-
-        // Update active tab
+    updateActiveTab() {
         document.querySelectorAll('.cm-tab').forEach(tab => {
             tab.classList.remove('active');
+            if (tab.dataset.page === this.currentPage) {
+                tab.classList.add('active');
+            }
         });
-        const activeTab = document.querySelector(`.cm-tab[data-page="${page}"]`);
-        if (activeTab) {
-            activeTab.classList.add('active');
-        }
+    },
 
-        // Load content for the selected page
+    switchTab(page) {
+        console.log(`Switching to: ${page}`);
         this.currentPage = page;
-        this.loadPageContent(page);
+
+        // Update dropdown if switching to homepage
+        const typeSelect = document.getElementById('homepageType');
+        if (typeSelect && (page === 'home_public' || page === 'home_customer')) {
+            typeSelect.value = page;
+            typeSelect.parentElement.style.display = 'flex';
+        } else if (typeSelect) {
+            typeSelect.parentElement.style.display = 'none';
+        }
+
+        this.updateActiveTab();
+        this.loadPreview();
     },
 
-    // Load content preview for a specific page
-    loadPageContent(page) {
-        console.log(`Loading content for page: ${page}`);
-        const previewCard = document.getElementById('previewCard');
+    loadPreview() {
+        const iframe = document.getElementById('previewIframe');
+        console.log('loadPreview() called, iframe:', iframe);
 
-        if (!previewCard) {
-            console.error('Preview card element not found');
+        if (!iframe) {
+            console.error('Preview iframe not found in loadPreview()');
             return;
         }
 
-        // Show loading state
-        previewCard.innerHTML = `
-            <div class="preview-loading">
-                <div class="spinner"></div>
-                <p>Loading preview...</p>
-            </div>
-        `;
+        const url = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
+        console.log('Loading preview URL:', url);
 
-        // Fetch content from API
-        fetch(`${this.apiBaseUrl}?action=get&page=${page}`)
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text}`);
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Received data:', data);
-                if (data.success) {
-                    this.renderPreview(page, data.content);
-                } else {
-                    throw new Error(data.message || 'Failed to load content');
-                }
-            })
-            .catch(error => {
-                console.error('Error loading content:', error);
-                previewCard.innerHTML = `
-                    <div class="preview-error">
-                        <span class="material-symbols-rounded" style="font-size: 48px; color: #e74c3c;">error</span>
-                        <p>Error loading content</p>
-                        <small>${error.message}</small>
-                        <button onclick="CM.loadPageContent('${page}')" class="btn-retry">
-                            Retry
-                        </button>
-                    </div>
-                `;
-            });
+        iframe.src = url;
     },
 
-    // Render content preview
-    renderPreview(page, content) {
-        const previewCard = document.getElementById('previewCard');
-
-        if (!content) {
-            previewCard.innerHTML = `
-                <div class="preview-placeholder">
-                    <p>No content available for this page</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '';
-
-        switch (page) {
-            case 'home':
-                html = `
-                    <div class="preview-content">
-                        <h2>Homepage Preview</h2>
-                        <div class="preview-section">
-                            <h3>Hero Section</h3>
-                            <div class="hero-preview">
-                                ${content.hero_headline || '<p class="placeholder">No hero headline set</p>'}
-                                ${content.hero_subtext || '<p class="placeholder">No hero subtext set</p>'}
-                            </div>
-                        </div>
-                        <div class="preview-section">
-                            <h3>Promo Strip</h3>
-                            ${content.promo_text || '<p class="placeholder">No promo text set</p>'}
-                        </div>
-                    </div>
-                `;
-                break;
-
-            case 'about':
-                html = `
-                    <div class="preview-content">
-                        <h2>About Us Preview</h2>
-                        <div class="preview-section">
-                            <h3>Mission</h3>
-                            ${content.about_mission || '<p class="placeholder">No mission statement set</p>'}
-                        </div>
-                        <div class="preview-section">
-                            <h3>Vision</h3>
-                            ${content.about_vision || '<p class="placeholder">No vision statement set</p>'}
-                        </div>
-                        <div class="preview-section">
-                            <h3>Our Story</h3>
-                            ${content.about_narrative || '<p class="placeholder">No story set</p>'}
-                        </div>
-                        <div class="preview-section">
-                            <h3>Contact Information</h3>
-                            <p><strong>Address:</strong> ${content.about_address || 'Not set'}</p>
-                            <p><strong>Phone:</strong> ${content.about_phone || 'Not set'}</p>
-                            <p><strong>Email:</strong> ${content.about_email || 'Not set'}</p>
-                            <p><strong>Hours:</strong> ${content.about_hours_weekday || 'Not set'}</p>
-                        </div>
-                    </div>
-                `;
-                break;
-
-            case 'privacy':
-                html = `
-                    <div class="preview-content">
-                        <h2>Privacy Policy Preview</h2>
-                        ${content.content || '<p class="placeholder">No privacy policy content set</p>'}
-                    </div>
-                `;
-                break;
-
-            case 'terms':
-                html = `
-                    <div class="preview-content">
-                        <h2>Terms & Conditions Preview</h2>
-                        ${content.content || '<p class="placeholder">No terms content set</p>'}
-                    </div>
-                `;
-                break;
-
-            case 'global':
-                html = `
-                    <div class="preview-content">
-                        <h2>Navigation & Footer Preview</h2>
-                        <div class="preview-section">
-                            <h3>Navigation Labels</h3>
-                            <ul>
-                                <li>Home: ${content.nav_home || 'Home'}</li>
-                                <li>About: ${content.nav_about || 'About'}</li>
-                                <li>Products: ${content.nav_products || 'Products'}</li>
-                            </ul>
-                        </div>
-                        <div class="preview-section">
-                            <h3>Contact Information</h3>
-                            <p>Phone: ${content.global_phone || 'Not set'}</p>
-                            <p>Email: ${content.global_email || 'Not set'}</p>
-                        </div>
-                        <div class="preview-section">
-                            <h3>Footer</h3>
-                            <p>${content.footer_about || 'Not set'}</p>
-                            <p>Copyright: ${content.footer_copyright || 'Not set'}</p>
-                        </div>
-                    </div>
-                `;
-                break;
-        }
-
-        previewCard.innerHTML = html;
-    },
-
-    // Open the edit modal
     openEditModal() {
-        console.log('Opening edit modal...');
+        console.log('Opening editor...');
         const modal = document.getElementById('editModal');
-        if (modal) {
-            modal.classList.add('show');
+        if (!modal) return;
 
-            // Initialize Quill editors if not already initialized
-            setTimeout(() => {
-                if (Object.keys(this.editors).length === 0) {
-                    this.initQuillEditors();
-                } else {
-                    // Load current content into editors
-                    this.loadEditorContent();
-                }
-            }, 100);
+        modal.classList.add('show');
 
-            // Show the correct editor panel
-            this.showEditorPanel(this.currentPage);
+        // Update title
+        const titles = {
+            home_public: 'Edit Public Homepage',
+            home_customer: 'Edit Customer Homepage',
+            about: 'Edit About Us',
+            privacy: 'Edit Privacy Policy',
+            terms: 'Edit Terms & Conditions'
+        };
+        document.getElementById('modalTitle').textContent = titles[this.currentPage] || 'Edit Content';
+
+        // Show customer notice for customer homepage
+        const notice = document.getElementById('customerNotice');
+        if (notice) {
+            notice.style.display = this.currentPage === 'home_customer' ? 'block' : 'none';
         }
+
+        // Build editor interface
+        this.buildEditorInterface();
+
+        // Load content
+        this.loadEditorContent();
     },
 
-    // Close the edit modal
     closeEditModal() {
         const modal = document.getElementById('editModal');
         if (modal) {
@@ -276,272 +150,731 @@ const CM = {
         }
     },
 
-    // Initialize Quill editors
+    buildEditorInterface() {
+        const container = document.getElementById('editorContainer');
+        if (!container) return;
+
+        if (this.currentPage === 'home_public') {
+            container.innerHTML = this.getHomePublicEditor();
+        } else if (this.currentPage === 'home_customer') {
+            container.innerHTML = this.getHomeCustomerEditor();
+        } else if (this.currentPage === 'about') {
+            container.innerHTML = this.getAboutPageEditor();
+        } else {
+            container.innerHTML = this.getSimplePageEditor();
+        }
+
+        // Initialize Quill editors
+        this.initQuillEditors();
+    },
+
+    getHomePublicEditor() {
+        return `
+            <!-- Hero Section -->
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">home</span> Hero Section</h3>
+                <label>Headline</label>
+                <div id="quill-hero-headline" class="quill-container"></div>
+                
+                <label>Subtitle</label>
+                <div id="quill-hero-subtitle" class="quill-container"></div>
+            </div>
+
+            <!-- Carousel -->
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">collections</span> Carousel Images</h3>
+                <div id="carousel-manager"></div>
+                <button type="button" class="btn-upload" onclick="document.getElementById('carouselUpload').click()">
+                    <span class="material-symbols-rounded">add_photo_alternate</span> Add Image
+                </button>
+                <input type="file" id="carouselUpload" accept="image/*" style="display:none;" onchange="CM.handleCarouselUpload(event)">
+            </div>
+
+            <!-- Video -->
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">videocam</span> Video Section</h3>
+                <label>Video Title</label>
+                <div id="quill-video-title" class="quill-container"></div>
+                
+                <label>Video Subtitle</label>
+                <div id="quill-video-subtitle" class="quill-container"></div>
+                
+                <label>Video URL</label>
+                <input type="text" id="video-url" class="form-input" placeholder="https://example.com/video.mp4">
+                <button type="button" class="btn-upload" onclick="document.getElementById('videoUpload').click()">
+                    <span class="material-symbols-rounded">upload</span> Upload Video
+                </button>
+                <input type="file" id="videoUpload" accept="video/*" style="display:none;" onchange="CM.handleVideoUpload(event)">
+            </div>
+
+            <!-- Footer -->
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">contact_mail</span> Footer Contact Info</h3>
+                <label>Company Name</label>
+                <input type="text" id="footer-company" class="form-input">
+                
+                <label>Email</label>
+                <input type="email" id="footer-email" class="form-input">
+                
+                <label>Phone</label>
+                <input type="tel" id="footer-phone" class="form-input">
+                
+                <label>Address</label>
+                <input type="text" id="footer-address" class="form-input">
+                
+                <label>Operating Hours</label>
+                <input type="text" id="footer-hours" class="form-input">
+            </div>
+        `;
+    },
+
+    getHomeCustomerEditor() {
+        return `
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">person</span> Customer Welcome</h3>
+                <label>Welcome Message</label>
+                <div id="quill-welcome" class="quill-container"></div>
+                <p class="help-text">Use {{customer_name}} as placeholder for customer's name</p>
+            </div>
+
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">info</span> Introduction Text</h3>
+                <label>Content</label>
+                <div id="quill-intro" class="quill-container"></div>
+            </div>
+        `;
+    },
+
+    getAboutPageEditor() {
+        return `
+        <!-- Background Image Section -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">image</span> Hero Background Image</h3>
+            
+            <div id="about-hero-preview" class="image-preview-container" style="margin-bottom: 10px;">
+                <img id="about-hero-img" src="" alt="Hero Background" style="max-width: 100%; height: 150px; object-fit: cover; border-radius: 4px; display: none;">
+            </div>
+            
+            <button type="button" class="btn-upload" onclick="document.getElementById('aboutHeroUpload').click()">
+                <span class="material-symbols-rounded">upload</span> Upload Hero Image
+            </button>
+            <input type="file" id="aboutHeroUpload" accept="image/*" style="display:none;" onchange="CM.handleAboutHeroUpload(event)">
+            <input type="hidden" id="about-hero-path" value="">
+        </div>
+
+        <!-- Main Content -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">description</span> About Section</h3>
+            
+            <label>Headline</label>
+            <input type="text" id="about-headline" class="form-input" placeholder="About RADS Tooling">
+            
+            <label>Subheadline</label>
+            <div id="quill-about-subheadline" class="quill-container"></div>
+        </div>
+
+        <!-- Mission & Vision -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">flag</span> Mission & Vision</h3>
+            
+            <label>Our Mission</label>
+            <div id="quill-about-mission" class="quill-container"></div>
+            
+            <label>Our Vision</label>
+            <div id="quill-about-vision" class="quill-container"></div>
+        </div>
+
+        <!-- Our Story -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">auto_stories</span> Our Story</h3>
+            <div id="quill-about-story" class="quill-container"></div>
+        </div>
+
+        <!-- Store Information -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">store</span> Store Information</h3>
+            
+            <label>Address</label>
+            <input type="text" id="about-address" class="form-input" placeholder="Store address">
+            
+            <label>Phone</label>
+            <input type="tel" id="about-phone" class="form-input" placeholder="+63 XXX XXX XXXX">
+            
+            <label>Email</label>
+            <input type="email" id="about-email" class="form-input" placeholder="contact@example.com">
+        </div>
+
+        <!-- Operating Hours -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">schedule</span> Operating Hours</h3>
+            
+            <label>Weekday Hours</label>
+            <input type="text" id="about-hours-weekday" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+            
+            <label>Sunday Hours</label>
+            <input type="text" id="about-hours-sunday" class="form-input" placeholder="Sunday: Closed">
+        </div>
+    `;
+    },
+
+    getSimplePageEditor() {
+        return `
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">article</span> Page Content</h3>
+            <label>Main Content</label>
+            <div id="quill-main-content" class="quill-container" style="height: 450px; min-height: 450px;"></div>
+        </div>
+    `;
+    },
+
     initQuillEditors() {
-        console.log('Initializing Quill editors...');
+        this.quillEditors = {};
 
-        // Find all elements with class 'wysiwyg-editor'
-        const editorElements = document.querySelectorAll('.wysiwyg-editor');
+        const editorIds = [
+            'quill-hero-headline',
+            'quill-hero-subtitle',
+            'quill-video-title',
+            'quill-video-subtitle',
+            'quill-welcome',
+            'quill-intro',
+            'quill-main-content',
+            // ADD these for About page
+            'quill-about-subheadline',
+            'quill-about-mission',
+            'quill-about-vision',
+            'quill-about-story'
+        ];
 
-        editorElements.forEach(element => {
-            // Create a div container for Quill
-            const quillContainer = document.createElement('div');
-            quillContainer.id = element.id + '_quill';
-            quillContainer.style.height = '200px';
-            quillContainer.style.backgroundColor = '#fff';
+        editorIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                this.quillEditors[id] = new Quill(`#${id}`, {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline'],
+                            [{ 'color': [] }],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                            ['link'],
+                            ['clean']
+                        ]
+                    }
+                });
 
-            // Hide the original textarea
-            element.style.display = 'none';
+                this.quillEditors[id].on('text-change', () => {
+                    this.updateLivePreview();
+                });
+            }
+        });
+    },
 
-            // Insert Quill container after the textarea
-            element.parentNode.insertBefore(quillContainer, element.nextSibling);
+    async loadEditorContent() {
+        try {
+            const response = await fetch(`${this.apiBaseUrl}?action=get&page=${this.currentPage}&status=draft`);
 
-            // Initialize Quill
-            const quill = new Quill('#' + quillContainer.id, {
-                theme: 'snow',
-                modules: {
-                    toolbar: [
-                        [{ 'header': [1, 2, 3, false] }],
-                        ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                        ['link'],
-                        ['clean']
-                    ]
-                },
-                placeholder: 'Enter content here...'
-            });
-
-            // Store the Quill instance
-            this.editors[element.id] = quill;
-
-            // Set initial content if exists
-            if (element.value) {
-                quill.root.innerHTML = element.value;
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            console.log(`Quill editor initialized: ${element.id}`);
-        });
+            const data = await response.json();
 
-        // Load content after all editors are ready
-        if (Object.keys(this.editors).length === editorElements.length) {
-            this.loadEditorContent();
+            if (data.success && data.content) {
+                this.currentContent = data.content;
+                this.populateFields(data.content);
+                this.updateLivePreview();
+
+                const statusEl = document.getElementById('previewStatus');
+                if (statusEl) {
+                    statusEl.textContent = data.status === 'draft' ? 'Draft' : 'Published';
+                    statusEl.className = 'preview-status ' + (data.status === 'draft' ? 'status-draft' : 'status-published');
+                }
+            } else {
+                throw new Error(data.message || 'Failed to load content');
+            }
+        } catch (error) {
+            console.error('Error loading content:', error);
+            this.showToast('Error loading content: ' + error.message, 'error');
         }
     },
 
-    // Show the appropriate editor panel
-    showEditorPanel(page) {
-        console.log(`Showing editor panel for: ${page}`);
-
-        // Hide all editor panels
-        document.querySelectorAll('.cm-page-editor').forEach(panel => {
-            panel.style.display = 'none';
-        });
-
-        // Show the selected panel
-        const panel = document.getElementById(`editor-${page}`);
-        if (panel) {
-            panel.style.display = 'block';
-        } else {
-            console.error(`Panel not found: editor-${page}`);
+    populateFields(content) {
+        // Populate Quill editors
+        if (this.quillEditors['quill-hero-headline'] && content.hero_headline) {
+            this.quillEditors['quill-hero-headline'].root.innerHTML = content.hero_headline;
+        }
+        if (this.quillEditors['quill-hero-subtitle'] && content.hero_subtitle) {
+            this.quillEditors['quill-hero-subtitle'].root.innerHTML = content.hero_subtitle;
+        }
+        if (this.quillEditors['quill-video-title'] && content.video_title) {
+            this.quillEditors['quill-video-title'].root.innerHTML = content.video_title;
+        }
+        if (this.quillEditors['quill-video-subtitle'] && content.video_subtitle) {
+            this.quillEditors['quill-video-subtitle'].root.innerHTML = content.video_subtitle;
+        }
+        if (this.quillEditors['quill-welcome'] && content.welcome_message) {
+            this.quillEditors['quill-welcome'].root.innerHTML = content.welcome_message;
+        }
+        if (this.quillEditors['quill-intro'] && content.intro_text) {
+            this.quillEditors['quill-intro'].root.innerHTML = content.intro_text;
         }
 
-        // Update modal title
-        const titles = {
-            home: 'Edit Homepage',
-            about: 'Edit About Us',
-            privacy: 'Edit Privacy Policy',
-            terms: 'Edit Terms & Conditions',
-            global: 'Edit Navbar & Footer'
+        // FIX: Handle simple page content
+        if (this.quillEditors['quill-main-content'] && content.content) {
+            this.quillEditors['quill-main-content'].root.innerHTML = content.content;
+        }
+
+        if (this.currentPage === 'about') {
+            // Text inputs
+            const aboutInputs = {
+                'about-headline': content.about_headline,
+                'about-address': content.about_address,
+                'about-phone': content.about_phone,
+                'about-email': content.about_email,
+                'about-hours-weekday': content.about_hours_weekday,
+                'about-hours-sunday': content.about_hours_sunday
+            };
+
+            Object.keys(aboutInputs).forEach(id => {
+                const input = document.getElementById(id);
+                if (input && aboutInputs[id]) {
+                    input.value = aboutInputs[id];
+                    input.addEventListener('input', () => this.updateLivePreview());
+                }
+            });
+
+            // Hero image
+            if (content.about_hero_image) {
+                const heroImg = document.getElementById('about-hero-img');
+                const heroPath = document.getElementById('about-hero-path');
+                if (heroImg && heroPath) {
+                    heroPath.value = content.about_hero_image;
+                    heroImg.src = content.about_hero_image;
+                    heroImg.style.display = 'block';
+                }
+            }
+
+            // Quill editors
+            if (this.quillEditors['quill-about-subheadline'] && content.about_subheadline) {
+                this.quillEditors['quill-about-subheadline'].root.innerHTML = content.about_subheadline;
+            }
+            if (this.quillEditors['quill-about-mission'] && content.about_mission) {
+                this.quillEditors['quill-about-mission'].root.innerHTML = content.about_mission;
+            }
+            if (this.quillEditors['quill-about-vision'] && content.about_vision) {
+                this.quillEditors['quill-about-vision'].root.innerHTML = content.about_vision;
+            }
+            if (this.quillEditors['quill-about-story'] && content.about_story) {
+                this.quillEditors['quill-about-story'].root.innerHTML = content.about_story;
+            }
+        }
+
+        // Populate form inputs
+        const inputs = {
+            'footer-company': content.footer_company,
+            'footer-email': content.footer_email,
+            'footer-phone': content.footer_phone,
+            'footer-address': content.footer_address,
+            'footer-hours': content.footer_hours,
+            'video-url': content.video_url
         };
 
-        const modalTitle = document.getElementById('modalTitle');
-        if (modalTitle) {
-            modalTitle.textContent = titles[page] || 'Edit Content';
+        Object.keys(inputs).forEach(id => {
+            const input = document.getElementById(id);
+            if (input && inputs[id]) {
+                input.value = inputs[id];
+                input.addEventListener('input', () => this.updateLivePreview());
+            }
+        });
+
+        // Render carousel
+        if (content.carousel_images) {
+            this.renderCarousel(content.carousel_images);
         }
     },
 
-    // Load content into editors
-    loadEditorContent() {
-        console.log('Loading content into editors for page:', this.currentPage);
+    renderCarousel(images) {
+        const container = document.getElementById('carousel-manager');
+        if (!container) return;
 
-        fetch(`${this.apiBaseUrl}?action=get&page=${this.currentPage}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.content) {
-                    console.log('Populating editors with:', data.content);
-
-                    // Populate form fields with content
-                    for (const [key, value] of Object.entries(data.content)) {
-                        const field = document.getElementById(key);
-                        if (field) {
-                            if (this.editors[key]) {
-                                // Quill editor
-                                this.editors[key].root.innerHTML = value || '';
-                            } else {
-                                // Regular input field
-                                field.value = value || '';
-                            }
-                        }
-                    }
-
-                    this.showToast('Content loaded', 'info');
-                } else {
-                    console.warn('No content to load');
-                }
-            })
-            .catch(error => {
-                console.error('Error loading editor content:', error);
-                this.showToast('Error loading content', 'error');
-            });
+        container.innerHTML = images.map((img, i) => `
+            <div class="carousel-item-edit">
+                <img src="${img.image}" alt="${img.title}">
+                <div class="carousel-info">
+                    <input type="text" value="${img.title}" onchange="CM.updateCarouselItem(${i}, 'title', this.value)">
+                    <input type="text" value="${img.description}" onchange="CM.updateCarouselItem(${i}, 'description', this.value)">
+                </div>
+                <div class="carousel-actions">
+                    <button type="button" onclick="CM.moveCarousel(${i}, -1)" ${i === 0 ? 'disabled' : ''}>
+                        <span class="material-symbols-rounded">arrow_upward</span>
+                    </button>
+                    <button type="button" onclick="CM.moveCarousel(${i}, 1)" ${i === images.length - 1 ? 'disabled' : ''}>
+                        <span class="material-symbols-rounded">arrow_downward</span>
+                    </button>
+                    <button type="button" class="btn-delete" onclick="CM.deleteCarouselItem(${i})">
+                        <span class="material-symbols-rounded">delete</span>
+                    </button>
+                </div>
+            </div>
+        `).join('');
     },
 
-    // Save as draft
-    saveDraft() {
-        this.saveContent('draft');
+    updateCarouselItem(index, field, value) {
+        if (!this.currentContent.carousel_images) return;
+        this.currentContent.carousel_images[index][field] = value;
+        this.updateLivePreview();
     },
 
-    // Publish content
-    publish() {
-        if (confirm('Are you sure you want to publish these changes? This will make them visible to all users.')) {
-            this.saveContent('published');
-        }
+    moveCarousel(index, direction) {
+        const images = this.currentContent.carousel_images;
+        if (!images) return;
+
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= images.length) return;
+
+        [images[index], images[newIndex]] = [images[newIndex], images[index]];
+        this.renderCarousel(images);
+        this.updateLivePreview();
     },
 
-    // Save content (draft or published)
-    saveContent(status) {
-        console.log(`Saving content as ${status}...`);
-
-        // Collect form data
-        const formData = new FormData();
-        formData.append('action', 'save');
-        formData.append('page', this.currentPage);
-        formData.append('status', status);
-
-        // Get all editor values
-        const panel = document.getElementById(`editor-${this.currentPage}`);
-        if (panel) {
-            panel.querySelectorAll('input, textarea, select').forEach(field => {
-                if (field.id) {
-                    let value;
-                    if (this.editors[field.id]) {
-                        // Get content from Quill editor
-                        value = this.editors[field.id].root.innerHTML;
-                    } else {
-                        value = field.value;
-                    }
-                    formData.append(field.id, value);
-                }
-            });
-        }
-
-        // Send to API
-        fetch(this.apiBaseUrl, {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.showToast(`Content ${status === 'draft' ? 'saved as draft' : 'published'} successfully!`, 'success');
-                    if (status === 'published') {
-                        this.loadPageContent(this.currentPage);
-                        this.closeEditModal();
-                    }
-                } else {
-                    throw new Error(data.message || 'Save failed');
-                }
-            })
-            .catch(error => {
-                console.error('Error saving content:', error);
-                this.showToast('Error: ' + error.message, 'error');
-            });
+    deleteCarouselItem(index) {
+        if (!confirm('Delete this image?')) return;
+        this.currentContent.carousel_images.splice(index, 1);
+        this.renderCarousel(this.currentContent.carousel_images);
+        this.updateLivePreview();
     },
 
-    // Reset to published version
-    resetToPublished() {
-        if (confirm('Are you sure you want to discard all unsaved changes and reset to the published version?')) {
-            this.loadEditorContent();
-            this.showToast('Content reset to published version', 'info');
-        }
-    },
+    async handleCarouselUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-    // Show toast notification
-    showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        if (!container) {
-            console.warn('Toast container not found');
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            this.showToast('Please upload a valid image (JPG, PNG, or WebP)', 'error');
+            event.target.value = '';
             return;
         }
 
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            this.showToast('Image must be less than 5MB', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'carousel');
+        formData.append('action', 'upload_image');
+
+        try {
+            this.showToast('Uploading image...', 'info');
+
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                if (!this.currentContent.carousel_images) {
+                    this.currentContent.carousel_images = [];
+                }
+
+                this.currentContent.carousel_images.push({
+                    image: '/' + data.file_path.replace(/^\/+/, ''),
+                    title: 'New Image',
+                    description: 'Add description'
+                });
+
+                this.renderCarousel(this.currentContent.carousel_images);
+                this.updateLivePreview();
+                this.showToast('Image uploaded successfully!', 'success');
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showToast('Upload failed: ' + error.message, 'error');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    async handleVideoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'videos');
+
+        try {
+            this.showToast('Uploading video...', 'info');
+            const response = await fetch(`${this.apiBaseUrl}?action=upload_image`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                const input = document.getElementById('video-url');
+                if (input) {
+                    input.value = data.file_path;
+                    this.updateLivePreview();
+                }
+                this.showToast('Video uploaded', 'success');
+                event.target.value = '';
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showToast('Upload failed', 'error');
+        }
+    },
+
+    async handleAboutHeroUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'about');
+        formData.append('action', 'upload_image');
+
+        try {
+            this.showToast('Uploading...', 'info');
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                const imgPath = '/' + data.file_path.replace(/^\/+/, '');
+                document.getElementById('about-hero-path').value = imgPath;
+                document.getElementById('about-hero-img').src = imgPath;
+                document.getElementById('about-hero-img').style.display = 'block';
+                this.updateLivePreview();
+                this.showToast('Image uploaded!', 'success');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showToast('Upload failed', 'error');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    updateLivePreview() {
+        // Reload the live preview iframe
+        const iframe = document.getElementById('livePreviewIframe');
+        if (!iframe) return;
+
+        // Reload with current page and timestamp to avoid cache
+        iframe.src = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
+    },
+
+    collectContent() {
+        const content = { ...this.currentContent };
+
+        // Collect from Quill editors
+        Object.keys(this.quillEditors).forEach(key => {
+            const editor = this.quillEditors[key];
+            const html = editor.root.innerHTML;
+
+            // Map editor IDs to content field names
+            if (key === 'quill-hero-headline') content.hero_headline = html;
+            else if (key === 'quill-hero-subtitle') content.hero_subtitle = html;
+            else if (key === 'quill-video-title') content.video_title = html;
+            else if (key === 'quill-video-subtitle') content.video_subtitle = html;
+            else if (key === 'quill-welcome') content.welcome_message = html;
+            else if (key === 'quill-intro') content.intro_text = html;
+            else if (key === 'quill-main-content') content.content = html; // FIX: Map to 'content'
+            else if (key === 'quill-about-subheadline') content.about_subheadline = html;
+            else if (key === 'quill-about-mission') content.about_mission = html;
+            else if (key === 'quill-about-vision') content.about_vision = html;
+            else if (key === 'quill-about-story') content.about_story = html;
+        });
+
+        // Collect from inputs
+        const inputs = ['footer-company', 'footer-email', 'footer-phone', 'footer-address', 'footer-hours', 'video-url',
+            'about-headline', 'about-address', 'about-phone', 'about-email',
+            'about-hours-weekday', 'about-hours-sunday', 'about-hero-path'
+        ];
+        inputs.forEach(id => {
+            const input = document.getElementById(id);
+            if (input) {
+                const fieldName = id.replace(/-/g, '_');
+                content[fieldName] = input.value;
+            }
+        });
+
+        return content;
+    },
+
+    async saveDraft() {
+        const content = this.collectContent();
+
+        const formData = new FormData();
+        formData.append('action', 'save');
+        formData.append('page', this.currentPage);
+        formData.append('content', JSON.stringify(content));
+
+        try {
+            this.showToast('Saving draft...', 'info');
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                if (data.unchanged) {
+                    this.showToast('No changes to save', 'info');
+                } else {
+                    this.showToast('Draft saved!', 'success');
+
+                    // CRITICAL: Reload ALL previews with delay
+                    setTimeout(() => {
+                        // 1. Reload modal preview (inside edit modal)
+                        const modalPreview = document.getElementById('livePreviewIframe');
+                        if (modalPreview) {
+                            modalPreview.src = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
+                            console.log('✅ Modal preview reloaded');
+                        }
+
+                        // 2. Reload main preview (outside modal, in Content Management page)
+                        const mainPreview = document.getElementById('previewIframe');
+                        if (mainPreview) {
+                            mainPreview.src = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
+                            console.log('✅ Main preview reloaded');
+                        }
+                    }, 600); // Wait for database to commit
+
+                    // Update status badge
+                    const statusEl = document.getElementById('previewStatus');
+                    if (statusEl) {
+                        statusEl.textContent = 'Draft';
+                        statusEl.className = 'preview-status status-draft';
+                    }
+                }
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('Save error:', error);
+            this.showToast('Error saving draft', 'error');
+        }
+    },
+
+    async publish() {
+        if (!confirm('Publish this content? It will be visible to all users.')) return;
+
+        const formData = new FormData();
+        formData.append('action', 'publish');
+        formData.append('page', this.currentPage);
+
+        try {
+            this.showToast('Publishing...', 'info');
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.showToast('Content published!', 'success');
+                this.loadPreview();
+                this.closeEditModal();
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('Publish error:', error);
+            this.showToast('Error publishing', 'error');
+        }
+    },
+
+    async discardDraft() {
+        if (!confirm('Discard all unsaved changes? This will revert to the published version.')) return;
+
+        const formData = new FormData();
+        formData.append('action', 'discard');
+        formData.append('page', this.currentPage);
+
+        try {
+            this.showToast('Discarding changes...', 'info');
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                this.showToast('Changes discarded', 'info');
+                this.loadEditorContent(); // Reload published content
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            console.error('Discard error:', error);
+            this.showToast('Error discarding', 'error');
+        }
+    },
+
+    showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
+        toast.className = `toast toast-${type} show`;
         toast.textContent = message;
 
         container.appendChild(toast);
 
         setTimeout(() => {
-            toast.classList.add('show');
-        }, 10);
-
-        setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
-    },
-
-    // Add banner (placeholder)
-    addBanner(sectionId) {
-        console.log(`Add banner to ${sectionId}`);
-        this.showToast('Banner upload functionality coming soon', 'info');
-    },
-
-    // Toggle version history drawer
-    toggleVersionDrawer() {
-        const drawer = document.getElementById('versionDrawer');
-        if (drawer) {
-            drawer.classList.toggle('show');
-
-            if (drawer.classList.contains('show')) {
-                this.loadVersionHistory();
-            }
-        }
-    },
-
-    // Load version history
-    loadVersionHistory() {
-        fetch(`${this.apiBaseUrl}?action=get_versions&page=${this.currentPage}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const versionList = document.getElementById('versionList');
-                    if (versionList && data.versions) {
-                        versionList.innerHTML = data.versions.map(v => `
-                            <div class="version-item">
-                                <div class="version-info">
-                                    <strong>Version ${v.version}</strong>
-                                    <span class="version-status ${v.status}">${v.status}</span>
-                                </div>
-                                <div class="version-meta">
-                                    <small>By ${v.updated_by}</small>
-                                    <small>${v.updated_at}</small>
-                                </div>
-                            </div>
-                        `).join('');
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error loading version history:', error);
-            });
     }
 };
 
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        // Small delay to ensure all resources are loaded
-        setTimeout(() => CM.init(), 100);
+// BETTER initialization approach
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM Ready - Initializing CMS');
+
+    // Check if Content Management section exists
+    const contentSection = document.querySelector('[data-section="content"]');
+    if (!contentSection) {
+        console.log('Content section not found');
+        return;
+    }
+
+    // If content section is already visible, init immediately
+    if (contentSection.classList.contains('show')) {
+        console.log('Content section visible - initializing now');
+        CM.init();
+    }
+
+    // Watch for navigation clicks
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function () {
+            const targetSection = this.dataset.section;
+            console.log('Navigation clicked:', targetSection);
+
+            if (targetSection === 'content') {
+                // Wait for section to be visible
+                setTimeout(() => {
+                    console.log('Initializing CMS after navigation');
+                    CM.init();
+                }, 300);
+            }
+        });
     });
-} else {
-    setTimeout(() => CM.init(), 100);
-}
+});

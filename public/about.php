@@ -1,6 +1,10 @@
 <?php
 // /public/index.php – PUBLIC landing page (no auth required)
 require_once __DIR__ . '/../backend/config/app.php';
+require_once __DIR__ . '/../backend/lib/cms_helper.php';
+
+$content = getCMSContent('about');
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -74,8 +78,8 @@ if ($isCustomer) {
         <!-- Hero Section -->
         <section class="sp-hero">
             <div class="sp-container">
-                <h1 class="sp-hero-title">About RADS Tooling</h1>
-                <p class="sp-hero-subtitle">Your trusted partner in precision tooling and industrial solutions</p>
+                <h1><?php echo strip_tags($content['about_headline'] ?? 'About RADS Tooling'); ?></h1>
+                <?php echo $content['about_subheadline'] ?? '<p>Your trusted partner</p>'; ?>
                 <div class="sp-hero-buttons">
                     <a href="signup.php" class="sp-btn sp-btn-primary">Get Started</a>
                     <a href="products.php" class="sp-btn sp-btn-secondary">Browse Products</a>
@@ -95,22 +99,19 @@ if ($isCustomer) {
                                 <span class="sp-icon">📍</span>
                                 <div>
                                     <strong>Location</strong>
-                                    <p>Green Breeze, Piela<br>
-                                        Dasmariñas, Cavite, Philippines</p>
+                                    <p><strong>Address:</strong> <?php echo htmlspecialchars($content['about_address'] ?? 'N/A'); ?></p>
                                 </div>
                             </div>
                             <div class="sp-info-item">
                                 <span class="sp-icon">📞</span>
                                 <div>
-                                    <strong>Phone</strong>
-                                    <p>+63 (976) 228-4270</p>
+                                    <p><strong>Phone:</strong> <?php echo htmlspecialchars($content['about_phone'] ?? 'N/A'); ?></p>
                                 </div>
                             </div>
                             <div class="sp-info-item">
                                 <span class="sp-icon">✉️</span>
                                 <div>
-                                    <strong>Email</strong>
-                                    <p>RadsTooling@gmail.com</p>
+                                    <p><strong>Email:</strong> <?php echo htmlspecialchars($content['about_email'] ?? 'N/A'); ?></p>
                                 </div>
                             </div>
                         </div>
@@ -121,12 +122,10 @@ if ($isCustomer) {
                         <h2 class="sp-card-title">Operating Hours</h2>
                         <div class="sp-hours-table">
                             <div class="sp-hours-row">
-                                <span>Monday - Saturday</span>
-                                <strong>8:00 AM - 5:00 PM</strong>
+                                <p><strong>Hours:</strong> <?php echo htmlspecialchars($content['about_hours_weekday'] ?? 'N/A'); ?></p>
                             </div>
                             <div class="sp-hours-row">
-                                <span>Sunday</span>
-                                <strong>Closed</strong>
+                                <p><?php echo htmlspecialchars($content['about_hours_sunday'] ?? 'Sunday: Closed'); ?></p>
                             </div>
                         </div>
                         <div class="sp-notice">
@@ -145,12 +144,12 @@ if ($isCustomer) {
                     <div class="sp-mv-panel">
                         <div class="sp-mv-icon">🎯</div>
                         <h2>Our Mission</h2>
-                        <p>To provide high-quality tooling solutions that empower businesses to achieve precision, efficiency, and innovation in their manufacturing processes. We are committed to delivering exceptional products and services that meet the evolving needs of our customers while maintaining the highest standards of quality and reliability.</p>
+                        <?php echo $content['about_mission'] ?? '<p>Loading...</p>'; ?>
                     </div>
                     <div class="sp-mv-panel">
                         <div class="sp-mv-icon">🔮</div>
                         <h2>Our Vision</h2>
-                        <p>To become the leading provider of industrial tooling solutions in the Philippines and Southeast Asia, recognized for our commitment to innovation, quality, and customer satisfaction. We envision a future where RADS Tooling is the first choice for businesses seeking reliable, cutting-edge tooling solutions that drive their success.</p>
+                        <?php echo $content['about_vision'] ?? '<p>Loading...</p>'; ?>
                     </div>
                 </div>
             </div>
@@ -161,9 +160,7 @@ if ($isCustomer) {
             <div class="sp-container">
                 <div class="sp-story">
                     <h2>Our Story</h2>
-                    <p>Founded with a passion for precision and innovation, RADS Tooling has been serving the industrial community for over a decade. What started as a small workshop has grown into a comprehensive tooling solutions provider, offering everything from standard tools to custom-designed equipment tailored to specific manufacturing needs.</p>
-                    <p>Our journey has been marked by continuous learning, adaptation, and an unwavering commitment to quality. We believe in building lasting relationships with our clients, understanding their unique challenges, and providing solutions that not only meet but exceed their expectations.</p>
-                    <p>Today, RADS Tooling stands as a testament to the power of dedication and expertise. Our team of skilled professionals works tirelessly to ensure that every product leaving our facility meets the highest standards of quality and precision. As we look to the future, we remain committed to innovation, sustainability, and the continued success of our valued customers.</p>
+                    <?php echo $content['about_story'] ?? '<p>Loading...</p>'; ?>
                 </div>
             </div>
         </section>

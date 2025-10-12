@@ -1,6 +1,10 @@
 <?php
 // /public/index.php – PUBLIC landing page (no auth required)
 require_once __DIR__ . '/../backend/config/app.php';
+require_once __DIR__ . '/../backend/lib/cms_helper.php';
+
+$content = getCMSContent('terms');
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -76,187 +80,13 @@ if ($isCustomer) {
             <div class="rt-container">
                 <div class="rt-about-narrative" style="margin-top: 3rem;">
                     <div class="rt-policy-content">
-                        <h1>Terms & Conditions</h1>
-                        <p><em>Effective Date: January 2024</em></p>
-
-                        <h2>1. Acceptance of Terms</h2>
-                        <p>By accessing and using the RADS Tooling website and services, you accept and agree to be bound by these Terms & Conditions. If you do not agree to these terms, please do not use our services.</p>
-
-                        <p>These terms apply to all visitors, users, customers, and others who access or use our services, including but not limited to browsing our website, placing orders, or engaging with our custom tooling services.</p>
-
-                        <h2>2. Accounts and Registration</h2>
-                        <h3>Account Creation</h3>
-                        <p>To access certain features of our services, you may be required to create an account. When creating an account, you must:</p>
-                        <ul>
-                            <li>Provide accurate, current, and complete information</li>
-                            <li>Maintain and promptly update your account information</li>
-                            <li>Keep your password secure and confidential</li>
-                            <li>Accept responsibility for all activities under your account</li>
-                            <li>Notify us immediately of any unauthorized use</li>
-                        </ul>
-
-                        <h3>Account Termination</h3>
-                        <p>We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or remain inactive for an extended period.</p>
-
-                        <h2>3. Orders and Payments</h2>
-                        <h3>Product Orders</h3>
-                        <p>When you place an order through our website:</p>
-                        <ul>
-                            <li>You are making an offer to purchase products subject to these terms</li>
-                            <li>All orders are subject to acceptance and availability</li>
-                            <li>We reserve the right to refuse or cancel any order for any reason</li>
-                            <li>Prices are subject to change without notice</li>
-                            <li>You agree to pay all charges associated with your order</li>
-                        </ul>
-
-                        <h3>Payment Terms</h3>
-                        <p>Payment must be made in full at the time of order unless otherwise agreed. We accept the following payment methods:</p>
-                        <ul>
-                            <li>Credit and debit cards (Visa, MasterCard, American Express)</li>
-                            <li>Bank transfers for large orders</li>
-                            <li>Cash on delivery (for local customers only)</li>
-                            <li>Corporate accounts (subject to credit approval)</li>
-                        </ul>
-
-                        <h3>Pricing Errors</h3>
-                        <p>In the event of a pricing error, we reserve the right to cancel orders placed at the incorrect price. We will notify you promptly and offer you the option to purchase at the correct price.</p>
-
-                        <h2>4. Shipping, Delivery, and Pickup</h2>
-                        <h3>Shipping Policy</h3>
-                        <p>We offer shipping within the Philippines and to select international destinations. Shipping terms include:</p>
-                        <ul>
-                            <li>Shipping costs are calculated based on weight, size, and destination</li>
-                            <li>Delivery times are estimates and not guaranteed</li>
-                            <li>Risk of loss transfers to you upon delivery to the carrier</li>
-                            <li>International orders may be subject to customs duties and taxes</li>
-                        </ul>
-
-                        <h3>Local Pickup</h3>
-                        <p>Customers may opt to pick up orders at our facility during operating hours:</p>
-                        <ul>
-                            <li>Monday to Saturday: 8:00 AM - 5:00 PM</li>
-                            <li>Sunday: Closed</li>
-                            <li>Valid ID required for pickup</li>
-                            <li>Orders must be collected within 30 days of notification</li>
-                        </ul>
-
-                        <h2>5. Custom Products and Services</h2>
-                        <h3>Custom Tooling Solutions</h3>
-                        <p>For custom tooling projects:</p>
-                        <ul>
-                            <li>Specifications must be approved in writing before production</li>
-                            <li>A deposit of 50% may be required before work begins</li>
-                            <li>Changes to specifications after approval may incur additional charges</li>
-                            <li>Delivery times for custom products are estimates only</li>
-                            <li>Custom products are non-returnable unless defective</li>
-                        </ul>
-
-                        <h3>Intellectual Property</h3>
-                        <p>You retain ownership of any designs you provide for custom work. However, you grant us a license to use such designs for the purpose of fulfilling your order. We retain ownership of any tooling, processes, or methods we develop.</p>
-
-                        <h2>6. Returns and Cancellations</h2>
-                        <h3>Return Policy</h3>
-                        <p>We accept returns under the following conditions:</p>
-                        <ul>
-                            <li>Standard products may be returned within 30 days of receipt</li>
-                            <li>Products must be unused and in original packaging</li>
-                            <li>Customer is responsible for return shipping costs</li>
-                            <li>Refunds will be processed within 10 business days of receipt</li>
-                            <li>Custom products are non-returnable except for defects</li>
-                        </ul>
-
-                        <h3>Cancellation Policy</h3>
-                        <p>Orders may be cancelled:</p>
-                        <ul>
-                            <li>Within 24 hours of placement for standard products</li>
-                            <li>Before production begins for custom products</li>
-                            <li>Cancellation fees may apply for custom orders</li>
-                            <li>Deposits on custom orders are non-refundable after production begins</li>
-                        </ul>
-
-                        <h2>7. Product Warranty</h2>
-                        <h3>Standard Warranty</h3>
-                        <p>We warrant that our products will be free from material defects for a period of:</p>
-                        <ul>
-                            <li>12 months for standard tools</li>
-                            <li>6 months for consumable items</li>
-                            <li>As agreed for custom products</li>
-                        </ul>
-
-                        <h3>Warranty Exclusions</h3>
-                        <p>This warranty does not cover:</p>
-                        <ul>
-                            <li>Normal wear and tear</li>
-                            <li>Damage from misuse or improper maintenance</li>
-                            <li>Modifications made by the customer</li>
-                            <li>Use beyond specified capacity or purpose</li>
-                        </ul>
-
-                        <h2>8. Limitation of Liability</h2>
-                        <p>To the maximum extent permitted by law:</p>
-                        <ul>
-                            <li>Our liability is limited to the purchase price of the product</li>
-                            <li>We are not liable for indirect, consequential, or punitive damages</li>
-                            <li>We are not responsible for lost profits or business interruption</li>
-                            <li>These limitations apply regardless of the legal theory</li>
-                        </ul>
-
-                        <h2>9. Indemnification</h2>
-                        <p>You agree to indemnify, defend, and hold harmless RADS Tooling, its officers, directors, employees, and agents from any claims, damages, losses, or expenses arising from:</p>
-                        <ul>
-                            <li>Your violation of these terms</li>
-                            <li>Your use or misuse of our products</li>
-                            <li>Your violation of any law or third-party rights</li>
-                            <li>Content or designs you provide for custom products</li>
-                        </ul>
-
-                        <h2>10. Intellectual Property Rights</h2>
-                        <p>All content on our website, including text, graphics, logos, images, and software, is the property of RADS Tooling or its licensors and is protected by intellectual property laws. You may not:</p>
-                        <ul>
-                            <li>Copy, modify, or distribute our content without permission</li>
-                            <li>Use our trademarks without written consent</li>
-                            <li>Reverse engineer or attempt to extract source code</li>
-                            <li>Use automated systems to access our website</li>
-                        </ul>
-
-                        <h2>11. Privacy and Data Protection</h2>
-                        <p>Your use of our services is also governed by our Privacy Policy, which is incorporated into these terms by reference. By using our services, you consent to our collection and use of your information as described in the Privacy Policy.</p>
-
-                        <h2>12. Dispute Resolution</h2>
-                        <h3>Governing Law</h3>
-                        <p>These terms are governed by the laws of the Republic of the Philippines, without regard to conflict of law principles.</p>
-
-                        <h3>Arbitration</h3>
-                        <p>Any disputes arising from these terms or your use of our services shall be resolved through binding arbitration in accordance with the rules of the Philippine Dispute Resolution Center, unless otherwise agreed by both parties.</p>
-
-                        <h2>13. Modifications to Terms</h2>
-                        <p>We reserve the right to modify these Terms & Conditions at any time. Changes will be effective immediately upon posting to our website. Your continued use of our services after any modifications constitutes acceptance of the updated terms.</p>
-
-                        <p>We will make reasonable efforts to notify registered users of material changes via email or website notification.</p>
-
-                        <h2>14. Severability</h2>
-                        <p>If any provision of these terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall remain in full force and effect.</p>
-
-                        <h2>15. Entire Agreement</h2>
-                        <p>These Terms & Conditions, together with our Privacy Policy and any other agreements explicitly referenced herein, constitute the entire agreement between you and RADS Tooling regarding the use of our services.</p>
-
-                        <h2>16. Contact Information</h2>
-                        <p>For questions or concerns regarding these Terms & Conditions, please contact us:</p>
-                        <ul>
-                            <li><strong>Email:</strong> RadsTooling@gmail.com</li>
-                            <li><strong>Phone:</strong> +63 (976) 228-4270</li>
-                            <li><strong>Address:</strong> Green Breeze, Piela, Dasmariñas, Cavite, Philippines</li>
-                            <li><strong>Business Hours:</strong> Monday-Saturday, 8:00 AM - 5:00 PM</li>
-                        </ul>
-
-                        <h2>17. Acknowledgment</h2>
-                        <p>By using RADS Tooling's website and services, you acknowledge that you have read, understood, and agree to be bound by these Terms & Conditions.</p>
+                        <?php echo $content['content'] ?? '<h1>Terms & Conditions</h1><p>Loading content...</p>'; ?>
                     </div>
                 </div>
             </div>
         </main>
 
-         <!-- RADS-TOOLING Chat Support Widget (Guest Mode) -->
+        <!-- RADS-TOOLING Chat Support Widget (Guest Mode) -->
         <button id="rtChatBtn" class="rt-chat-btn">
             <span class="material-symbols-rounded">chat</span>
             Need Help?

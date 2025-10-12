@@ -20,68 +20,65 @@ class Mailer
     private function configureMailer(): void
     {
         try {
-            // Server settings
             $this->mailer->isSMTP();
-            $this->mailer->Host = $this->config['host'];
-            $this->mailer->SMTPAuth = true;
-            $this->mailer->Username = $this->config['username'];
-            $this->mailer->Password = $this->config['password'];
-            $this->mailer->SMTPSecure = $this->config['secure'] === 'tls' ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
-            $this->mailer->Port = $this->config['port'];
+            $this->mailer->Host       = $this->config['host'];
+            $this->mailer->SMTPAuth   = true;
+            $this->mailer->Username   = $this->config['username'];
+            $this->mailer->Password   = $this->config['password'];
 
-            // Debug settings (remove in production)
-            // $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
-            
-            // Sender settings
-            $this->mailer->setFrom($this->config['from_email'], $this->config['from_name']);
-            
-            // Reply-To to improve deliverability
-            if (isset($this->config['reply_to'])) {
-                $this->mailer->addReplyTo($this->config['reply_to'], $this->config['from_name']);
+            // Map secure to PHPMailer constants
+            $secure = strtolower((string)($this->config['secure'] ?? ''));
+            if ($secure === 'tls') {
+                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            } elseif ($secure === 'ssl') {
+                $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } else {
+                $this->mailer->SMTPSecure = false;
             }
-            
+
+            $this->mailer->Port = (int)$this->config['port'];
+
+            // Enable once if you need to see SMTP conversation in logs:
+            // $this->mailer->SMTPDebug = SMTP::DEBUG_SERVER;
+
+            $this->mailer->setFrom($this->config['from_email'], $this->config['from_name'] ?? '');
+            if (!empty($this->config['reply_to'])) {
+                $this->mailer->addReplyTo($this->config['reply_to'], $this->config['from_name'] ?? '');
+            }
+
             $this->mailer->isHTML(true);
             $this->mailer->CharSet = 'UTF-8';
-            
-            // Additional headers to reduce spam score
-            $this->mailer->XMailer = ' '; // Remove X-Mailer header
-            $this->mailer->Sender = $this->config['from_email']; // Add Sender header
-
-        } catch (Exception $e) {
-            error_log("Mailer configuration error: " . $e->getMessage());
-            throw new Exception("Email configuration failed");
+        } catch (Throwable $e) {
+            error_log('[MAIL] configureMailer error: ' . $e->getMessage());
         }
     }
-
     /**
      * Send verification code for customer registration
      */
-    public function sendVerificationCode(string $email, string $fullName, string $verificationCode): bool
+    public function sendVerificationCode(string $toEmail, string $toName, string $code): bool
     {
         try {
             $this->mailer->clearAddresses();
-            $this->mailer->addAddress($email, $fullName);
+            $this->mailer->clearAttachments();
 
-            $this->mailer->Subject = 'Verify Your Account - Rads Tooling';
-            
-            $htmlBody = $this->getRegistrationEmailTemplate($fullName, $verificationCode);
-            $textBody = $this->getRegistrationEmailTextTemplate($fullName, $verificationCode);
-            
-            $this->mailer->Body = $htmlBody;
+            $this->mailer->addAddress($toEmail, $toName);
+            $this->mailer->Subject = 'Your RADS Tooling verification code';
+
+            // ✅ Use your styled templates (blue theme, not the red reset style)
+            $htmlBody = $this->getRegistrationEmailTemplate($toName, $code);
+            $textBody = $this->getRegistrationEmailTextTemplate($toName, $code);
+
+            $this->mailer->isHTML(true);
+            $this->mailer->Body    = $htmlBody;
             $this->mailer->AltBody = $textBody;
 
-            $result = $this->mailer->send();
-            
-            if ($result) {
-                error_log("Verification email sent successfully to: {$email}");
-            } else {
-                error_log("Failed to send verification email to: {$email}");
+            $ok = $this->mailer->send();
+            if (!$ok) {
+                error_log('[MAIL] send() returned false. ErrorInfo: ' . ($this->mailer->ErrorInfo ?? 'n/a'));
             }
-            
-            return $result;
-
-        } catch (Exception $e) {
-            error_log("Error sending verification email to {$email}: " . $e->getMessage());
+            return $ok;
+        } catch (Throwable $e) {
+            error_log('[MAIL] Exception while sending to ' . $toEmail . ': ' . $e->getMessage());
             return false;
         }
     }
@@ -96,23 +93,22 @@ class Mailer
             $this->mailer->addAddress($email, $fullName);
 
             $this->mailer->Subject = 'Password Reset Code - Rads Tooling';
-            
+
             $htmlBody = $this->getPasswordResetEmailTemplate($fullName, $resetCode);
             $textBody = $this->getPasswordResetEmailTextTemplate($fullName, $resetCode);
-            
+
             $this->mailer->Body = $htmlBody;
             $this->mailer->AltBody = $textBody;
 
             $result = $this->mailer->send();
-            
+
             if ($result) {
                 error_log("Password reset email sent successfully to: {$email}");
             } else {
                 error_log("Failed to send password reset email to: {$email}");
             }
-            
-            return $result;
 
+            return $result;
         } catch (Exception $e) {
             error_log("Error sending password reset email to {$email}: " . $e->getMessage());
             return false;
@@ -318,7 +314,7 @@ This is an automated message, please do not reply to this email.";
             $this->mailer->Subject = 'Test Email - Rads Tooling';
             $this->mailer->Body = '<h1>Test Email</h1><p>This is a test email to verify PHPMailer configuration.</p>';
             $this->mailer->AltBody = 'Test Email - This is a test email to verify PHPMailer configuration.';
-            
+
             return $this->mailer->send();
         } catch (Exception $e) {
             error_log("Test email failed: " . $e->getMessage());

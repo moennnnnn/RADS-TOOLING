@@ -1,6 +1,26 @@
 <?php
-// /RADS-TOOLING/customer/homepage.php - Customer homepage with full access
+// STEP 1: Load config and CMS helper FIRST
 require_once __DIR__ . '/../backend/config/app.php';
+require_once __DIR__ . '/../backend/lib/cms_helper.php';
+
+// STEP 2: Check if in preview mode
+$isPreview = isset($GLOBALS['cms_preview_content']) && !empty($GLOBALS['cms_preview_content']);
+
+// STEP 3: Only authenticate if NOT preview
+if (!$isPreview) {
+  require_once __DIR__ . '/../includes/guard.php';
+  guard_require_customer();
+  $customer = $_SESSION['customer'];
+} else {
+  // Mock customer for preview
+  $customer = [
+    'id' => 999999,
+    'full_name' => '[Customer Name]',
+    'username' => 'preview_customer',
+    'email' => 'preview@example.com',
+    'profile_image' => null
+  ];
+}
 
 // Ensure user is logged in as customer
 $user = $_SESSION['user'] ?? null;

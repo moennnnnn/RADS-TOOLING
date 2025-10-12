@@ -39,7 +39,7 @@ if (!$isLoggedIn) {
     <!-- Quill Rich Text Editor (No API Key Required) -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-        <!-- Main CSS -->
+    <!-- Main CSS -->
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/style.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-admin.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/content_mgmt.css" />
@@ -567,9 +567,18 @@ if (!$isLoggedIn) {
                 </button>
             </div>
 
+            <!-- Homepage Type Selector -->
+            <div class="cm-page-selector">
+                <label for="homepageType">Editing:</label>
+                <select id="homepageType" class="homepage-type-select">
+                    <option value="home_public">Public Landing Page</option>
+                    <option value="home_customer">Customer Homepage</option>
+                </select>
+            </div>
+
             <!-- Tab Navigation -->
             <div class="cm-tabs">
-                <button class="cm-tab active" data-page="home">
+                <button class="cm-tab active" data-page="home_public">
                     <span class="material-symbols-rounded">home</span>
                     Homepage
                 </button>
@@ -585,46 +594,13 @@ if (!$isLoggedIn) {
                     <span class="material-symbols-rounded">gavel</span>
                     Terms & Conditions
                 </button>
-                <button class="cm-tab" data-page="global">
-                    <span class="material-symbols-rounded">settings</span>
-                    Navbar & Footer
-                </button>
             </div>
 
             <!-- Content Preview Area -->
             <div class="cm-preview-container">
                 <div class="cm-preview-card" id="previewCard">
-                    <div class="preview-loading">
-                        <div class="spinner"></div>
-                        <p>Loading preview...</p>
-                    </div>
+                    <iframe id="previewIframe" style="width:100%; height:600px; border:1px solid #e3edfb; border-radius:8px;"></iframe>
                 </div>
-            </div>
-        </section>
-
-        <!-- ===== PAYMENT VERIFICATION ===== -->
-        <section class="main-section" data-section="payment">
-            <div class="section-header">
-                <h1>Payment Verification</h1>
-            </div>
-            <div class="payments-table-container">
-                <table class="payments-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Customer</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Proof</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="paymentsTableBody">
-                        <tr>
-                            <td colspan="6" style="text-align:center;">Loading payments...</td>
-                        </tr>
-                    </tbody>
-                </table>
             </div>
         </section>
 
@@ -1011,112 +987,332 @@ if (!$isLoggedIn) {
         </div>
 
         <style>
-            .modal-icon-wrapper {
-                text-align: center;
-                margin-bottom: 1rem;
-            }
-
-            .modal-icon {
-                display: inline-flex;
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
+            /* Modal Styles */
+            .modal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 9999;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto;
             }
 
-            .modal-icon.warning {
-                background: #fff3cd;
-            }
-
-            .modal-icon.warning .material-symbols-rounded {
-                color: #f7b731;
-                font-size: 32px;
-            }
-
-            .modal-icon.success {
-                background: #d4edda;
-            }
-
-            .modal-icon.success .material-symbols-rounded {
-                color: #3db36b;
-                font-size: 32px;
-            }
-
-            .modal-icon.error {
-                background: #f8d7da;
-            }
-
-            .modal-icon.error .material-symbols-rounded {
-                color: #e14d4d;
-                font-size: 32px;
-            }
-
-            .modal-small {
-                max-width: 400px;
-            }
-
-            .modal-title {
-                text-align: center;
-                margin-bottom: 0.5rem;
-            }
-
-            .modal-message {
-                text-align: center;
-                color: #666;
-                margin-bottom: 1.5rem;
-            }
-
-            .modal-actions {
+            .modal.show {
                 display: flex;
-                gap: 0.5rem;
-                justify-content: center;
             }
 
-            .btn-modal-primary {
-                background: #2f5b88;
-                color: #fff;
+            .modal-dialog {
+                width: 95vw;
+                height: 95vh;
+                margin: auto;
+            }
+
+            .modal-fullscreen .modal-content {
+                width: 100%;
+                height: 100%;
+                background: white;
+                border-radius: 8px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .modal-header {
+                padding: 20px;
+                border-bottom: 1px solid #e0e0e0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .modal-header h2 {
+                margin: 0;
+                font-size: 1.5rem;
+            }
+
+            .modal-close {
+                background: none;
                 border: none;
-                padding: 10px 24px;
-                border-radius: 6px;
-                font-weight: 600;
                 cursor: pointer;
-                transition: background 0.2s;
+                padding: 8px;
+                border-radius: 4px;
             }
 
-            .btn-modal-primary:hover {
-                background: #17416d;
+            .modal-close:hover {
+                background: #f5f5f5;
             }
 
-            .btn-modal-secondary {
-                background: #e0e0e0;
-                color: #333;
+            .modal-body {
+                flex: 1;
+                overflow: hidden;
+            }
+
+            .editor-layout {
+                display: grid;
+                grid-template-columns: 500px 1fr;
+                height: 100%;
+                gap: 0;
+            }
+
+            /* LEFT Panel */
+            .editor-panel {
+                border-right: 1px solid #e0e0e0;
+                display: flex;
+                flex-direction: column;
+                background: #fafafa;
+            }
+
+            .editor-header {
+                padding: 16px;
+                border-bottom: 1px solid #e0e0e0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .preview-status {
+                padding: 4px 12px;
+                border-radius: 12px;
+                font-size: 0.85rem;
+                font-weight: 600;
+            }
+
+            .status-draft {
+                background: #fff3cd;
+                color: #856404;
+            }
+
+            .status-published {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .editor-fields {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+            }
+
+            .editor-section {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+            .editor-section h3 {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 16px;
+                font-size: 1.1rem;
+            }
+
+            .editor-section label {
+                display: block;
+                margin: 12px 0 6px;
+                font-weight: 600;
+                font-size: 0.9rem;
+            }
+
+            .quill-container {
+                height: 150px;
+                margin-bottom: 20px;
+            }
+
+            .form-input {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                font-size: 0.95rem;
+            }
+
+            .btn-upload {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 16px;
+                background: #1f4e74;
+                color: white;
                 border: none;
-                padding: 10px 24px;
-                border-radius: 6px;
-                font-weight: 600;
+                border-radius: 4px;
                 cursor: pointer;
-                transition: background 0.2s;
+                margin-top: 10px;
             }
 
-            .btn-modal-secondary:hover {
-                background: #d0d0d0;
+            .btn-upload:hover {
+                background: #163a56;
             }
 
-            .btn-modal-danger {
-                background: #e14d4d;
-                color: #fff;
+            .alert {
+                padding: 12px;
+                border-radius: 6px;
+                margin-bottom: 16px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .alert-info {
+                background: #cfe2ff;
+                color: #084298;
+            }
+
+            .help-text {
+                font-size: 0.85rem;
+                color: #666;
+                margin-top: 6px;
+            }
+
+            /* RIGHT Panel */
+            .preview-panel {
+                display: flex;
+                flex-direction: column;
+                background: white;
+            }
+
+            .preview-header {
+                padding: 16px;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            .preview-iframe-container {
+                flex: 1;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .preview-iframe-container iframe {
+                width: 100%;
+                height: 100%;
                 border: none;
-                padding: 10px 24px;
-                border-radius: 6px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background 0.2s;
             }
 
-            .btn-modal-danger:hover {
-                background: #c93030;
+            /* Modal Footer */
+            .modal-footer {
+                padding: 16px 20px;
+                border-top: 1px solid #e0e0e0;
+                display: flex;
+                gap: 12px;
+                justify-content: flex-end;
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+            }
+
+            .btn-secondary {
+                background: #6c757d;
+                color: white;
+            }
+
+            .btn-primary {
+                background: #0d6efd;
+                color: white;
+            }
+
+            .btn-success {
+                background: #28a745;
+                color: white;
+            }
+
+            .btn:hover {
+                opacity: 0.9;
+            }
+
+            /* Carousel Manager */
+            .carousel-item-edit {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                padding: 12px;
+                background: #f8f9fa;
+                border-radius: 6px;
+                margin-bottom: 12px;
+            }
+
+            .carousel-item-edit img {
+                width: 80px;
+                height: 80px;
+                object-fit: cover;
+                border-radius: 4px;
+            }
+
+            .carousel-info {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .carousel-info input {
+                padding: 6px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            .carousel-actions {
+                display: flex;
+                gap: 6px;
+            }
+
+            .carousel-actions button {
+                padding: 6px;
+                border: none;
+                background: #fff;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            .carousel-actions button:hover {
+                background: #e9ecef;
+            }
+
+            .btn-delete {
+                color: #dc3545;
+            }
+
+            /* Toast Notifications */
+            .toast-container {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 99999;
+            }
+
+            .toast {
+                padding: 12px 20px;
+                margin-top: 10px;
+                border-radius: 6px;
+                color: white;
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all 0.3s;
+            }
+
+            .toast.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .toast-info {
+                background: #0dcaf0;
+            }
+
+            .toast-success {
+                background: #28a745;
+            }
+
+            .toast-error {
+                background: #dc3545;
             }
         </style>
 
@@ -1148,153 +1344,69 @@ if (!$isLoggedIn) {
         </script>
 
         <!-- ===== CONTENT MANAGEMENT EDIT MODAL ===== -->
-        <div class="cm-modal" id="editModal">
-            <div class="cm-modal-content">
-                <!-- Modal Header -->
-                <div class="cm-modal-header">
-                    <h2 id="modalTitle">Edit Homepage</h2>
-                    <div class="cm-modal-actions">
-                        <button class="btn-modal-action" id="btnSaveDraft" title="Save as draft">
-                            <span class="material-symbols-rounded">save</span> Save Draft
-                        </button>
-                        <button class="btn-modal-action btn-publish" id="btnPublish" title="Publish changes">
-                            <span class="material-symbols-rounded">publish</span> Publish
-                        </button>
-                        <button class="btn-modal-action" id="btnReset" title="Reset to published version">
-                            <span class="material-symbols-rounded">refresh</span> Reset
-                        </button>
-                        <button class="btn-modal-close" id="btnCloseModal" title="Close editor">
+        <div class="modal" id="editModal">
+            <div class="modal-dialog modal-fullscreen">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 id="modalTitle">Edit Content</h2>
+                        <button class="modal-close" id="btnCloseModal">
                             <span class="material-symbols-rounded">close</span>
                         </button>
                     </div>
-                </div>
 
-                <!-- Modal Body: Two-column layout -->
-                <div class="cm-modal-body">
-                    <!-- Left Column: Form Controls -->
-                    <div class="cm-editor-panel">
-                        <!-- Homepage Editor -->
-                        <div class="cm-page-editor" id="editor-home">
-                            <div class="editor-section">
-                                <h3>Hero Section</h3>
-                                <p class="helper-text">Main heading and subheading shown at the top of the homepage</p>
-                                <label>Hero Headline</label>
-                                <textarea id="home_hero_headline" class="wysiwyg-editor"></textarea>
+                    <div class="modal-body">
+                        <!-- Split Layout: Editor LEFT | Preview RIGHT -->
+                        <div class="editor-layout">
+                            <!-- LEFT: Editable Fields -->
+                            <div class="editor-panel">
+                                <div class="editor-header">
+                                    <h3>Edit Fields</h3>
+                                    <div class="editor-status">
+                                        <span id="previewStatus" class="preview-status status-published">Published</span>
+                                    </div>
+                                </div>
 
-                                <label>Hero Subtext</label>
-                                <textarea id="home_hero_subtext" class="wysiwyg-editor"></textarea>
+                                <!-- Notice for Customer Homepage -->
+                                <div id="customerNotice" class="alert alert-info" style="display:none;">
+                                    <span class="material-symbols-rounded">info</span>
+                                    <p>Use <code>{{customer_name}}</code> as placeholder for customer's name</p>
+                                </div>
+
+                                <!-- Dynamic Editor Container -->
+                                <div id="editorContainer" class="editor-fields">
+                                    <!-- Fields will be injected here by JS -->
+                                </div>
                             </div>
 
-                            <div class="editor-section">
-                                <h3>Promo Strip</h3>
-                                <p class="helper-text">Promotional text shown below the hero section</p>
-                                <textarea id="home_promo_text" class="wysiwyg-editor"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- About Us Editor -->
-                        <div class="cm-page-editor" id="editor-about" style="display:none;">
-                            <div class="editor-section">
-                                <h3>Mission Statement</h3>
-                                <textarea id="about_mission" class="wysiwyg-editor"></textarea>
-                            </div>
-
-                            <div class="editor-section">
-                                <h3>Vision Statement</h3>
-                                <textarea id="about_vision" class="wysiwyg-editor"></textarea>
-                            </div>
-
-                            <div class="editor-section">
-                                <h3>Our Story</h3>
-                                <textarea id="about_narrative" class="wysiwyg-editor"></textarea>
-                            </div>
-
-                            <div class="editor-section">
-                                <h3>Contact Information</h3>
-                                <label>Address</label>
-                                <input type="text" id="about_address" placeholder="Street address, city, province">
-
-                                <label>Phone</label>
-                                <input type="text" id="about_phone" placeholder="+63 (XXX) XXX-XXXX">
-
-                                <label>Email</label>
-                                <input type="email" id="about_email" placeholder="email@example.com">
-
-                                <label>Operating Hours</label>
-                                <input type="text" id="about_hours_weekday" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
-                                <input type="text" id="about_hours_sunday" placeholder="Sunday: Closed">
-                            </div>
-                        </div>
-
-                        <!-- Privacy Policy Editor -->
-                        <div class="cm-page-editor" id="editor-privacy" style="display:none;">
-                            <div class="editor-section">
-                                <h3>Privacy Policy Content</h3>
-                                <textarea id="privacy_content" class="wysiwyg-editor"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Terms & Conditions Editor -->
-                        <div class="cm-page-editor" id="editor-terms" style="display:none;">
-                            <div class="editor-section">
-                                <h3>Terms & Conditions Content</h3>
-                                <textarea id="terms_content" class="wysiwyg-editor"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Global (Navbar & Footer) Editor -->
-                        <div class="cm-page-editor" id="editor-global" style="display:none;">
-                            <div class="editor-section">
-                                <h3>Navigation Labels</h3>
-                                <label>Home Label</label>
-                                <input type="text" id="nav_home" placeholder="Home">
-
-                                <label>About Label</label>
-                                <input type="text" id="nav_about" placeholder="About">
-
-                                <label>Products Label</label>
-                                <input type="text" id="nav_products" placeholder="Products">
-                            </div>
-
-                            <div class="editor-section">
-                                <h3>Contact Information</h3>
-                                <label>Support Phone</label>
-                                <input type="text" id="global_phone" placeholder="+63 (XXX) XXX-XXXX">
-
-                                <label>Support Email</label>
-                                <input type="email" id="global_email" placeholder="support@example.com">
-                            </div>
-
-                            <div class="editor-section">
-                                <h3>Footer Content</h3>
-                                <label>About Section</label>
-                                <textarea id="footer_about" class="wysiwyg-editor"></textarea>
-
-                                <label>Copyright Text</label>
-                                <input type="text" id="footer_copyright" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+                            <!-- RIGHT: Live Preview -->
+                            <div class="preview-panel">
+                                <div class="preview-header">
+                                    <h3>Live Preview</h3>
+                                </div>
+                                <div class="preview-iframe-container">
+                                    <iframe id="livePreviewIframe" frameborder="0"></iframe>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right Column: Live Preview -->
-                    <div class="cm-preview-panel">
-                        <div class="preview-header">
-                            <h3>Live Preview</h3>
-                            <span class="preview-status" id="previewStatus">Not saved</span>
-                        </div>
-                        <div class="preview-frame" id="livePreview">
-                            <div class="preview-placeholder">
-                                <span class="material-symbols-rounded">visibility</span>
-                                <p>Preview will appear here as you edit</p>
-                            </div>
-                        </div>
+                    <div class="modal-footer">
+                        <button id="btnDiscard" class="btn btn-secondary">
+                            <span class="material-symbols-rounded">delete</span> Discard Changes
+                        </button>
+                        <button id="btnSaveDraft" class="btn btn-primary">
+                            <span class="material-symbols-rounded">save</span> Save Draft
+                        </button>
+                        <button id="btnPublish" class="btn btn-success">
+                            <span class="material-symbols-rounded">publish</span> Publish
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Toast Notification Container for Content Management -->
-        <div class="toast-container" id="toastContainer"></div>
+        <!-- Toast Container -->
+        <div id="toastContainer" class="toast-container"></div>
 
         <script src="/RADS-TOOLING/assets/JS/chat_admin.js"></script>
         <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>

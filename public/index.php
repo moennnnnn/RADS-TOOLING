@@ -1,6 +1,10 @@
 <?php
 // /public/index.php – PUBLIC landing page (no auth required)
 require_once __DIR__ . '/../backend/config/app.php';
+require_once __DIR__ . '/../backend/lib/cms_helper.php';
+
+// Fetch published content
+$cmsContent = getCMSContent('home_public');
 
 $user = $_SESSION['user'] ?? null;
 $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
@@ -71,13 +75,8 @@ if ($isCustomer) {
       <section class="hero-section">
         <div class="hero-content-wrapper">
           <div class="hero-text-content">
-            <h1>
-              <span class="big-blue-italic">C</span>ustomize Your Dream Cabinets
-            </h1>
-            <p class="hero-subtitle">
-              Design, visualize, and order premium custom cabinets online.
-              Choose your style, materials, and finishes with our 360° preview tool.
-            </p>
+            <?php echo $cmsContent['hero_headline'] ?? '<h1>Welcome to RADS Tooling</h1>'; ?>
+            <?php echo $cmsContent['hero_subtitle'] ?? '<p>Your trusted partner in custom cabinets</p>'; ?>
             <div class="hero-actions">
               <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary">
                 <i class="fas fa-rocket"></i> Get Started Free
@@ -91,20 +90,20 @@ if ($isCustomer) {
             <div class="trust-badges">
               <div class="badge">
                 <i class="fas fa-check-circle"></i>
-                <span>17+ Years Experience</span>
+                <span><?php echo $cmsContent['trust_badge_1'] ?? '17+ Years Experience'; ?></span>
               </div>
               <div class="badge">
                 <i class="fas fa-star"></i>
-                <span>100+ Happy Clients</span>
+                <span><?php echo $cmsContent['trust_badge_2'] ?? '100+ Happy Clients'; ?></span>
               </div>
               <div class="badge">
                 <i class="fas fa-tools"></i>
-                <span>Premium Quality</span>
+                <span><?php echo $cmsContent['trust_badge_3'] ?? 'Premium Quality'; ?></span>
               </div>
             </div>
           </div>
           <div class="hero-image-content">
-            <img src="/RADS-TOOLING/assets/images/cabinet-hero.jpg" alt="Custom Cabinets">
+            <img src="<?php echo $cmsContent['hero_image'] ?? '/RADS-TOOLING/assets/images/cabinet-hero.jpg'; ?>" alt="Custom Cabinets">
           </div>
         </div>
   </div>
@@ -113,8 +112,8 @@ if ($isCustomer) {
   <!-- FEATURES SECTION -->
   <section class="features-section">
     <div class="section-header">
-      <h2>Why Choose <span class="highlight">RADS TOOLING</span>?</h2>
-      <p>Everything you need to create your perfect cabinet</p>
+      <?php echo $cmsContent['features_title'] ?? '<h2>Why Choose RADS TOOLING?</h2>'; ?>
+      <?php echo $cmsContent['features_subtitle'] ?? '<p>Everything you need to create your perfect cabinet</p>'; ?>
     </div>
 
     <div class="features-grid">
@@ -160,45 +159,19 @@ if ($isCustomer) {
       </button>
 
       <div class="carousel-track">
-        <div class="carousel-item">
-          <img src="/RADS-TOOLING/assets/images/cab1.jpg" alt="Modern Kitchen Cabinet">
-          <div class="carousel-caption">
-            <h4>Modern Kitchen</h4>
-            <p>Contemporary design with premium finishes</p>
+        <?php
+        $carouselImages = $cmsContent['carousel_images'] ?? [];
+        foreach ($carouselImages as $image):
+        ?>
+          <div class="carousel-item">
+            <img src="<?php echo htmlspecialchars($image['image']); ?>"
+              alt="<?php echo htmlspecialchars($image['title']); ?>">
+            <div class="carousel-caption">
+              <h4><?php echo htmlspecialchars($image['title']); ?></h4>
+              <p><?php echo htmlspecialchars($image['description']); ?></p>
+            </div>
           </div>
-        </div>
-
-        <div class="carousel-item">
-          <img src="/RADS-TOOLING/assets/images/cab2.jpg" alt="Bedroom Wardrobe">
-          <div class="carousel-caption">
-            <h4>Bedroom Wardrobe</h4>
-            <p>Spacious storage with elegant styling</p>
-          </div>
-        </div>
-
-        <div class="carousel-item">
-          <img src="/RADS-TOOLING/assets/images/cab3.jpg" alt="Living Room Cabinet">
-          <div class="carousel-caption">
-            <h4>Living Room Display</h4>
-            <p>Showcase your style with custom shelving</p>
-          </div>
-        </div>
-
-        <div class="carousel-item">
-          <img src="/RADS-TOOLING/assets/images/cab4.jpg" alt="Bathroom Vanity">
-          <div class="carousel-caption">
-            <h4>Bathroom Vanity</h4>
-            <p>Water-resistant premium materials</p>
-          </div>
-        </div>
-
-        <div class="carousel-item">
-          <img src="/RADS-TOOLING/assets/images/cab5.jpg" alt="Office Storage">
-          <div class="carousel-caption">
-            <h4>Office Storage</h4>
-            <p>Professional workspace solutions</p>
-          </div>
-        </div>
+        <?php endforeach; ?>
       </div>
 
       <button class="carousel-btn next" type="button" aria-label="Next">
@@ -214,12 +187,8 @@ if ($isCustomer) {
     <div class="video-content">
       <div class="video-text">
         <h2>
-          <span class="big-blue-italic">C</span>rafted with Passion & Precision
-        </h2>
-        <p class="video-subtitle">
-          Every cabinet is handcrafted by skilled artisans using premium materials.
-          Watch our craftsmen bring your vision to life.
-        </p>
+          <?php echo $cmsContent['video_title'] ?? '<h2>Crafted with Passion</h2>'; ?>
+          <?php echo $cmsContent['video_subtitle'] ?? '<p>Watch our craftsmen at work</p>'; ?> </h2>
         <ul class="video-features">
           <li><i class="fas fa-check"></i> Premium hardwood materials</li>
           <li><i class="fas fa-check"></i> Expert craftsmanship</li>
@@ -229,7 +198,7 @@ if ($isCustomer) {
       </div>
 
       <div class="video-wrapper">
-        <video controls playsinline poster="/RADS-TOOLING/assets/images/video-poster.jpg">
+        <video controls playsinline poster="/RADS-TOOLING/assets/videos/crafting.mp4">
           <source src="/RADS-TOOLING/assets/videos/crafting.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
@@ -255,8 +224,8 @@ if ($isCustomer) {
   <!-- CTA BANNER -->
   <section class="cta-banner">
     <div class="cta-content">
-      <h2>Ready to Design Your Dream Cabinet?</h2>
-      <p>Join hundreds of satisfied customers who transformed their spaces</p>
+      <?php echo $cmsContent['cta_headline'] ?? '<h2>Ready to Design Your Dream Cabinet?</h2>'; ?>
+      <?php echo $cmsContent['cta_text'] ?? '<p>Join hundreds of satisfied customers</p>'; ?>
       <div class="cta-buttons">
         <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary btn-large">
           <i class="fas fa-user-plus"></i> Create Free Account
@@ -321,10 +290,10 @@ if ($isCustomer) {
     <div class="footer-content">
       <!-- About Section -->
       <div class="footer-section">
-        <h3>About RADS TOOLING</h3>
+        <h3><?php echo $cmsContent['footer_company_name'] ?? 'About RADS TOOLING'; ?></h3>
         <p class="footer-description">
-          Premium custom cabinet manufacturer serving clients since 2007.
-          Quality craftsmanship, affordable prices, and exceptional service.
+          <?php echo $cmsContent['footer_description'] ?? 'Premium custom cabinet manufacturer serving clients since 2007.
+            Quality craftsmanship, affordable prices, and exceptional service.'; ?>
         </p>
         <div class="footer-social">
           <a href="#" class="social-icon" aria-label="Facebook">
@@ -367,22 +336,28 @@ if ($isCustomer) {
         <h3>Contact Info</h3>
         <div class="contact-info-item">
           <span class="material-symbols-rounded">location_on</span>
-          <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+          <span><?php echo $cmsContent['footer_address'] ?? 'Green Breeze, Piela, Dasmariñas, Cavite'; ?></span>
         </div>
         <div class="contact-info-item">
           <span class="material-symbols-rounded">mail</span>
-          <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+          <a href="mailto:<?php echo $cmsContent['footer_email'] ?? 'RadsTooling@gmail.com'; ?>">
+            <?php echo $cmsContent['footer_email'] ?? 'RadsTooling@gmail.com'; ?>
+          </a>
+        </div>
+        <div class="contact-info-item">
+          <span class="material-symbols-rounded">phone</span>
+          <span><?php echo $cmsContent['footer_phone'] ?? '+63 976 228 4270'; ?></span>
         </div>
         <div class="contact-info-item">
           <span class="material-symbols-rounded">schedule</span>
-          <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+          <span><?php echo $cmsContent['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM'; ?></span>
         </div>
       </div>
     </div>
 
     <div class="footer-bottom">
       <p class="footer-copyright">
-        © 2025 RADS TOOLING INC. All rights reserved.
+        <?php echo $cmsContent['footer_copyright'] ?? '© 2025 RADS TOOLING INC. All rights reserved.'; ?>
       </p>
       <div class="footer-legal">
         <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>

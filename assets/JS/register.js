@@ -1,270 +1,230 @@
 // File: /assets/JS/register.js
-// CUSTOMER REGISTRATION WITH EMAIL VERIFICATION
+// CUSTOMER REGISTRATION WITH EMAIL VERIFICATION (+63 phone normalization + modal messages)
 
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('registerForm');
-    const errorDiv = document.getElementById('errorMessage');
-    const loadingDiv = document.getElementById('loadingMessage');
-    const submitBtn = form.querySelector('.btn-primary');
+  const form       = document.getElementById('registerForm');
+  if (!form) return;
 
-    // Form submission
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // Reset states
-        errorDiv.style.display = 'none';
-        loadingDiv.style.display = 'block';
-        submitBtn.disabled = true;
-        
-        // Get form data
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-        
-        // Validate passwords match
-        if (data.password !== data.confirm_password) {
-            showError('Passwords do not match');
-            return;
-        }
-        
-        // Validate password length
-        if (data.password.length < 6) {
-            showError('Password must be at least 6 characters long');
-            return;
-        }
-        
-        // Validate phone number format (Philippine format: +63XXXXXXXXX - 11 digits total)
-        const phoneRegex = /^\+63\d{10}$/;
-        if (!phoneRegex.test(data.phone)) {
-            showError('Invalide Phone Number');
-            return;
-        }
-        
-        // Add audience for customer registration
-        data.audience = 'customer';
-        
-        try {
-            const res = await fetch('/RADS-TOOLING/backend/api/auth.php?action=register', {
-                method: 'POST', 
-                headers: {'Content-Type':'application/json'}, 
-                credentials:'same-origin',
-                body: JSON.stringify(data)
-            });
-            
-            const result = await res.json();
-            
-            if (result.success) {
-                // Store email for verification page
-                sessionStorage.setItem('verify_email', data.email);
-                
-                // Show success and redirect to verify page
-                alert('Account created successfully! Please check your email for verification code.');
-                window.location.href = `/RADS-TOOLING/customer/verify.php?email=${encodeURIComponent(data.email)}`;
-            } else {
-                throw new Error(result.message || 'Registration failed');
-            }
-            
-        } catch (err) { 
-            console.error('Registration error:', err);
-            showError(err.message || 'Registration failed. Please try again.');
-        } finally {
-            loadingDiv.style.display = 'none';
-            submitBtn.disabled = false;
-        }
-    });
+  const errorDiv   = document.getElementById('errorMessage');
+  const loadingDiv = document.getElementById('loadingMessage');
+  const submitBtn  = form.querySelector('.btn-signup-primary');
 
-    // Helper function to show errors
-    function showError(message) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        loadingDiv.style.display = 'none';
-        submitBtn.disabled = false;
+  // Modal helper (falls back to alert if showModal isn't installed yet)
+  const modal = (window.showModal)
+    ? window.showModal
+    : ({ title = 'Notice', html = '' } = {}) => alert((title ? title + ': ' : '') + html.replace(/<[^>]*>/g, ''));
+
+  const get = (id) => (document.getElementById(id)?.value || '').trim();
+
+  function setLoading(on, msg) {
+    if (loadingDiv) {
+      loadingDiv.style.display = on ? 'block' : 'none';
+      if (msg) loadingDiv.textContent = msg;
     }
+    if (submitBtn) submitBtn.disabled = !!on;
+  }
 
-    // Helper function to clear error
-    function clearError() {
-        errorDiv.style.display = 'none';
-        errorDiv.textContent = '';
+  function showError(message) {
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    } else {
+      modal({ title: 'Registration failed', html: message });
     }
+    setLoading(false);
+  }
 
-    // Password strength indicator
-    const passwordInput = document.getElementById('password');
-    const strengthContainer = document.querySelector('.password-strength');
-    const strengthBar = document.querySelector('.password-strength-bar');
-    
-    passwordInput.addEventListener('input', function() {
-        const password = this.value;
-        
-        if (password.length === 0) {
-            strengthContainer.classList.remove('show');
-            return;
-        }
-        
-        strengthContainer.classList.add('show');
-        
-        // Calculate strength
-        let strength = 0;
-        if (password.length >= 8) strength++;
-        if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
-        if (password.match(/[0-9]/)) strength++;
-        if (password.match(/[^a-zA-Z0-9]/)) strength++;
-        
-        // Update bar
-        strengthBar.className = 'password-strength-bar';
-        if (strength <= 1) {
-            strengthBar.classList.add('weak');
-        } else if (strength === 2 || strength === 3) {
-            strengthBar.classList.add('medium');
-        } else {
-            strengthBar.classList.add('strong');
-        }
-    });
+  function clearError() {
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+    }
+  }
 
-    // Real-time password confirmation validation
-    document.getElementById('confirmPassword').addEventListener('input', function() {
-        const password = document.getElementById('password').value;
-        const confirmPassword = this.value;
-        const formGroup = this.closest('.form-group');
-        
-        if (confirmPassword) {
-            if (password === confirmPassword) {
-                formGroup.classList.remove('has-error');
-                formGroup.classList.add('has-success');
-            } else {
-                formGroup.classList.remove('has-success');
-                formGroup.classList.add('has-error');
-            }
-        } else {
-            formGroup.classList.remove('has-success', 'has-error');
-        }
-    });
+  // Build +63 phone from either #phoneLocal (10 digits) or existing #phone
+  function buildPhone() {
+    const local = get('phoneLocal'); // preferred UI (10 digits, e.g., 9123456789)
+    if (local) {
+      if (!/^\d{10}$/.test(local)) return null;
+      return `+63${local}`;
+    }
+    // Fallback to your existing #phone (accepts +63XXXXXXXXXX / 09XXXXXXXXX / 10-digit)
+    const raw = get('phone');
+    if (!raw) return null;
+    if (/^\+63\d{10}$/.test(raw)) return raw;
+    if (/^09\d{9}$/.test(raw))   return '+63' + raw.substring(1);
+    if (/^\d{10}$/.test(raw))    return '+63' + raw;
+    return null;
+  }
 
-    // Email validation and check for existing email
-    let emailTimeout;
-    document.getElementById('email').addEventListener('input', function() {
-        const email = this.value.trim();
-        const formGroup = this.closest('.form-group');
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
-        // Clear any existing error for email
-        if (errorDiv.textContent.includes('Email')) {
-            clearError();
-        }
-        
-        if (!email) {
-            formGroup.classList.remove('has-success', 'has-error');
-            return;
-        }
-        
-        if (!emailRegex.test(email)) {
-            formGroup.classList.remove('has-success');
-            formGroup.classList.add('has-error');
-            return;
-        }
-        
-        // Check if email exists (debounced)
-        clearTimeout(emailTimeout);
-        emailTimeout = setTimeout(async () => {
-            try {
-                const res = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_email', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ email })
-                });
-                const result = await res.json();
-                
-                if (result.data && result.data.available) {
-                    formGroup.classList.remove('has-error');
-                    formGroup.classList.add('has-success');
-                } else {
-                    formGroup.classList.remove('has-success');
-                    formGroup.classList.add('has-error');
-                    showError('Email is already registered');
-                }
-            } catch (err) {
-                console.error('Email check failed:', err);
-            }
-        }, 500);
-    });
+  // Submit handler
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+    setLoading(true, 'Creating your account…');
 
-    // Phone number validation
-    document.getElementById('phone').addEventListener('input', function() {
-        const phone = this.value.trim();
-        const formGroup = this.closest('.form-group');
-        const phoneRegex = /^\+63\d{10}$/;
-        
-        // Clear phone-related errors when typing
-        if (errorDiv.textContent.includes('Phone number')) {
-            clearError();
-        }
-        
-        if (!phone) {
-            formGroup.classList.remove('has-success', 'has-error');
-            return;
-        }
-        
-        if (phoneRegex.test(phone)) {
-            formGroup.classList.remove('has-error');
-            formGroup.classList.add('has-success');
-        } else {
-            formGroup.classList.remove('has-success');
-            formGroup.classList.add('has-error');
-        }
-    });
+    // Collect form data (by IDs for safety)
+    const payload = {
+      audience:   'customer',
+      first_name: get('firstName'),
+      last_name:  get('lastName'),
+      email:      get('email'),
+      username:   get('username'),
+      password:   get('password')
+    };
+    const confirm = get('confirmPassword');
+    const phone   = buildPhone();
 
-    // Username availability check
-    let usernameTimeout;
-    document.getElementById('username').addEventListener('input', function() {
-        const username = this.value.trim();
-        const formGroup = this.closest('.form-group');
-        
-        // Clear username-related errors when typing
-        if (errorDiv.textContent === 'Username is already taken') {
-            clearError();
-        }
-        
-        if (username.length < 3) {
-            formGroup.classList.remove('has-success', 'has-error');
-            return;
-        }
-        
-        clearTimeout(usernameTimeout);
-        usernameTimeout = setTimeout(async () => {
-            try {
-                const res = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_username', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ username })
-                });
-                const result = await res.json();
-                
-                if (result.data && result.data.available) {
-                    formGroup.classList.remove('has-error');
-                    formGroup.classList.add('has-success');
-                } else {
-                    formGroup.classList.remove('has-success');
-                    formGroup.classList.add('has-error');
-                    showError('Username is already taken');
-                }
-            } catch (err) {
-                console.error('Username check failed:', err);
-            }
-        }, 500);
-    });
+    // Client-side validation (server re-validates too)
+    if (!payload.first_name || !payload.last_name)  return showError('Please enter your first and last name.');
+    if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return showError('Please enter a valid email.');
+    if (!payload.username || !/^[A-Za-z0-9_]{3,20}$/.test(payload.username)) return showError('Username must be 3–20 characters (letters, numbers, underscore).');
+    if (!payload.password || payload.password.length < 6) return showError('Password must be at least 6 characters long.');
+    if (payload.password !== confirm)               return showError('Passwords do not match.');
+    if (!phone)                                     return showError('Invalid phone number. Enter 10 digits (e.g., 9123456789) or a valid +63 format.');
+    payload.phone = phone;
 
-    // Basic field validation
-    document.querySelectorAll('input[required]').forEach(input => {
-        if (!['password', 'confirmPassword', 'email', 'username', 'phone'].includes(input.id)) {
-            input.addEventListener('blur', function() {
-                const formGroup = this.closest('.form-group');
-                if (this.value.trim()) {
-                    formGroup.classList.remove('has-error');
-                    formGroup.classList.add('has-success');
-                } else {
-                    formGroup.classList.remove('has-success');
-                }
-            });
-        }
+    try {
+      const res = await fetch('/RADS-TOOLING/backend/api/auth.php?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
+
+      const text = await res.text();
+      let j;
+      try { j = JSON.parse(text); } catch { throw new Error('Server returned invalid response.'); }
+
+      if (!res.ok || !j.success) {
+        throw new Error(j.message || 'Registration failed. Please try again.');
+      }
+
+      // Store email (optional convenience)
+      try { sessionStorage.setItem('verify_email', payload.email); } catch (_) {}
+
+      // Success → modal + redirect to verify
+      modal({
+        title: 'Account created',
+        html:  'Please check your email for the verification code.',
+        actions: [
+          { label: 'Verify now', cls: 'btn btn-primary', onClick: () => { location.href = `/RADS-TOOLING/customer/verify.php?email=${encodeURIComponent(payload.email)}`; } }
+        ]
+      });
+
+      // Fallback redirect if modal not available
+      setTimeout(() => {
+        window.location.href = `/RADS-TOOLING/customer/verify.php?email=${encodeURIComponent(payload.email)}`;
+      }, 1200);
+
+    } catch (err) {
+      console.error('Registration error:', err);
+      showError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  /* ===== Password strength (kept from your original) ===== */
+  const passwordInput      = document.getElementById('password');
+  const strengthContainer  = document.querySelector('.password-strength');
+  const strengthBar        = document.querySelector('.password-strength-bar');
+
+  passwordInput?.addEventListener('input', function() {
+    const password = this.value;
+
+    if (!strengthContainer || !strengthBar) return;
+
+    if (password.length === 0) { strengthContainer.classList.remove('show'); return; }
+    strengthContainer.classList.add('show');
+
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+    strengthBar.className = 'password-strength-bar';
+    if (strength <= 1) strengthBar.classList.add('weak');
+    else if (strength <= 3) strengthBar.classList.add('medium');
+    else strengthBar.classList.add('strong');
+  });
+
+  /* ===== Real-time password confirmation ===== */
+  document.getElementById('confirmPassword')?.addEventListener('input', function() {
+    const pw   = document.getElementById('password')?.value || '';
+    const conf = this.value;
+    const grp  = this.closest('.form-group');
+    if (!grp) return;
+    if (!conf) { grp.classList.remove('has-success', 'has-error'); return; }
+    if (pw === conf) { grp.classList.add('has-success'); grp.classList.remove('has-error'); }
+    else { grp.classList.add('has-error'); grp.classList.remove('has-success'); }
+  });
+
+  /* ===== Debounced email availability check (case-insensitive on server) ===== */
+  let emailTimeout;
+  document.getElementById('email')?.addEventListener('input', function() {
+    const email = this.value.trim();
+    const grp   = this.closest('.form-group');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (errorDiv?.textContent.includes('Email')) clearError();
+    if (!grp) return;
+
+    if (!email) { grp.classList.remove('has-success', 'has-error'); return; }
+    if (!emailRegex.test(email)) { grp.classList.add('has-error'); grp.classList.remove('has-success'); return; }
+
+    clearTimeout(emailTimeout);
+    emailTimeout = setTimeout(async () => {
+      try {
+        const r = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_email', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({ email })
+        });
+        const j = await r.json();
+        if (j.data && j.data.available) { grp.classList.add('has-success'); grp.classList.remove('has-error'); }
+        else { grp.classList.add('has-error'); grp.classList.remove('has-success'); showError('Email is already registered'); }
+      } catch (err) { console.error('Email check failed:', err); }
+    }, 500);
+  });
+
+  /* ===== Debounced username availability check (case-insensitive on server) ===== */
+  let usernameTimeout;
+  document.getElementById('username')?.addEventListener('input', function() {
+    const username = this.value.trim();
+    const grp = this.closest('.form-group');
+    if (!grp) return;
+
+    if (errorDiv && errorDiv.textContent === 'Username is already taken') clearError();
+    if (username.length < 3) { grp.classList.remove('has-success', 'has-error'); return; }
+
+    clearTimeout(usernameTimeout);
+    usernameTimeout = setTimeout(async () => {
+      try {
+        const r = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_username', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({ username })
+        });
+        const j = await r.json();
+        if (j.data && j.data.available) { grp.classList.add('has-success'); grp.classList.remove('has-error'); }
+        else { grp.classList.add('has-error'); grp.classList.remove('has-success'); showError('Username is already taken'); }
+      } catch (err) { console.error('Username check failed:', err); }
+    }, 500);
+  });
+
+  /* ===== Basic blur validation for other required fields ===== */
+  document.querySelectorAll('input[required]')?.forEach(input => {
+    const skip = ['password', 'confirmPassword', 'email', 'username', 'phone', 'phoneLocal'];
+    if (skip.includes(input.id)) return;
+    input.addEventListener('blur', function() {
+      const grp = this.closest('.form-group');
+      if (!grp) return;
+      if (this.value.trim()) { grp.classList.add('has-success'); grp.classList.remove('has-error'); }
+      else { grp.classList.remove('has-success'); }
     });
+  });
 });
