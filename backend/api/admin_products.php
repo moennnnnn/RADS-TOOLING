@@ -1,0 +1,496 @@
+<?php
+// admin/backend/api/admin_products.php - FIXED VERSION
+declare(strict_types=1);
+
+// CRITICAL: Catch all errors before any output
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/../logs/product_errors.log');
+
+// Start output buffering to catch any accidental output
+ob_start();
+
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Set headers FIRST
+header('Content-Type: application/json');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
+// Helper function for JSON responses
+function sendJSON(bool $success, string $message, $data = null, int $code = 200): void
+{
+    // Clear any output buffer
+    if (ob_get_level()) ob_clean();
+
+    http_response_code($code);
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Error handler
+set_error_handler(function ($severity, $message, $file, $line) {
+    error_log("PHP Error: $message in $file on line $line");
+    sendJSON(false, 'Server error occurred', null, 500);
+});
+
+// Exception handler
+set_exception_handler(function ($e) {
+    error_log("Exception: " . $e->getMessage());
+    sendJSON(false, 'An error occurred', null, 500);
+});
+
+try {
+    require_once __DIR__ . '/../config/database.php';
+} catch (Throwable $e) {
+    error_log("Database config error: " . $e->getMessage());
+    sendJSON(false, 'Database configuration error', null, 500);
+}
+
+// FIXED: Check authentication with multiple fallbacks
+function requireStaffAuth(): void
+{
+    // Check new session format
+    if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? null) === 'staff') {
+        return;
+    }
+    // Check staff-specific session
+    if (!empty($_SESSION['staff'])) {
+        return;
+    }
+    // Check legacy admin session
+    if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+        return;
+    }
+
+    sendJSON(false, 'Unauthorized access', null, 401);
+}
+
+// Check authentication
+requireStaffAuth();
+
+// Get database connection
+try {
+    $database = new Database();
+    $conn = $database->getConnection();
+} catch (Throwable $e) {
+    error_log("Database connection error: " . $e->getMessage());
+    sendJSON(false, 'Database connection failed', null, 500);
+}
+
+$action = $_GET['action'] ?? '';
+
+try {
+    switch ($action) {
+        case 'list':
+            listProducts($conn);
+            break;
+        case 'view':
+            viewProduct($conn);
+            break;
+        case 'add':
+            addProduct($conn);
+            break;
+        case 'update':
+            updateProduct($conn);
+            break;
+        case 'delete':
+            deleteProduct($conn);
+            break;
+        case 'upload_image':
+            uploadImage();
+            break;
+        case 'upload_model':
+            uploadModel();
+            break;
+        default:
+            sendJSON(false, 'Invalid action', null, 400);
+    }
+} catch (Throwable $e) {
+    error_log("API Error: " . $e->getMessage());
+    sendJSON(false, 'An error occurred while processing your request', null, 500);
+}
+
+// ========== FUNCTIONS ==========
+
+function listProducts(PDO $conn): void
+{
+    try {
+        $search = $_GET['search'] ?? '';
+        $type = $_GET['type'] ?? '';
+
+        $whereClauses = [];
+        $params = [];
+
+        if (!empty($search)) {
+            $whereClauses[] = '(p.name LIKE ? OR p.description LIKE ?)';
+            $searchTerm = '%' . $search . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (!empty($type)) {
+            $whereClauses[] = 'p.type = ?';
+            $params[] = $type;
+        }
+
+        $whereClause = !empty($whereClauses) ? 'WHERE ' . implode(' AND ', $whereClauses) : '';
+
+        $sql = "SELECT 
+                    p.*,
+                    COUNT(DISTINCT pc.color_id) as color_count,
+                    COUNT(DISTINCT pt.texture_id) as texture_count,
+                    COUNT(DISTINCT ph.handle_id) as handle_count
+                FROM products p
+                LEFT JOIN product_colors pc ON p.id = pc.product_id
+                LEFT JOIN product_textures pt ON p.id = pt.product_id
+                LEFT JOIN product_handles ph ON p.id = ph.product_id
+                $whereClause
+                GROUP BY p.id
+                ORDER BY p.created_at DESC";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        sendJSON(true, 'Products retrieved successfully', $products);
+    } catch (Throwable $e) {
+        error_log("List products error: " . $e->getMessage());
+        sendJSON(false, 'Failed to retrieve products', null, 500);
+    }
+}
+
+function viewProduct(PDO $conn): void
+{
+    $productId = $_GET['id'] ?? '';
+
+    if (empty($productId)) {
+        sendJSON(false, 'Product ID is required', null, 400);
+    }
+
+    try {
+        // Get product details
+        $sql = "SELECT * FROM products WHERE id = ? LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$productId]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$product) {
+            sendJSON(false, 'Product not found', null, 404);
+        }
+
+        // Get size configuration
+        $sql = "SELECT * FROM product_size_config WHERE product_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$productId]);
+        $sizeConfig = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get assigned textures
+        $sql = "SELECT pt.*, t.texture_name, t.texture_code, t.texture_image, t.base_price as texture_base_price
+                FROM product_textures pt
+                JOIN textures t ON pt.texture_id = t.id
+                WHERE pt.product_id = ?
+                ORDER BY pt.display_order, t.texture_name";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$productId]);
+        $textures = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get assigned colors
+        $sql = "SELECT pc.*, c.color_name, c.color_code, c.hex_value, c.base_price as color_base_price
+                FROM product_colors pc
+                JOIN colors c ON pc.color_id = c.id
+                WHERE pc.product_id = ?
+                ORDER BY pc.display_order, c.color_name";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$productId]);
+        $colors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get assigned handles
+        $sql = "SELECT ph.*, h.handle_name, h.handle_code, h.handle_image, h.base_price as handle_base_price
+                FROM product_handles ph
+                JOIN handle_types h ON ph.handle_id = h.id
+                WHERE ph.product_id = ?
+                ORDER BY ph.display_order, h.handle_name";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$productId]);
+        $handles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $product['size_config'] = $sizeConfig;
+        $product['textures'] = $textures;
+        $product['colors'] = $colors;
+        $product['handles'] = $handles;
+
+        sendJSON(true, 'Product details retrieved successfully', $product);
+    } catch (Throwable $e) {
+        error_log("View product error: " . $e->getMessage());
+        sendJSON(false, 'Failed to retrieve product details', null, 500);
+    }
+}
+
+function addProduct(PDO $conn): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (empty($input['name']) || empty($input['type'])) {
+        sendJSON(false, 'Product name and type are required', null, 400);
+    }
+
+    try {
+        $conn->beginTransaction();
+
+        // Get current user ID
+        $createdBy = $_SESSION['staff']['id'] ?? $_SESSION['user']['id'] ?? 1;
+
+        $sql = "INSERT INTO products (name, type, description, price, stock, image, model_3d, measurement_unit, is_customizable, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([
+            $input['name'],
+            $input['type'],
+            $input['description'] ?? null,
+            $input['price'] ?? 0.00,
+            $input['stock'] ?? 0,
+            $input['image'] ?? null,
+            $input['model_3d'] ?? null,
+            $input['measurement_unit'] ?? 'cm',
+            $input['is_customizable'] ?? 0,
+            $createdBy
+        ]);
+
+        $productId = $conn->lastInsertId();
+
+        // If customizable, insert size configuration
+        if (!empty($input['is_customizable']) && !empty($input['size_config'])) {
+            foreach ($input['size_config'] as $dimension => $config) {
+                $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, default_value, step_value, price_per_unit, measurement_unit)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute([
+                    $productId,
+                    $dimension,
+                    $config['min_value'] ?? 0,
+                    $config['max_value'] ?? 300,
+                    $config['default_value'] ?? 100,
+                    $config['step_value'] ?? 1,
+                    $config['price_per_unit'] ?? 0.00,
+                    $input['measurement_unit'] ?? 'cm'
+                ]);
+            }
+        }
+
+        $conn->commit();
+
+        sendJSON(true, 'Product added successfully', ['id' => $productId]);
+    } catch (Throwable $e) {
+        $conn->rollBack();
+        error_log("Add product error: " . $e->getMessage());
+        sendJSON(false, 'Failed to add product: ' . $e->getMessage(), null, 500);
+    }
+}
+
+function updateProduct(PDO $conn): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    if (empty($input['id']) && !empty($_GET['id'])) {
+        $input['id'] = (int)$_GET['id'];
+    }
+    if (empty($input['id'])) {
+        sendJSON(false, 'Product ID is required', null, 400);
+    }
+
+    try {
+        $conn->beginTransaction();
+
+        $updateFields = [];
+        $params = [];
+
+        if (isset($input['name'])) {
+            $updateFields[] = 'name = ?';
+            $params[] = $input['name'];
+        }
+        if (isset($input['type'])) {
+            $updateFields[] = 'type = ?';
+            $params[] = $input['type'];
+        }
+        if (isset($input['description'])) {
+            $updateFields[] = 'description = ?';
+            $params[] = $input['description'];
+        }
+        if (isset($input['price'])) {
+            $updateFields[] = 'price = ?';
+            $params[] = $input['price'];
+        }
+        if (isset($input['stock'])) {
+            $updateFields[] = 'stock = ?';
+            $params[] = $input['stock'];
+        }
+        if (isset($input['image'])) {
+            $updateFields[] = 'image = ?';
+            $params[] = $input['image'];
+        }
+        if (isset($input['model_3d'])) {
+            $updateFields[] = 'model_3d = ?';
+            $params[] = $input['model_3d'];
+        }
+        if (isset($input['measurement_unit'])) {
+            $updateFields[] = 'measurement_unit = ?';
+            $params[] = $input['measurement_unit'];
+        }
+        if (isset($input['is_customizable'])) {
+            $updateFields[] = 'is_customizable = ?';
+            $params[] = $input['is_customizable'];
+        }
+
+        if (empty($updateFields)) {
+            sendJSON(false, 'No fields to update', null, 400);
+        }
+
+        $params[] = $input['id'];
+        $sql = 'UPDATE products SET ' . implode(', ', $updateFields) . ' WHERE id = ?';
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+
+        $conn->commit();
+
+        sendJSON(true, 'Product updated successfully');
+    } catch (Throwable $e) {
+        $conn->rollBack();
+        error_log("Update product error: " . $e->getMessage());
+        sendJSON(false, 'Failed to update product', null, 500);
+    }
+}
+
+function deleteProduct(PDO $conn): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
+
+    if (!$id) {
+        sendJSON(false, 'Product ID required', null, 400);
+    }
+
+    try {
+        $stmt = $conn->prepare('SELECT id FROM products WHERE id = ?');
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            sendJSON(false, 'Product not found', null, 404);
+        }
+
+        $stmt = $conn->prepare('DELETE FROM products WHERE id = ?');
+        $stmt->execute([$id]);
+
+        sendJSON(true, 'Product deleted successfully');
+    } catch (Throwable $e) {
+        error_log("Delete product error: " . $e->getMessage());
+        sendJSON(false, 'Failed to delete product', null, 500);
+    }
+}
+
+function uploadImage(): void
+{
+    if (empty($_FILES['image'])) {
+        sendJSON(false, 'No image file provided', null, 400);
+    }
+
+    $file = $_FILES['image'];
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    if (!in_array($file['type'], $allowedTypes)) {
+        sendJSON(false, 'Invalid file type. Only JPG, PNG, and WEBP allowed', null, 400);
+    }
+
+    $uploadDir = __DIR__ . '/../../uploads/products/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = 'product_' . time() . '_' . uniqid() . '.' . $extension;
+    $uploadPath = $uploadDir . $filename;
+
+    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+        sendJSON(true, 'Image uploaded successfully', ['filename' => $filename]);
+    } else {
+        sendJSON(false, 'Failed to upload image', null, 500);
+    }
+}
+
+function uploadModel(): void
+{
+    if (empty($_FILES['model'])) {
+        sendJSON(false, 'No 3D model file provided', null, 400);
+    }
+
+    $file = $_FILES['model'];
+
+    if ($file['type'] !== 'model/gltf-binary' && pathinfo($file['name'], PATHINFO_EXTENSION) !== 'glb') {
+        sendJSON(false, 'Invalid file type. Only GLB files allowed', null, 400);
+    }
+
+    $uploadDir = __DIR__ . '/../../uploads/models/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $filename = 'model_' . time() . '_' . uniqid() . '.glb';
+    $uploadPath = $uploadDir . $filename;
+
+    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+        sendJSON(true, '3D model uploaded successfully', ['filename' => $filename]);
+    } else {
+        sendJSON(false, 'Failed to upload 3D model', null, 500);
+    }
+}
+
+// .... existing code above
+$action = $_GET['action'] ?? '';
+
+if ($action === 'set_availability') {
+    header('Content-Type: application/json; charset=utf-8');
+    $payload = json_decode(file_get_contents('php://input'), true);
+    $id = (int)($payload['id'] ?? 0);
+    $is_available = isset($payload['is_available']) ? (int)$payload['is_available'] : 0;
+
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid product id']);
+        exit;
+    }
+
+    // Adjust table/column names if needed
+    // Example: UPDATE products SET is_available = ? WHERE id = ?
+    $stmt = $pdo->prepare('UPDATE products SET is_available = ? WHERE id = ?');
+    $ok = $stmt->execute([$is_available, $id]);
+
+    if ($ok) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'DB error updating availability']);
+    }
+    exit;
+}

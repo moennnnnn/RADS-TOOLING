@@ -2,3 +2,9 @@
   Require all denied
 </FilesMatch>
 Options -ExecCGI
+
+# Allow image and model files
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|glb)$">
+    Require all granted
+    Allow from all
+</FilesMatch>

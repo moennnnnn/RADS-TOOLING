@@ -1,38 +1,54 @@
 <?php
-// STEP 1: Load config and CMS helper FIRST
+// STEP 1: Load config + helper
 require_once __DIR__ . '/../backend/config/app.php';
 require_once __DIR__ . '/../backend/lib/cms_helper.php';
 
-// STEP 2: Check if in preview mode
+// STEP 2: Detect CMS preview (cms_preview.php sets this global)
 $isPreview = isset($GLOBALS['cms_preview_content']) && !empty($GLOBALS['cms_preview_content']);
 
-// STEP 3: Only authenticate if NOT preview
+// STEP 3: Auth only if NOT preview
 if (!$isPreview) {
-  require_once __DIR__ . '/../includes/guard.php';
+  require_once __DIR__ . '/includes/guard.php';
   guard_require_customer();
-  $customer = $_SESSION['customer'];
+
+  $user = $_SESSION['user'] ?? null;
+  $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
+  if (!$isCustomer) {
+    header('Location: /RADS-TOOLING/customer/cust_login.php?next=' . urlencode($_SERVER['REQUEST_URI']));
+    exit;
+  }
+  $customerName = htmlspecialchars($user['name'] ?? $user['username']);
 } else {
-  // Mock customer for preview
-  $customer = [
-    'id' => 999999,
-    'full_name' => '[Customer Name]',
-    'username' => 'preview_customer',
-    'email' => 'preview@example.com',
-    'profile_image' => null
-  ];
+  $customerName = '{Customer Name}'; // placeholder in preview
 }
 
-// Ensure user is logged in as customer
-$user = $_SESSION['user'] ?? null;
-$isCustomer = $user && (($user['aud'] ?? '') === 'customer');
-
-if (!$isCustomer) {
-  header('Location: /RADS-TOOLING/customer/cust_login.php?next=' . urlencode($_SERVER['REQUEST_URI']));
-  exit;
+// STEP 4: Fetch CMS JSON
+// CRITICAL: If in preview, use the draft content passed by cms_preview.php
+if ($isPreview) {
+  $cms = $GLOBALS['cms_preview_content'];
+} else {
+  $cms = getCMSContent('home_customer'); // Gets published for normal customer view
 }
 
-$customerName = htmlspecialchars($user['name'] ?? $user['username']);
-$customerId = $user['id'] ?? 0;
+// STEP 5: Map fields with defaults
+$welcomeHtml = cmsTokens($cms['welcome_message'] ?? '<h1>Welcome back, {{customer_name}}!</h1>', [
+  'customer_name' => $customerName
+]);
+
+$introHtml = cmsTokens($cms['intro_text'] ?? '<p>Explore our latest cabinet designs and continue your projects</p>', [
+  'customer_name' => $customerName
+]);
+
+$heroImage = $cms['hero_image'] ?? '/RADS-TOOLING/assets/images/cabinet-hero.jpg';
+$ctaPrimaryText = $cms['cta_primary_text'] ?? 'Start Designing';
+$ctaSecondaryText = $cms['cta_secondary_text'] ?? 'Browse Products';
+
+// Footer content
+$footerDescription = $cms['footer_description'] ?? 'Premium custom cabinet manufacturer serving clients since 2007. Quality craftsmanship, affordable prices, and exceptional service.';
+$footerEmail = $cms['footer_email'] ?? 'RadsTooling@gmail.com';
+$footerPhone = $cms['footer_phone'] ?? '+63 976 228 4270';
+$footerAddress = $cms['footer_address'] ?? 'Green Breeze, Piela, Dasmariñas, Cavite';
+$footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -135,18 +151,18 @@ $customerId = $user['id'] ?? 0;
             <h1>Welcome back, <span class="text-highlight"><?= $customerName ?></span>!</h1>
             <p class="hero-subtitle">Explore our latest cabinet designs and continue your projects</p>
             <div class="hero-actions">
-              <a href="/RADS-TOOLING/customer/customize.php" class="btn-hero-primary">
+              <a href="/RADS-TOOLING/customer/customization.php" class="btn-hero-primary">
                 <span class="material-symbols-rounded">view_in_ar</span>
-                <span>Start Designing</span>
+                <span><?php echo htmlspecialchars($ctaPrimaryText); ?></span>
               </a>
               <a href="/RADS-TOOLING/public/products.php" class="btn-hero-secondary">
                 <span class="material-symbols-rounded">storefront</span>
-                <span>Browse Products</span>
+                <span><?php echo htmlspecialchars($ctaSecondaryText); ?></span>
               </a>
             </div>
           </div>
           <div class="hero-image-content">
-            <img src="/RADS-TOOLING/assets/images/cabinet-hero.jpg" alt="Custom Cabinets">
+            <img src="<?php echo htmlspecialchars($heroImage); ?>" alt="Custom Cabinets">
           </div>
         </div>
       </section>
@@ -270,10 +286,10 @@ $customerId = $user['id'] ?? 0;
       <div class="footer-content">
         <!-- About Section -->
         <div class="footer-section">
-          <h3>About RADS TOOLING</h3>
+          <h3><?php echo $cmsContent['footer_company_name'] ?? 'About RADS TOOLING'; ?></h3>
           <p class="footer-description">
-            Premium custom cabinet manufacturer serving clients since 2007.
-            Quality craftsmanship, affordable prices, and exceptional service.
+            <?php echo $cmsContent['footer_description'] ?? 'Premium custom cabinet manufacturer serving clients since 2007.
+            Quality craftsmanship, affordable prices, and exceptional service.'; ?>
           </p>
           <div class="footer-social">
             <a href="#" class="social-icon" aria-label="Facebook">
@@ -314,22 +330,28 @@ $customerId = $user['id'] ?? 0;
           <h3>Contact Info</h3>
           <div class="contact-info-item">
             <span class="material-symbols-rounded">location_on</span>
-            <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+            <span><?php echo $cmsContent['footer_address'] ?? 'Green Breeze, Piela, Dasmariñas, Cavite'; ?></span>
           </div>
           <div class="contact-info-item">
             <span class="material-symbols-rounded">mail</span>
-            <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+            <a href="mailto:<?php echo $cmsContent['footer_email'] ?? 'RadsTooling@gmail.com'; ?>">
+              <?php echo $cmsContent['footer_email'] ?? 'RadsTooling@gmail.com'; ?>
+            </a>
+          </div>
+          <div class="contact-info-item">
+            <span class="material-symbols-rounded">phone</span>
+            <span><?php echo $cmsContent['footer_phone'] ?? '+63 976 228 4270'; ?></span>
           </div>
           <div class="contact-info-item">
             <span class="material-symbols-rounded">schedule</span>
-            <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+            <span><?php echo $cmsContent['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM'; ?></span>
           </div>
         </div>
       </div>
 
       <div class="footer-bottom">
         <p class="footer-copyright">
-          © 2025 RADS TOOLING INC. All rights reserved.
+          <?php echo $cmsContent['footer_copyright'] ?? '© 2025 RADS TOOLING INC. All rights reserved.'; ?>
         </p>
         <div class="footer-legal">
           <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
@@ -338,7 +360,9 @@ $customerId = $user['id'] ?? 0;
       </div>
     </footer>
 
-  </div><!-- /.page-wrapper -->
+  </div>
+
+  <!-- /.page-wrapper -->
 
   <script>
     // ========== INITIALIZE ON PAGE LOAD ==========

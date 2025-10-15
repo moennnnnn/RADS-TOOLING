@@ -121,7 +121,9 @@ function saveContent()
         'terms' => 'Terms & Conditions'
     ];
 
-    // ADD: Check if content actually changed
+    $newContentJson = json_encode($contentData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    // Check if content actually changed
     $stmt = $pdo->prepare("
         SELECT content_data 
         FROM rt_cms_pages 
@@ -132,9 +134,6 @@ function saveContent()
     $stmt->execute([$page]);
     $existingDraft = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $newContentJson = json_encode($contentData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-    // If draft exists and content is identical, don't save
     if ($existingDraft && $existingDraft['content_data'] === $newContentJson) {
         echo json_encode([
             'success' => true,
@@ -144,31 +143,41 @@ function saveContent()
         return;
     }
 
+    // Start transaction
     $pdo->beginTransaction();
 
-    // Only delete and insert if content changed
-    $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'draft'");
-    $stmt->execute([$page]);
+    try {
+        // Delete ALL old drafts for this page
+        $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'draft'");
+        $stmt->execute([$page]);
 
-    // Get next version
-    $stmt = $pdo->prepare("SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM rt_cms_pages WHERE page_key = ?");
-    $stmt->execute([$page]);
-    $nextVersion = $stmt->fetch(PDO::FETCH_ASSOC)['next_version'];
+        // Get next version
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM rt_cms_pages WHERE page_key = ?");
+        $stmt->execute([$page]);
+        $nextVersion = $stmt->fetch(PDO::FETCH_ASSOC)['next_version'];
 
-    // Insert new draft
-    $stmt = $pdo->prepare("
-        INSERT INTO rt_cms_pages (page_key, page_name, content_data, status, version, updated_by)
-        VALUES (?, ?, ?, 'draft', ?, ?)
-    ");
+        // Insert new draft with current timestamp
+        $stmt = $pdo->prepare("
+            INSERT INTO rt_cms_pages (page_key, page_name, content_data, status, version, updated_by, updated_at)
+            VALUES (?, ?, ?, 'draft', ?, ?, NOW())
+        ");
+        $stmt->execute([$page, $pageNames[$page], $newContentJson, $nextVersion, $staffName]);
 
-    $stmt->execute([$page, $pageNames[$page], $newContentJson, $nextVersion, $staffName]);
+        // CRITICAL: Commit immediately
+        $pdo->commit();
 
-    $pdo->commit();
+        // Wait for database to finish writing
+        usleep(150000); // 150ms
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Draft saved successfully'
-    ]);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Draft saved successfully',
+            'timestamp' => time()
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
 }
 
 function publishContent()
@@ -262,17 +271,42 @@ function getDefaultContent($page)
 
 function uploadImage()
 {
-    if (!isset($_FILES['image'])) {
-        throw new Exception('No file uploaded');
+    try {
+        if (!isset($_FILES['image'])) {
+            throw new Exception('No file uploaded - $_FILES is empty');
+        }
+
+        $file = $_FILES['image'];
+        $group = $_POST['group'] ?? 'general';
+
+        // Debug logging
+        error_log('Upload attempt - File: ' . ($file['name'] ?? 'unknown'));
+        error_log('Upload attempt - Size: ' . ($file['size'] ?? 0));
+        error_log('Upload attempt - Error: ' . ($file['error'] ?? 'none'));
+
+        // Load upload helper
+        $uploadHelperPath = __DIR__ . '/../helpers/upload.php';
+
+        if (!file_exists($uploadHelperPath)) {
+            throw new Exception('Upload helper not found');
+        }
+
+        require_once $uploadHelperPath;
+
+        // CHANGED: Call the renamed function
+        $result = processFileUpload($file, $group);
+
+        // Log result
+        error_log('Upload result: ' . json_encode($result));
+
+        echo json_encode($result);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'file' => __FILE__,
+            'line' => __LINE__
+        ]);
     }
-
-    $file = $_FILES['image'];
-    $group = $_POST['group'] ?? 'general';
-
-    // Use your existing upload.php function
-    require_once __DIR__ . '/../lib/upload.php';
-
-    $result = uploadImage($file, $group);
-
-    echo json_encode($result);
 }

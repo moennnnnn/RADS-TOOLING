@@ -7,6 +7,12 @@ const CM = {
     apiBaseUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
     previewUrl: '/RADS-TOOLING/backend/api/cms_preview.php',
 
+    normalizePageKey(page) {
+        // Any aliases you might use in tabs/dropdowns map to DB keys
+        if (page === 'customer_home') return 'home_customer';
+        return page;
+    },
+
     init() {
         console.log('CM.init() called');
 
@@ -15,6 +21,11 @@ const CM = {
         if (!previewIframe) {
             console.error('Preview iframe not found!');
             return;
+        }
+
+        const typeSelect = document.getElementById('homepageType');
+        if (typeSelect && typeSelect.value) {
+            this.currentPage = this.normalizePageKey(typeSelect.value);
         }
 
         console.log('Preview iframe found:', previewIframe);
@@ -83,7 +94,7 @@ const CM = {
 
     switchTab(page) {
         console.log(`Switching to: ${page}`);
-        this.currentPage = page;
+        this.currentPage = this.normalizePageKey(page);
 
         // Update dropdown if switching to homepage
         const typeSelect = document.getElementById('homepageType');
@@ -106,6 +117,8 @@ const CM = {
             console.error('Preview iframe not found in loadPreview()');
             return;
         }
+
+        const key = this.normalizePageKey(this.currentPage);
 
         const url = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
         console.log('Loading preview URL:', url);
@@ -230,19 +243,62 @@ const CM = {
 
     getHomeCustomerEditor() {
         return `
-            <div class="editor-section">
-                <h3><span class="material-symbols-rounded">person</span> Customer Welcome</h3>
-                <label>Welcome Message</label>
-                <div id="quill-welcome" class="quill-container"></div>
-                <p class="help-text">Use {{customer_name}} as placeholder for customer's name</p>
-            </div>
+        <!-- Hero Section -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">person</span> Hero Section</h3>
+            
+            <label>Welcome Message</label>
+            <div id="quill-welcome" class="quill-container"></div>
+            <p class="help-text">Use {{customer_name}} as placeholder for customer's name</p>
+            
+            <label>Introduction Text</label>
+            <div id="quill-intro" class="quill-container"></div>
+            
+            <label>Hero Image</label>
+            <input type="text" id="customer-hero-image" class="form-input" placeholder="/RADS-TOOLING/assets/images/cabinet-hero.jpg">
+            <button type="button" class="btn-upload" onclick="document.getElementById('customerHeroUpload').click()">
+                <span class="material-symbols-rounded">upload</span> Upload Hero Image
+            </button>
+            <input type="file" id="customerHeroUpload" accept="image/*" style="display:none;" onchange="CM.handleCustomerHeroUpload(event)">
+        </div>
 
-            <div class="editor-section">
-                <h3><span class="material-symbols-rounded">info</span> Introduction Text</h3>
-                <label>Content</label>
-                <div id="quill-intro" class="quill-container"></div>
-            </div>
-        `;
+        <!-- Call-to-Action Buttons -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">touch_app</span> CTA Buttons</h3>
+            
+            <label>Primary Button Text</label>
+            <input type="text" id="cta-primary-text" class="form-input" placeholder="Start Designing">
+            
+            <label>Secondary Button Text</label>
+            <input type="text" id="cta-secondary-text" class="form-input" placeholder="Browse Products">
+        </div>
+
+        <!-- Quick Actions Section -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">dashboard</span> Quick Actions</h3>
+            <p class="help-text">Quick Actions section is managed separately in Products Management</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">contact_mail</span> Footer Contact Info</h3>
+            
+            <label>Company Description</label>
+            <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
+            
+            <label>Email</label>
+            <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
+            
+            <label>Phone</label>
+            <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
+            
+            <label>Address</label>
+            <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
+            
+            <label>Operating Hours</label>
+            <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+        </div>
+    `;
     },
 
     getAboutPageEditor() {
@@ -424,6 +480,28 @@ const CM = {
             this.quillEditors['quill-main-content'].root.innerHTML = content.content;
         }
 
+        if (this.currentPage === 'home_customer') {
+            // Populate additional customer homepage fields
+            const customerInputs = {
+                'customer-hero-image': content.hero_image,
+                'cta-primary-text': content.cta_primary_text,
+                'cta-secondary-text': content.cta_secondary_text,
+                'footer-description': content.footer_description,
+                'footer-email': content.footer_email,
+                'footer-phone': content.footer_phone,
+                'footer-address': content.footer_address,
+                'footer-hours': content.footer_hours
+            };
+
+            Object.keys(customerInputs).forEach(id => {
+                const input = document.getElementById(id);
+                if (input && customerInputs[id]) {
+                    input.value = customerInputs[id];
+                    input.addEventListener('input', () => this.updateLivePreview());
+                }
+            });
+        }
+
         if (this.currentPage === 'about') {
             // Text inputs
             const aboutInputs = {
@@ -432,7 +510,12 @@ const CM = {
                 'about-phone': content.about_phone,
                 'about-email': content.about_email,
                 'about-hours-weekday': content.about_hours_weekday,
-                'about-hours-sunday': content.about_hours_sunday
+                'about-hours-sunday': content.about_hours_sunday,
+                'footer-description': content.footer_description,
+                'footer-email': content.footer_email,
+                'footer-phone': content.footer_phone,
+                'footer-address': content.footer_address,
+                'footer-hours': content.footer_hours
             };
 
             Object.keys(aboutInputs).forEach(id => {
@@ -671,10 +754,43 @@ const CM = {
         }
     },
 
+    async handleCustomerHeroUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'customer');
+        formData.append('action', 'upload_image');
+
+        try {
+            this.showToast('Uploading...', 'info');
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                const imgPath = '/' + data.file_path.replace(/^\/+/, '');
+                document.getElementById('customer-hero-image').value = imgPath;
+                this.updateLivePreview();
+                this.showToast('Image uploaded!', 'success');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showToast('Upload failed', 'error');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
     updateLivePreview() {
         // Reload the live preview iframe
         const iframe = document.getElementById('livePreviewIframe');
         if (!iframe) return;
+
+        const key = this.normalizePageKey(this.currentPage);
 
         // Reload with current page and timestamp to avoid cache
         iframe.src = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
@@ -705,7 +821,8 @@ const CM = {
         // Collect from inputs
         const inputs = ['footer-company', 'footer-email', 'footer-phone', 'footer-address', 'footer-hours', 'video-url',
             'about-headline', 'about-address', 'about-phone', 'about-email',
-            'about-hours-weekday', 'about-hours-sunday', 'about-hero-path'
+            'about-hours-weekday', 'about-hours-sunday', 'about-hero-path', 'customer-hero-image', 'cta-primary-text', 'cta-secondary-text',
+            'footer-description'
         ];
         inputs.forEach(id => {
             const input = document.getElementById(id);
@@ -728,34 +845,51 @@ const CM = {
 
         try {
             this.showToast('Saving draft...', 'info');
+
             const response = await fetch(this.apiBaseUrl, {
                 method: 'POST',
                 body: formData
             });
 
             const data = await response.json();
+
             if (data.success) {
                 if (data.unchanged) {
                     this.showToast('No changes to save', 'info');
                 } else {
                     this.showToast('Draft saved!', 'success');
 
-                    // CRITICAL: Reload ALL previews with delay
+                    // CRITICAL: Wait then force hard reload of BOTH previews
                     setTimeout(() => {
-                        // 1. Reload modal preview (inside edit modal)
+                        const timestamp = Date.now();
+                        const random = Math.random().toString(36).substring(7);
+                        const previewUrl = `${this.previewUrl}?page=${this.currentPage}&t=${timestamp}&r=${random}`;
+
+                        // 1. Reload modal preview (Live Preview inside edit modal)
                         const modalPreview = document.getElementById('livePreviewIframe');
                         if (modalPreview) {
-                            modalPreview.src = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
-                            console.log('✅ Modal preview reloaded');
+                            // Force complete reload by setting to blank first
+                            const oldSrc = modalPreview.src;
+                            modalPreview.src = 'about:blank';
+
+                            setTimeout(() => {
+                                modalPreview.src = previewUrl;
+                                console.log('✅ Modal preview reloaded:', previewUrl);
+                            }, 100);
                         }
 
-                        // 2. Reload main preview (outside modal, in Content Management page)
+                        // 2. Reload main preview (Content Management page)
                         const mainPreview = document.getElementById('previewIframe');
                         if (mainPreview) {
-                            mainPreview.src = `${this.previewUrl}?page=${this.currentPage}&t=${Date.now()}`;
-                            console.log('✅ Main preview reloaded');
+                            const oldSrc = mainPreview.src;
+                            mainPreview.src = 'about:blank';
+
+                            setTimeout(() => {
+                                mainPreview.src = previewUrl;
+                                console.log('✅ Main preview reloaded:', previewUrl);
+                            }, 100);
                         }
-                    }, 600); // Wait for database to commit
+                    }, 300); // Wait 300ms for database commit
 
                     // Update status badge
                     const statusEl = document.getElementById('previewStatus');
@@ -765,15 +899,29 @@ const CM = {
                     }
                 }
             } else {
-                throw new Error(data.message);
+                throw new Error(data.message || 'Save failed');
             }
         } catch (error) {
             console.error('Save error:', error);
-            this.showToast('Error saving draft', 'error');
+            this.showToast('Error saving draft: ' + error.message, 'error');
         }
     },
 
     async publish() {
+        // CRITICAL: Check if draft exists before allowing publish
+        try {
+            const checkResponse = await fetch(`${this.apiBaseUrl}?action=get&page=${this.currentPage}&status=draft`);
+            const checkData = await checkResponse.json();
+
+            if (!checkData.success || checkData.status !== 'draft') {
+                this.showToast('You must save a draft before publishing!', 'error');
+                return;
+            }
+        } catch (error) {
+            this.showToast('Error checking draft status', 'error');
+            return;
+        }
+
         if (!confirm('Publish this content? It will be visible to all users.')) return;
 
         const formData = new FormData();
@@ -790,7 +938,16 @@ const CM = {
             const data = await response.json();
             if (data.success) {
                 this.showToast('Content published!', 'success');
-                this.loadPreview();
+
+                // Reload preview to show published status
+                setTimeout(() => {
+                    const timestamp = Date.now();
+                    const mainPreview = document.getElementById('previewIframe');
+                    if (mainPreview) {
+                        mainPreview.src = `${this.previewUrl}?page=${this.currentPage}&t=${timestamp}`;
+                    }
+                }, 300);
+
                 this.closeEditModal();
             } else {
                 throw new Error(data.message);

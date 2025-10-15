@@ -514,9 +514,6 @@ if (!$isLoggedIn) {
             <div class="section-header">
                 <h1>Product Management</h1>
                 <div class="product-header-actions">
-                    <button class="btn-manage-customization" onclick="openModal('manageCustomizationModal')">
-                        <span class="material-symbols-rounded">tune</span> Manage Customization Options
-                    </button>
                     <button class="btn-add-product" onclick="openModal('addProductModal')">
                         <span class="material-symbols-rounded">add_circle</span> Add Product
                     </button>
@@ -528,11 +525,11 @@ if (!$isLoggedIn) {
                     placeholder="Search by name or description..." />
                 <select class="products-filter" id="product-filter">
                     <option value="">All Types</option>
-                    <option>Kitchen</option>
-                    <option>Bathroom</option>
-                    <option>Living Room</option>
-                    <option>Bedroom</option>
-                    <option>Office</option>
+                    <option value="Kitchen Cabinet">Kitchen Cabinet</option>
+                    <option value="Wardrobe">Wardrobe</option>
+                    <option value="Office Cabinet">Office Cabinet</option>
+                    <option value="Bathroom Cabinet">Bathroom Cabinet</option>
+                    <option value="Storage Cabinet">Storage Cabinet</option>
                 </select>
             </div>
 
@@ -545,13 +542,13 @@ if (!$isLoggedIn) {
                             <th>Type</th>
                             <th>Description</th>
                             <th>Price</th>
-                            <th>Stock</th>
+                            <th>Customizable</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="productTableBody">
                         <tr>
-                            <td colspan="7" style="text-align:center;">Loading products...</td>
+                            <td colspan="8" style="text-align:center;">Loading products...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -854,34 +851,6 @@ if (!$isLoggedIn) {
                         <button type="submit" class="primary">Create User</button>
                     </div>
                 </form>
-            </div>
-        </div>
-
-
-        <!-- Add Product Modal (skeleton) -->
-        <div class="modal" id="addProductModal">
-            <div class="modal-content">
-                <button class="modal-close" onclick="closeModal('addProductModal')">×</button>
-                <h2>Add Product</h2>
-                <form id="addProductForm">
-                    <input id="ap-name" name="name" placeholder="Product Name" required />
-                    <input id="ap-type" name="category" placeholder="Type/Category" />
-                    <textarea id="ap-desc" name="description" placeholder="Description"></textarea>
-                    <input id="ap-price" name="price" type="number" step="0.01" placeholder="Price" required />
-                    <input id="ap-stock" name="stock" type="number" placeholder="Stock" required />
-                    <label class="edit-pic-label" for="ap-image">Upload Photo</label>
-                    <input id="ap-image" name="image" type="file" accept="image/*" hidden />
-                    <button type="submit">Save Product</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Manage Customization Modal (placeholder) -->
-        <div class="modal" id="manageCustomizationModal">
-            <div class="modal-content">
-                <button class="modal-close" onclick="closeModal('manageCustomizationModal')">×</button>
-                <h2>Manage Customization Options</h2>
-                <div id="customizationPanel"><!-- DB-READY --></div>
             </div>
         </div>
 
@@ -1411,6 +1380,837 @@ if (!$isLoggedIn) {
         <script src="/RADS-TOOLING/assets/JS/chat_admin.js"></script>
         <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
         <script src="/RADS-TOOLING/assets/JS/content_mgmt.js"></script>
+
+        
+        <!-- ========== ADD PRODUCT MODAL ========== -->
+        <div id="addProductModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2>Add New Product</h2>
+                    <button class="close-modal" onclick="closeModal('addProductModal')">&times;</button>
+                </div>
+
+                <form id="addProductForm">
+                    <!-- SCROLLABLE BODY -->
+                    <div class="modal-body">
+
+                        <!-- Row 1 -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productName">Product Name *</label>
+                                <input type="text" id="productName" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="productType">Type *</label>
+                                <select id="productType" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Kitchen Cabinet">Kitchen Cabinet</option>
+                                    <option value="Wardrobe">Wardrobe</option>
+                                    <option value="Office Cabinet">Office Cabinet</option>
+                                    <option value="Bathroom Cabinet">Bathroom Cabinet</option>
+                                    <option value="Storage Cabinet">Storage Cabinet</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Row 2 -->
+                        <div class="form-group">
+                            <label for="productDescription">Description</label>
+                            <textarea id="productDescription" rows="3"></textarea>
+                        </div>
+
+                        <!-- Row 3 -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productPrice">Base Price (₱)</label>
+                                <input type="number" id="productPrice" step="0.01" value="0">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="customizable-inline">
+                                    <input type="checkbox" id="isCustomizable">
+                                    <span>This product is customizable (3D)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Row 4 -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productImage">Product Image (Normal View)</label>
+                                <div class="pm-filebox">
+                                    <input type="file" id="productImage" accept="image/*">
+                                </div>
+                                <img id="productImagePreview" style="max-width: 200px; margin-top: 10px; display: none;">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="productModel">3D Model (.glb)</label>
+                                <div class="pm-filebox">
+                                    <input type="file" id="productModel" accept=".glb,model/gltf-binary" disabled>
+                                </div>
+                                <div id="productModelPreview" style="margin-top: 10px; display: none; color: #28a745;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Note -->
+                        <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <p style="margin: 0; font-size: 14px; color: #555;">
+                                <strong>Note:</strong> After creating the product, use "Manage Customization Options"
+                                to assign textures, colors, and handles.
+                            </p>
+                        </div>
+                    </div><!-- /modal-body -->
+
+                    <!-- FOOTER (inside the form) -->
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="addProductCancelBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Product</button>
+                    </div>
+                </form>
+            </div><!-- /modal-content -->
+        </div><!-- /modal -->
+
+
+        <!-- ========== MANAGE CUSTOMIZATION MODAL ========== -->
+        <div id="manageCustomizationModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h2>Manage Customization Options</h2>
+                    <button class="close-modal" onclick="closeModal('manageCustomizationModal')">&times;</button>
+                </div>
+
+                <input type="hidden" id="customProductId">
+
+                <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #2c5f8d;">Product: <span id="customProductName"></span></h3>
+                </div>
+
+                <!-- Tabs -->
+                <div class="customization-tabs">
+                    <button type="button" class="tab-btn active" onclick="switchCustomTab('size')">Size Sliders</button>
+                    <button type="button" class="tab-btn" onclick="switchCustomTab('texture')">Textures</button>
+                    <button type="button" class="tab-btn" onclick="switchCustomTab('color')">Colors</button>
+                    <button type="button" class="tab-btn" onclick="switchCustomTab('handle')">Handles</button>
+                </div>
+
+                <!-- Size Tab -->
+                <div id="sizeTabContent" class="tab-content">
+                    <h3 style="margin-bottom: 15px;">Size Slider Configuration</h3>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="margin-bottom: 10px;">Width Slider</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Min Value</label>
+                                <input type="number" id="widthMinCustom" step="0.1" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Value</label>
+                                <input type="number" id="widthMaxCustom" step="0.1" value="300">
+                            </div>
+                            <div class="form-group">
+                                <label>Default Value</label>
+                                <input type="number" id="widthDefaultCustom" step="0.1" value="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Step</label>
+                                <input type="number" id="widthStepCustom" step="0.1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Price per Unit (₱)</label>
+                                <input type="number" id="widthPriceCustom" step="0.01" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                        <h4 style="margin-bottom: 10px;">Height Slider</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Min Value</label>
+                                <input type="number" id="heightMinCustom" step="0.1" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Value</label>
+                                <input type="number" id="heightMaxCustom" step="0.1" value="300">
+                            </div>
+                            <div class="form-group">
+                                <label>Default Value</label>
+                                <input type="number" id="heightDefaultCustom" step="0.1" value="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Step</label>
+                                <input type="number" id="heightStepCustom" step="0.1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Price per Unit (₱)</label>
+                                <input type="number" id="heightPriceCustom" step="0.01" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px;">Depth Slider</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Min Value</label>
+                                <input type="number" id="depthMinCustom" step="0.1" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Max Value</label>
+                                <input type="number" id="depthMaxCustom" step="0.1" value="300">
+                            </div>
+                            <div class="form-group">
+                                <label>Default Value</label>
+                                <input type="number" id="depthDefaultCustom" step="0.1" value="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Step</label>
+                                <input type="number" id="depthStepCustom" step="0.1" value="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Price per Unit (₱)</label>
+                                <input type="number" id="depthPriceCustom" step="0.01" value="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Texture Tab -->
+                <div id="textureTabContent" class="tab-content" style="display: none;">
+                    <h3 style="margin-bottom: 15px;">Select Available Textures</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Check the textures that should be available for this product</p>
+
+                    <div id="texturesListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f8f9fa;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button type="button" class="btn-secondary" onclick="openAddTextureModal()">
+                            <span class="material-symbols-rounded">add</span> Add New Texture
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Color Tab -->
+                <div id="colorTabContent" class="tab-content" style="display: none;">
+                    <h3 style="margin-bottom: 15px;">Select Available Colors</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Check the colors that should be available for this product</p>
+
+                    <div id="colorsListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f8f9fa;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button type="button" class="btn-secondary" onclick="openAddColorModal()">
+                            <span class="material-symbols-rounded">add</span> Add New Color
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Handle Tab -->
+                <div id="handleTabContent" class="tab-content" style="display: none;">
+                    <h3 style="margin-bottom: 15px;">Select Available Handles</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Check the handle types that should be available for this product</p>
+
+                    <div id="handlesListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f8f9fa;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button type="button" class="btn-secondary" onclick="openAddHandleModal()">
+                            <span class="material-symbols-rounded">add</span> Add New Handle
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('manageCustomizationModal')">Cancel</button>
+                    <button type="button" class="btn-primary" onclick="saveCustomizationOptions()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Tab switching function
+            function switchCustomTab(tabName) {
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.style.display = 'none';
+                });
+
+                // Remove active class from all buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Show selected tab
+                document.getElementById(`${tabName}TabContent`).style.display = 'block';
+
+                // Add active class to clicked button
+                event.target.classList.add('active');
+            }
+        </script>
+
+        <style>
+            /* Modal Styles */
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.6);
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+
+            .modal-content {
+                background: #fff;
+                padding: 0;
+                border-radius: 12px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            .modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 20px 25px;
+                border-bottom: 2px solid #e3e3e3;
+                position: sticky;
+                top: 0;
+                background: #fff;
+                z-index: 10;
+            }
+
+            .modal-header h2 {
+                margin: 0;
+                color: #2c5f8d;
+                font-size: 1.5rem;
+            }
+
+            .close-modal {
+                background: none;
+                border: none;
+                font-size: 2rem;
+                cursor: pointer;
+                color: #999;
+                transition: color 0.2s;
+            }
+
+            .close-modal:hover {
+                color: #333;
+            }
+
+            .modal form,
+            .modal>div:not(.modal-header) {
+                padding: 25px;
+            }
+
+            .form-row {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 15px;
+            }
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .form-group label {
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #333;
+                font-size: 14px;
+            }
+
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                transition: border-color 0.2s;
+            }
+
+            .form-group input:focus,
+            .form-group select:focus,
+            .form-group textarea:focus {
+                outline: none;
+                border-color: #2c5f8d;
+            }
+
+            .modal-actions {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+                padding: 20px 25px;
+                border-top: 2px solid #e3e3e3;
+                position: sticky;
+                bottom: 0;
+                background: #fff;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .btn-primary {
+                background: #2c5f8d;
+                color: #fff;
+            }
+
+            .btn-primary:hover {
+                background: #1e4567;
+            }
+
+            .btn-secondary {
+                background: #e3e3e3;
+                color: #333;
+            }
+
+            .btn-secondary:hover {
+                background: #d0d0d0;
+            }
+
+            .customization-option-item {
+                display: flex;
+                align-items: center;
+                padding: 12px;
+                margin-bottom: 10px;
+                background: #fff;
+                border: 1px solid #e3e3e3;
+                border-radius: 8px;
+                transition: all 0.2s;
+            }
+
+            .customization-option-item:hover {
+                border-color: #2c5f8d;
+                box-shadow: 0 2px 8px rgba(44, 95, 141, 0.1);
+            }
+
+            .customization-option-item input[type="checkbox"] {
+                margin-right: 10px;
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+            }
+
+            .customization-option-item label {
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                margin: 0;
+                font-weight: normal;
+                flex: 1;
+            }
+
+            .tab-content {
+                min-height: 300px;
+            }
+
+            .badge {
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .badge-info {
+                background: #e8f4f8;
+                color: #2c5f8d;
+            }
+
+            .badge-success {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .badge-secondary {
+                background: #e3e3e3;
+                color: #666;
+            }
+        </style>
+
+        <!-- ========== ADD TEXTURE MODAL ========== -->
+        <div id="addTextureModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>Add New Texture</h2>
+                    <button class="close-modal" onclick="closeModal('addTextureModal')">&times;</button>
+                </div>
+
+                <form id="addTextureForm" onsubmit="handleAddTexture(event)">
+                    <div class="form-group">
+                        <label for="textureName">Texture Name *</label>
+                        <input type="text" id="textureName" required placeholder="e.g., Oak Wood, Marble White">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="textureCode">Texture Code *</label>
+                        <input type="text" id="textureCode" required placeholder="e.g., WOOD_OAK, MARBLE_WHITE">
+                        <small style="color: #666;">Use uppercase with underscores</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="textureDescription">Description</label>
+                        <textarea id="textureDescription" rows="3" placeholder="Describe the texture..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="textureBasePrice">Base Price (₱)</label>
+                        <input type="number" id="textureBasePrice" step="0.01" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="textureImage">Texture Image *</label>
+                        <input type="file" id="textureImage" accept="image/*" required onchange="handleTextureImagePreview(event)">
+                        <img id="textureImagePreview" style="max-width: 200px; margin-top: 10px; display: none; border-radius: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="textureIsActive" checked>
+                            <span>Active (Available for selection)</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('addTextureModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Texture</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ========== ADD COLOR MODAL ========== -->
+        <div id="addColorModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>Add New Color</h2>
+                    <button class="close-modal" onclick="closeModal('addColorModal')">&times;</button>
+                </div>
+
+                <form id="addColorForm" onsubmit="handleAddColor(event)">
+                    <div class="form-group">
+                        <label for="colorName">Color Name *</label>
+                        <input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="colorCode">Color Code *</label>
+                        <input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY">
+                        <small style="color: #666;">Use uppercase with underscores</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="colorHex">Hex Color Value *</label>
+                            <input type="color" id="colorHex" value="#000000" required style="height: 50px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="colorHexText">Hex Code</label>
+                            <input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="colorBasePrice">Base Price (₱)</label>
+                        <input type="number" id="colorBasePrice" step="0.01" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="colorIsActive" checked>
+                            <span>Active (Available for selection)</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Color</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ========== ADD HANDLE MODAL ========== -->
+        <div id="addHandleModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>Add New Handle Type</h2>
+                    <button class="close-modal" onclick="closeModal('addHandleModal')">&times;</button>
+                </div>
+
+                <form id="addHandleForm" onsubmit="handleAddHandle(event)">
+                    <div class="form-group">
+                        <label for="handleName">Handle Name *</label>
+                        <input type="text" id="handleName" required placeholder="e.g., Modern Silver, Classic Brass">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="handleCode">Handle Code *</label>
+                        <input type="text" id="handleCode" required placeholder="e.g., MODERN_SILVER, CLASSIC_BRASS">
+                        <small style="color: #666;">Use uppercase with underscores</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="handleDescription">Description</label>
+                        <textarea id="handleDescription" rows="3" placeholder="Describe the handle type..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="handleBasePrice">Base Price (₱)</label>
+                        <input type="number" id="handleBasePrice" step="0.01" value="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="handleImage">Handle Image *</label>
+                        <input type="file" id="handleImage" accept="image/*" required onchange="handleHandleImagePreview(event)">
+                        <img id="handleImagePreview" style="max-width: 200px; margin-top: 10px; display: none; border-radius: 8px;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="handleIsActive" checked>
+                            <span>Active (Available for selection)</span>
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('addHandleModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Handle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            // Open modals
+            function openAddTextureModal() {
+                openModal('addTextureModal');
+            }
+
+            function openAddColorModal() {
+                openModal('addColorModal');
+            }
+
+            function openAddHandleModal() {
+                openModal('addHandleModal');
+            }
+
+            // Texture Image Preview
+            async function handleTextureImagePreview(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('image', file);
+
+                try {
+                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=upload_texture_image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const preview = document.getElementById('textureImagePreview');
+                        preview.src = `/RADS-TOOLING/uploads/textures/${data.data.filename}`;
+                        preview.style.display = 'block';
+                        preview.dataset.filename = data.data.filename;
+                        showNotification('success', 'Texture image uploaded successfully');
+                    } else {
+                        showNotification('error', data.message);
+                    }
+                } catch (error) {
+                    console.error('Upload texture image error:', error);
+                    showNotification('error', 'Failed to upload texture image');
+                }
+            }
+
+            // Handle Image Preview
+            async function handleHandleImagePreview(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('image', file);
+
+                try {
+                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=upload_handle_image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const preview = document.getElementById('handleImagePreview');
+                        preview.src = `/RADS-TOOLING/uploads/handles/${data.data.filename}`;
+                        preview.style.display = 'block';
+                        preview.dataset.filename = data.data.filename;
+                        showNotification('success', 'Handle image uploaded successfully');
+                    } else {
+                        showNotification('error', data.message);
+                    }
+                } catch (error) {
+                    console.error('Upload handle image error:', error);
+                    showNotification('error', 'Failed to upload handle image');
+                }
+            }
+
+            // Add Texture
+            async function handleAddTexture(e) {
+                e.preventDefault();
+
+                const formData = {
+                    texture_name: document.getElementById('textureName').value,
+                    texture_code: document.getElementById('textureCode').value,
+                    description: document.getElementById('textureDescription').value,
+                    base_price: parseFloat(document.getElementById('textureBasePrice').value) || 0,
+                    is_active: document.getElementById('textureIsActive').checked ? 1 : 0,
+                    texture_image: document.getElementById('textureImagePreview').dataset.filename || ''
+                };
+
+                try {
+                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=add_texture', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('success', 'Texture added successfully');
+                        closeModal('addTextureModal');
+                        document.getElementById('addTextureForm').reset();
+                        loadTextures();
+                    } else {
+                        showNotification('error', data.message);
+                    }
+                } catch (error) {
+                    console.error('Add texture error:', error);
+                    showNotification('error', 'Failed to add texture');
+                }
+            }
+
+            // Add Color
+            async function handleAddColor(e) {
+                e.preventDefault();
+
+                const formData = {
+                    color_name: document.getElementById('colorName').value,
+                    color_code: document.getElementById('colorCode').value,
+                    hex_value: document.getElementById('colorHex').value,
+                    base_price: parseFloat(document.getElementById('colorBasePrice').value) || 0,
+                    is_active: document.getElementById('colorIsActive').checked ? 1 : 0
+                };
+
+                try {
+                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=add_color', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('success', 'Color added successfully');
+                        closeModal('addColorModal');
+                        document.getElementById('addColorForm').reset();
+                        loadColors();
+                    } else {
+                        showNotification('error', data.message);
+                    }
+                } catch (error) {
+                    console.error('Add color error:', error);
+                    showNotification('error', 'Failed to add color');
+                }
+            }
+
+            // Add Handle
+            async function handleAddHandle(e) {
+                e.preventDefault();
+
+                const formData = {
+                    handle_name: document.getElementById('handleName').value,
+                    handle_code: document.getElementById('handleCode').value,
+                    description: document.getElementById('handleDescription').value,
+                    base_price: parseFloat(document.getElementById('handleBasePrice').value) || 0,
+                    is_active: document.getElementById('handleIsActive').checked ? 1 : 0,
+                    handle_image: document.getElementById('handleImagePreview').dataset.filename || ''
+                };
+
+                try {
+                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=add_handle', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('success', 'Handle added successfully');
+                        closeModal('addHandleModal');
+                        document.getElementById('addHandleForm').reset();
+                        loadHandles();
+                    } else {
+                        showNotification('error', data.message);
+                    }
+                } catch (error) {
+                    console.error('Add handle error:', error);
+                    showNotification('error', 'Failed to add handle');
+                }
+            }
+
+            // Sync color picker and text input
+            document.getElementById('colorHex')?.addEventListener('input', (e) => {
+                document.getElementById('colorHexText').value = e.target.value;
+            });
+
+            document.getElementById('colorHexText')?.addEventListener('input', (e) => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                    document.getElementById('colorHex').value = e.target.value;
+                }
+            });
+        </script>
+        <script src="/RADS-TOOLING/assets/JS/script.js"></script>
+        <script src="/RADS-TOOLING/assets/JS/product_management.js"></script>
 </body>
 
 </html>

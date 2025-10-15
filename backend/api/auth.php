@@ -227,7 +227,7 @@ class AuthAPI
                 WHERE id = ?
             ');
             $updateStmt->execute([$verificationCode, $verificationExpires, $user['id']]);
-            
+
             if (class_exists('Mailer')) {
                 $mailer = new Mailer();
                 $ok = $mailer->sendVerificationCode($email, $user['full_name'], $verificationCode);
@@ -495,9 +495,9 @@ class AuthAPI
     {
         $stmt = $this->conn->prepare(
             'SELECT id, username, password, full_name, role, profile_image
-             FROM admin_users 
-             WHERE username = ? 
-             LIMIT 1'
+     FROM admin_users
+     WHERE username = BINARY ?
+     LIMIT 1'
         );
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);

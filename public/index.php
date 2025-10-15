@@ -1,10 +1,22 @@
 <?php
-// /public/index.php – PUBLIC landing page (no auth required)
+// /public/index.php - PUBLIC landing page (no auth required)
 require_once __DIR__ . '/../backend/config/app.php';
 require_once __DIR__ . '/../backend/lib/cms_helper.php';
 
-// Fetch published content
-$cmsContent = getCMSContent('home_public');
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
+// CRITICAL: Check if we're in preview mode
+$isPreview = isset($GLOBALS['cms_preview_content']) && !empty($GLOBALS['cms_preview_content']);
+
+// If in preview, use the content passed by cms_preview.php
+// Otherwise, fetch published content for public view
+if ($isPreview) {
+  $cmsContent = $GLOBALS['cms_preview_content'];
+} else {
+  $cmsContent = getCMSContent('home_public'); // Gets published by default
+}
 
 $user = $_SESSION['user'] ?? null;
 $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
