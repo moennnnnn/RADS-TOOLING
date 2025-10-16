@@ -3,7 +3,7 @@
 .rt-admin-body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, Arial, sans-serif;
+  font-family: Poppins;
   background: #f5f7fa;
 }
 
@@ -153,7 +153,7 @@
   text-align: center;
   padding: 50px 20px;
   color: #999;
-  font-style: italic;
+  font-style: Poppins;
 }
 
 /* ========== MESSAGE BUBBLES (.rt-msg style) ========== */

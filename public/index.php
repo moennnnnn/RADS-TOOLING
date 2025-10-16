@@ -33,11 +33,12 @@ if ($isCustomer) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RADS TOOLING - Custom Cabinet Solutions</title>
+  <title>Rads Tooling - Custom Cabinet Solutions</title>
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
 </head>
 
 <body>
@@ -78,7 +79,7 @@ if ($isCustomer) {
         <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item active">Home</a>
         <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
         <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
-        <a href="#testimonials" class="nav-menu-item">Testimonials</a>
+        <a href="/RADS-TOOLING/public/testimonials.php" class="nav-menu-item">Testimonials</a>
       </nav>
     </header>
 
@@ -194,44 +195,32 @@ if ($isCustomer) {
     <div class="carousel-dots"></div>
   </section>
 
-  <!-- VIDEO SECTION -->
-  <section class="video-section">
-    <div class="video-content">
-      <div class="video-text">
-        <h2>
-          <?php echo $cmsContent['video_title'] ?? '<h2>Crafted with Passion</h2>'; ?>
-          <?php echo $cmsContent['video_subtitle'] ?? '<p>Watch our craftsmen at work</p>'; ?> </h2>
-        <ul class="video-features">
-          <li><i class="fas fa-check"></i> Premium hardwood materials</li>
-          <li><i class="fas fa-check"></i> Expert craftsmanship</li>
-          <li><i class="fas fa-check"></i> Quality assurance tested</li>
-          <li><i class="fas fa-check"></i> Custom finishing options</li>
-        </ul>
-      </div>
-
-      <div class="video-wrapper">
-        <video controls playsinline poster="/RADS-TOOLING/assets/videos/crafting.mp4">
-          <source src="/RADS-TOOLING/assets/videos/crafting.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      </div>
-    </div>
-  </section>
-
-  <!-- TESTIMONIALS SECTION -->
-  <section class="testimonials-section" id="testimonials">
-    <div class="section-header">
-      <h2>What Our <span class="highlight">Customers Say</span></h2>
-      <p>Real feedback from satisfied clients</p>
+ <!-- VIDEO SECTION -->
+<section class="craft">
+  <div class="craft-grid">
+    <div class="craft-text">
+      <h2>Crafted with Passion &amp; Precision</h2>
+      <p>Every cabinet is handcrafted by skilled artisans using premium materials. Watch our craftsmen bring your vision to life.</p>
+      <ul class="craft-list">
+        <li>Premium hardwood materials</li>
+        <li>Expert craftsmanship</li>
+        <li>Quality assurance tested</li>
+        <li>Custom finishing options</li>
+      </ul>
     </div>
 
-    <div class="testimonials-grid" id="testimonialsContainer">
-      <!-- Testimonials will be loaded here via JavaScript -->
-      <div class="loading">
-        <i class="fas fa-spinner fa-spin"></i> Loading testimonials...
+    <div class="craft-media">
+      <div class="craft-media-box">
+        <video class="craft-video"
+               src="/RADS-TOOLING/assets/videos/crafting.mp4"
+               muted autoplay loop playsinline controls
+               preload="metadata"
+               poster="/RADS-TOOLING/assets/images/cab1.jpg"></video>
       </div>
     </div>
-  </section>
+  </div>
+</section>
+
 
   <!-- CTA BANNER -->
   <section class="cta-banner">
@@ -381,123 +370,117 @@ if ($isCustomer) {
   </div><!-- /.page-wrapper -->
 
   <script>
-    // ========== CAROUSEL ==========
-    (function() {
+    (() => {
       const track = document.querySelector('.carousel-track');
-      const items = document.querySelectorAll('.carousel-item');
+      const items0 = [...document.querySelectorAll('.carousel-item')];
       const nextBtn = document.querySelector('.carousel-btn.next');
       const prevBtn = document.querySelector('.carousel-btn.prev');
-      const dotsContainer = document.querySelector('.carousel-dots');
+      const dotsBox = document.querySelector('.carousel-dots');
 
-      if (!track || items.length === 0) return;
+      if (!track || items0.length === 0) return;
 
-      let currentIndex = 0;
-      const itemWidth = items[0].offsetWidth + 20; // including gap
+      // --- sizing helpers ---
+      const stepWidth = () => (items0[1] ? items0[1].offsetLeft - items0[0].offsetLeft :
+        items0[0].offsetWidth + 20);
+      const perView = Math.max(1, Math.round(track.parentElement.offsetWidth / stepWidth()));
 
-      // Create dots
-      items.forEach((_, index) => {
-        const dot = document.createElement('span');
-        dot.classList.add('dot');
-        if (index === 0) dot.classList.add('active');
-        dot.addEventListener('click', () => goToSlide(index));
-        dotsContainer.appendChild(dot);
+      // --- clone edges for seamless loop ---
+      for (let i = 0; i < perView; i++) {
+        const head = items0[i].cloneNode(true);
+        const tail = items0[items0.length - 1 - i].cloneNode(true);
+        head.classList.add('is-clone');
+        tail.classList.add('is-clone');
+        track.appendChild(head); // first N -> end
+        track.insertBefore(tail, track.firstChild); // last N  -> start
+      }
+
+      const origCount = items0.length;
+      let index = perView; // start at first real slide
+      let isAnimating = false,
+        tEndTimer;
+
+      // dots
+      dotsBox.innerHTML = '';
+      const dots = items0.map((_, i) => {
+        const d = document.createElement('span');
+        d.className = 'dot' + (i === 0 ? ' active' : '');
+        d.addEventListener('click', () => goTo(perView + i, true, true));
+        dotsBox.appendChild(d);
+        return d;
       });
 
-      const dots = document.querySelectorAll('.dot');
+      const setTransform = (withTransition) => {
+        track.style.transition = withTransition ? 'transform .45s ease' : 'none';
+        track.style.transform = `translateX(-${index * stepWidth()}px)`;
+        const active = ((index - perView) % origCount + origCount) % origCount;
+        dots.forEach((d, i) => d.classList.toggle('active', i === active));
+      };
 
-      function updateCarousel() {
-        track.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
-        dots.forEach((dot, index) => {
-          dot.classList.toggle('active', index === currentIndex);
+      const goTo = (i, withTransition = true, resetAuto = false) => {
+        index = i;
+        setTransform(withTransition);
+        if (withTransition) watchTransition();
+        if (resetAuto) restartAuto();
+      };
+
+      const watchTransition = () => {
+        clearTimeout(tEndTimer);
+        tEndTimer = setTimeout(onTransitionEnd, 600); // fallback if transitionend doesn’t fire
+        isAnimating = true;
+        toggleBtns(true);
+      };
+
+      const onTransitionEnd = () => {
+        // snap back from clones (no transition so walang “jump”)
+        if (index >= origCount + perView) index = perView;
+        if (index < perView) index = origCount + perView - 1;
+        setTransform(false);
+        // re-enable clicks
+        isAnimating = false;
+        toggleBtns(false);
+      };
+
+      const step = (dir) => {
+        if (isAnimating) return;
+        goTo(index + dir, true, true);
+      };
+
+      const toggleBtns = (lock) => {
+        [nextBtn, prevBtn].forEach(b => {
+          if (!b) return;
+          b.disabled = lock;
         });
-      }
+      };
 
-      function goToSlide(index) {
-        currentIndex = index;
-        updateCarousel();
-      }
-
-      nextBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex + 1) % items.length;
-        updateCarousel();
+      track.addEventListener('transitionend', (e) => {
+        if (e.propertyName === 'transform') onTransitionEnd();
       });
 
-      prevBtn.addEventListener('click', () => {
-        currentIndex = (currentIndex - 1 + items.length) % items.length;
-        updateCarousel();
-      });
+      nextBtn?.addEventListener('click', () => step(1));
+      prevBtn?.addEventListener('click', () => step(-1));
 
-      // Auto-play
-      setInterval(() => {
-        currentIndex = (currentIndex + 1) % items.length;
-        updateCarousel();
-      }, 5000);
+      // autoplay
+      let auto;
+      const startAuto = () => auto = setInterval(() => step(1), 3500);
+      const stopAuto = () => clearInterval(auto);
+      const restartAuto = () => {
+        stopAuto();
+        startAuto();
+      };
+
+      track.parentElement.addEventListener('mouseenter', stopAuto);
+      track.parentElement.addEventListener('mouseleave', startAuto);
+
+      // init
+      setTransform(false);
+      startAuto();
+
+      // keep position on resize
+      window.addEventListener('resize', () => setTransform(false));
     })();
-
-    // ========== TESTIMONIALS ==========
-    (function() {
-      const container = document.getElementById('testimonialsContainer');
-
-      fetch('/RADS-TOOLING/backend/api/testimonials.php')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.testimonials.length > 0) {
-            container.innerHTML = data.testimonials.map(t => `
-          <div class="testimonial-card">
-            <div class="testimonial-header">
-              <div class="testimonial-avatar">
-                ${t.customer_name.charAt(0).toUpperCase()}
-              </div>
-              <div class="testimonial-info">
-                <h4>${escapeHtml(t.customer_name)}</h4>
-                <div class="testimonial-rating">
-                  ${'<i class="fas fa-star"></i>'.repeat(t.rating)}
-                  ${'<i class="far fa-star"></i>'.repeat(5 - t.rating)}
-                </div>
-              </div>
-            </div>
-            <p class="testimonial-comment">"${escapeHtml(t.comment)}"</p>
-            <span class="testimonial-date">${formatDate(t.created_at)}</span>
-          </div>
-        `).join('');
-          } else {
-            container.innerHTML = '<p class="no-testimonials">No testimonials yet. Be the first to share your experience!</p>';
-          }
-        })
-        .catch(() => {
-          container.innerHTML = '<p class="error">Unable to load testimonials.</p>';
-        });
-
-      function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-      }
-
-      function formatDate(dateStr) {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-      }
-    })();
-
-    // ========== SMOOTH SCROLL ==========
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function(e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }
-      });
-    });
   </script>
+
+
 
   <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 

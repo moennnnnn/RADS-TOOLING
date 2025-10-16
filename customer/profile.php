@@ -1,17 +1,15 @@
 <?php
-// customer/profile.php
-require_once dirname(__DIR__) . '/includes/guard.php';
-
-guard_require_customer();
-
-// Generate CSRF token
+session_start();
+if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? '') !== 'customer') {
+    header('Location: /RADS-TOOLING/customer/login.php');
+    exit;
+}
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-
-$customer_id = $_SESSION['user']['id'];
-$csrf_token = $_SESSION['csrf_token'];
+$CSRF = $_SESSION['csrf_token'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -23,10 +21,11 @@ $csrf_token = $_SESSION['csrf_token'];
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
 </head>
 
 <body>
-    
+
     <!-- Main Container -->
     <div class="profile-wrapper">
         <div class="profile-layout">
@@ -170,22 +169,44 @@ $csrf_token = $_SESSION['csrf_token'];
                 <div id="password-tab" class="tab-content">
                     <div class="content-header">
                         <h2>Change Password</h2>
-                        <p>For your account security, please do not share your password with others</p>
+                        <p>You can change your password while logged in, or use an email code if you forgot it.</p>
                     </div>
 
                     <div class="content-body">
-                        <div class="info-box">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                            <div>
-                                <strong>Password reset required</strong>
-                                <p>For security reasons, password changes must be done through the forgot password process.</p>
+                        <!-- Logged-in change form -->
+                        <form id="pwChangeForm" class="profile-form">
+                            <div class="form-group">
+                                <label>Current Password</label>
+                                <input type="password" id="curr_pw" required autocomplete="current-password">
                             </div>
+
+                            <div class="form-group">
+                                <label>New Password</label>
+                                <input type="password" id="new_pw" minlength="8" required autocomplete="new-password">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Confirm New Password</label>
+                                <input type="password" id="new_pw2" minlength="8" required autocomplete="new-password">
+                            </div>
+
+                            <div class="form-actions">
+                                <button class="btn btn-primary" id="pwSaveBtn">
+                                    <span class="btn-text">Update Password</span>
+                                    <span class="btn-spinner" style="display:none">
+                                        <div class="mini-spinner"></div>
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="form-divider" style="margin:20px 0;"></div>
+
+                        <!-- Forgot password shortcut -->
+                        <div>
+                            <p><strong>Forgot your password?</strong></p>
+                            <a href="#" class="btn btn-outline" id="btnOpenPwReq">Request Password Reset (via email)</a>
                         </div>
-                        <a href="/RADS-TOOLING/customer/forgot-password.php" class="btn btn-primary">Request Password Reset</a>
                     </div>
                 </div>
             </main>
@@ -194,7 +215,7 @@ $csrf_token = $_SESSION['csrf_token'];
 
     <script>
         const API_BASE = '/RADS-TOOLING/backend/api';
-        const CSRF_TOKEN = '<?php echo $csrf_token; ?>';
+        const CSRF_TOKEN = <?php echo json_encode($CSRF); ?>;
 
         let customerData = null;
 
@@ -254,66 +275,77 @@ $csrf_token = $_SESSION['csrf_token'];
 
         async function loadProfile() {
             showLoading();
-
             try {
-                const response = await fetch(`${API_BASE}/customer_profile.php`);
+                const res = await fetch(`${API_BASE}/customer_profile.php`, {
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const text = await res.text();
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    console.error('Non-JSON response from customer_profile.php:', text.slice(0, 200));
+                    throw new Error('Failed to load profile');
                 }
 
-                const result = await response.json();
-
-                if (!result.success) {
-                    if (result.redirect) {
+                if (!res.ok || !result.success) {
+                    if (result && result.redirect) {
                         window.location.href = result.redirect;
                         return;
                     }
-                    throw new Error(result.message || 'Failed to load profile');
+                    throw new Error(result?.message || `HTTP ${res.status}`);
                 }
 
                 customerData = result.data.customer;
                 renderProfile(customerData);
-                hideLoading();
-
             } catch (error) {
                 console.error('Load profile error:', error);
                 showMessage(error.message || 'Failed to load profile data', 'error');
+            } finally {
                 hideLoading();
             }
         }
 
         function renderProfile(customer) {
-            const profileImage = customer.profile_image ?
-                `/RADS-TOOLING/${customer.profile_image}` :
-                null;
-            const initials = customer.full_name.substring(0, 2).toUpperCase();
+            const fullName = customer.full_name || customer.username || 'Customer';
+            const initials = (fullName.split(' ').map(s => s[0]).join('').slice(0, 2) || 'U').toUpperCase();
+            const profileImage = customer.profile_image ? `/RADS-TOOLING/${customer.profile_image}` : null;
 
-            // Update navigation
-            document.getElementById('nav-username').textContent = customer.full_name;
+            // nav username (kung wala yung element, tahimik lang)
+            const navUser = document.getElementById('nav-username');
+            if (navUser) navUser.textContent = fullName;
 
-            // Update sidebar
+            // sidebar
             const sidebarAvatar = document.getElementById('sidebar-avatar');
-            if (profileImage) {
-                sidebarAvatar.innerHTML = `<img src="${profileImage}" alt="Profile">`;
-            } else {
-                sidebarAvatar.innerHTML = `<div class="avatar-placeholder">${initials}</div>`;
+            if (sidebarAvatar) {
+                sidebarAvatar.innerHTML = profileImage ?
+                    `<img src="${profileImage}?v=${Date.now()}" alt="Profile">` :
+                    `<div class="avatar-placeholder">${initials}</div>`;
             }
-            document.getElementById('sidebar-name').textContent = customer.full_name;
+            const sidebarName = document.getElementById('sidebar-name');
+            if (sidebarName) sidebarName.textContent = fullName;
 
-            // Update form fields
-            document.getElementById('username').value = customer.username;
-            document.getElementById('full_name').value = customer.full_name;
-            document.getElementById('email').value = customer.email;
-            document.getElementById('phone').value = customer.phone || '';
-            document.getElementById('address').value = customer.address || '';
+            // form fields
+            const setVal = (id, v) => {
+                const el = document.getElementById(id);
+                if (el) el.value = v ?? '';
+            };
+            setVal('username', customer.username);
+            setVal('full_name', fullName);
+            setVal('email', customer.email);
+            setVal('phone', customer.phone);
+            setVal('address', customer.address);
 
-            // Update avatar preview
+            // avatar preview
             const avatarPreview = document.getElementById('avatar-preview');
-            if (profileImage) {
-                avatarPreview.innerHTML = `<img src="${profileImage}" alt="Profile">`;
-            } else {
-                avatarPreview.innerHTML = `<div class="avatar-placeholder-large">${initials}</div>`;
+            if (avatarPreview) {
+                avatarPreview.innerHTML = profileImage ?
+                    `<img src="${profileImage}?v=${Date.now()}" alt="Profile">` :
+                    `<div class="avatar-placeholder-large">${initials}</div>`;
             }
         }
 
@@ -336,27 +368,50 @@ $csrf_token = $_SESSION['csrf_token'];
             };
 
             try {
-                const response = await fetch(`${API_BASE}/customer_profile.php`, {
+                const res = await fetch(`${API_BASE}/customer_profile.php`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify(formData)
                 });
 
-                const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.message || 'Failed to update profile');
+                const text = await res.text();
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    console.error('Non-JSON response:', text.slice(0, 200));
+                    throw new Error('Failed to update profile');
                 }
 
-                customerData.full_name = result.data.full_name;
-                renderProfile(customerData);
-                showMessage(result.message, 'success');
+                if (!res.ok || !result.success) {
+                    if (result && result.redirect) {
+                        window.location.href = result.redirect;
+                        return;
+                    }
+                    throw new Error(result?.message || `HTTP ${res.status}`);
+                }
 
-            } catch (error) {
-                console.error('Update profile error:', error);
-                showMessage(error.message || 'Failed to update profile', 'error');
+                // sync local state
+                customerData.full_name = result.data.full_name;
+                customerData.phone = result.data.phone ?? customerData.phone;
+                customerData.address = result.data.address ?? customerData.address;
+
+                // refresh UI (sidebar, preview, fields)
+                renderProfile(customerData);
+
+                // optional: update nav username kung meron
+                const navUser = document.getElementById('nav-username');
+                if (navUser) navUser.textContent = customerData.full_name;
+
+                showMessage(result.message || 'Saved!', 'success');
+
+            } catch (err) {
+                console.error('Update profile error:', err);
+                showMessage(err.message || 'Failed to update profile', 'error');
             } finally {
                 saveBtn.disabled = false;
                 btnText.style.display = 'inline';
@@ -374,28 +429,30 @@ $csrf_token = $_SESSION['csrf_token'];
                 address: document.getElementById('address').value.trim()
             };
 
-            try {
-                const response = await fetch(`${API_BASE}/customer_profile.php`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
+            const response = await fetch(`${API_BASE}/customer_profile.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(formData)
+            });
 
-                const result = await response.json();
+            const result = await response.json().catch(() => ({
+                success: false
+            }));
 
-                if (!result.success) {
-                    throw new Error(result.message || 'Failed to update address');
-                }
-
-                showMessage('Address updated successfully', 'success');
-
-            } catch (error) {
-                console.error('Update address error:', error);
-                showMessage(error.message || 'Failed to update address', 'error');
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to update address');
             }
+
+            // sync local + refresh UI
+            customerData.address = formData.address;
+            renderProfile(customerData);
+            showMessage('Address updated successfully', 'success');
         }
+
 
         async function uploadProfileImage(event) {
             const file = event.target.files[0];
@@ -406,42 +463,319 @@ $csrf_token = $_SESSION['csrf_token'];
                 showMessage('Only JPG, JPEG, and PNG files are allowed', 'error');
                 return;
             }
-
             if (file.size > 5 * 1024 * 1024) {
                 showMessage('File size must be less than 5MB', 'error');
                 return;
             }
 
             const formData = new FormData();
-            formData.append('profile_image', file);
+            formData.append('profile_image', file); // <-- backend dapat $_FILES['profile_image']
             formData.append('csrf_token', CSRF_TOKEN);
 
             try {
-                const response = await fetch(`${API_BASE}/upload_profile_image.php`, {
+                const res = await fetch(`${API_BASE}/upload_profile_image.php`, {
                     method: 'POST',
-                    body: formData
+                    body: formData, // wag lagyan ng Content-Type
+                    credentials: 'include'
                 });
 
-                const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.message || 'Failed to upload image');
+                const text = await res.text();
+                let result;
+                try {
+                    result = JSON.parse(text);
+                } catch {
+                    console.error('Non-JSON upload response:', text.slice(0, 200));
+                    throw new Error('Failed to upload image');
                 }
 
-                customerData.profile_image = result.data.profile_image;
-                renderProfile(customerData);
-                showMessage(result.message, 'success');
+                if (!res.ok || !result.success) {
+                    throw new Error(result?.message || `HTTP ${res.status}`);
+                }
 
-            } catch (error) {
-                console.error('Upload image error:', error);
-                showMessage(error.message || 'Failed to upload profile picture', 'error');
+                // success: sync local + refresh UI
+                // depende sa response mo: result.data.profile_image or result.path
+                const newPath = (result.data && result.data.profile_image) ? result.data.profile_image : result.path;
+                customerData.profile_image = newPath;
+                renderProfile(customerData); // may ?v=Date.now() sa render para cache-bust
+                showMessage(result.message || 'Profile image updated', 'success');
+
+            } catch (err) {
+                console.error('Upload image error:', err);
+                showMessage(err.message || 'Failed to upload image', 'error');
+            } finally {
+                event.target.value = ''; // reset input
             }
-
-            event.target.value = '';
         }
 
         document.addEventListener('DOMContentLoaded', loadProfile);
     </script>
+
+    <!-- MODAL: Step 1 - request code -->
+    <div id="pwReqModal" class="modal hidden">
+        <div class="modal-card">
+            <h3>Send reset code</h3>
+            <p class="muted">We will email you a 6-digit code to verify it’s you.</p>
+            <form id="pwReqForm">
+                <label>Email</label>
+                <input type="email" id="pwReqEmail" required>
+                <div class="row">
+                    <button type="button" class="btn btn-outline" id="pwReqCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Send Code</button>
+                </div>
+                <div id="pwReqMsg" class="msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Step 2 - verify code + new password -->
+    <div id="pwCodeModal" class="modal hidden">
+        <div class="modal-card">
+            <h3>Verify code</h3>
+            <p class="muted">Enter the 6-digit code from your email, then set a new password.</p>
+            <form id="pwCodeForm">
+                <label>6-digit code</label>
+                <input type="text" id="pwCodeInput" pattern="^[0-9]{6}$" maxlength="6" required>
+                <label>New password (min 8)</label>
+                <input type="password" id="pwNew1" minlength="8" required>
+                <label>Confirm new password</label>
+                <input type="password" id="pwNew2" minlength="8" required>
+                <div class="row">
+                    <button type="button" class="btn btn-outline" id="pwCodeCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </div>
+                <div id="pwCodeMsg" class="msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /***** CHANGE PASSWORD (LOGGED-IN) *****/
+        document.getElementById('pwChangeForm')?.addEventListener('submit', changePasswordLoggedIn);
+
+        async function changePasswordLoggedIn(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('pwSaveBtn');
+            const t = btn.querySelector('.btn-text');
+            const s = btn.querySelector('.btn-spinner');
+            btn.disabled = true;
+            t.style.display = 'none';
+            s.style.display = 'inline-block';
+
+            const current = document.getElementById('curr_pw').value;
+            const newPw = document.getElementById('new_pw').value;
+            const confirm = document.getElementById('new_pw2').value;
+
+            if (newPw !== confirm) {
+                showMessage('New password and confirmation do not match', 'error');
+                btn.disabled = false;
+                t.style.display = 'inline';
+                s.style.display = 'none';
+                return;
+            }
+            if (newPw.length < 8) {
+                showMessage('Password must be at least 8 characters', 'error');
+                btn.disabled = false;
+                t.style.display = 'inline';
+                s.style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/change_password.php`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        csrf_token: CSRF_TOKEN,
+                        current_password: current,
+                        new_password: newPw,
+                        confirm_password: confirm
+                    })
+                });
+
+                const out = await res.json().catch(() => ({
+                    success: false
+                }));
+                showMessage(out.message || (out.success ? 'Password updated' : 'Update failed'),
+                    out.success ? 'success' : 'error');
+
+                if (out.success) {
+                    document.getElementById('curr_pw').value = '';
+                    document.getElementById('new_pw').value = '';
+                    document.getElementById('new_pw2').value = '';
+                }
+            } catch {
+                showMessage('Network error', 'error');
+            } finally {
+                btn.disabled = false;
+                t.style.display = 'inline';
+                s.style.display = 'none';
+            }
+        }
+
+        /***** OTP MODALS (FORGOT PASSWORD FLOW) *****/
+        const btnOpenPwReq = document.getElementById('btnOpenPwReq');
+
+        // Request modal elements
+        const pwReqModal = document.getElementById('pwReqModal');
+        const pwReqCancel = document.getElementById('pwReqCancel');
+        const pwReqEmail = document.getElementById('pwReqEmail');
+        const pwReqForm = document.getElementById('pwReqForm');
+        const pwReqMsg = document.getElementById('pwReqMsg');
+
+        // Verify modal elements
+        const pwCodeModal = document.getElementById('pwCodeModal');
+        const pwCodeCancel = document.getElementById('pwCodeCancel');
+        const pwCodeForm = document.getElementById('pwCodeForm');
+        const pwCodeMsg = document.getElementById('pwCodeMsg');
+
+        function openModal(el) {
+            el.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(el) {
+            el.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Open request modal
+        btnOpenPwReq?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof customerData !== 'undefined' && customerData?.email) {
+                pwReqEmail.value = customerData.email;
+            }
+            pwReqMsg.textContent = '';
+            pwReqMsg.className = 'msg';
+            openModal(pwReqModal);
+        });
+
+        // Close handlers
+        pwReqCancel?.addEventListener('click', () => closeModal(pwReqModal));
+        pwCodeCancel?.addEventListener('click', () => closeModal(pwCodeModal));
+        [pwReqModal, pwCodeModal].forEach(m => m?.addEventListener('click', e => {
+            if (e.target === m) closeModal(m);
+        }));
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if (!pwReqModal.classList.contains('hidden')) closeModal(pwReqModal);
+                if (!pwCodeModal.classList.contains('hidden')) closeModal(pwCodeModal);
+            }
+        });
+
+        // STEP 1: Send reset code
+        pwReqForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            pwReqMsg.textContent = 'Sending...';
+            pwReqMsg.className = 'msg';
+
+            try {
+                const res = await fetch(`${API_BASE}/password.php?action=request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        csrf_token: CSRF_TOKEN,
+                        email: pwReqEmail.value.trim()
+                    })
+                });
+
+                const out = await res.json().catch(() => ({
+                    success: false
+                }));
+                if (!out.success) throw new Error(out.message || 'Failed to send code');
+
+                pwReqMsg.textContent = 'Code sent! Please check your inbox (and spam).';
+                pwReqMsg.className = 'msg success';
+
+                // Open Step 2 after a short delay
+                setTimeout(() => {
+                    closeModal(pwReqModal);
+                    pwCodeMsg.textContent = '';
+                    pwCodeMsg.className = 'msg';
+                    pwCodeModal.dataset.email = pwReqEmail.value.trim();
+                    openModal(pwCodeModal);
+                }, 700);
+
+            } catch (err) {
+                pwReqMsg.textContent = err.message || 'Failed to send code';
+                pwReqMsg.className = 'msg error';
+            }
+        });
+
+        // STEP 2: Verify code + set new password
+        pwCodeForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = pwCodeModal.dataset.email || (typeof customerData !== 'undefined' ? (customerData?.email || '') : '');
+            const code = document.getElementById('pwCodeInput').value.trim();
+            const p1 = document.getElementById('pwNew1').value;
+            const p2 = document.getElementById('pwNew2').value;
+
+            if (p1 !== p2) {
+                pwCodeMsg.textContent = 'Passwords do not match';
+                pwCodeMsg.className = 'msg error';
+                return;
+            }
+            if (p1.length < 8) {
+                pwCodeMsg.textContent = 'Password must be at least 8 characters';
+                pwCodeMsg.className = 'msg error';
+                return;
+            }
+
+            pwCodeMsg.textContent = 'Updating...';
+            pwCodeMsg.className = 'msg';
+
+            try {
+                const res = await fetch(`${API_BASE}/password.php?action=reset`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        csrf_token: CSRF_TOKEN,
+                        email,
+                        code,
+                        new_password: p1,
+                        confirm: p2
+                    })
+                });
+
+                const out = await res.json().catch(() => ({
+                    success: false
+                }));
+                if (!out.success) throw new Error(out.message || 'Failed to change password');
+
+                pwCodeMsg.textContent = 'Password changed! You can now log in with your new password.';
+                pwCodeMsg.className = 'msg success';
+                setTimeout(() => closeModal(pwCodeModal), 900);
+
+            } catch (err) {
+                pwCodeMsg.textContent = err.message || 'Failed to change password';
+                pwCodeMsg.className = 'msg error';
+            }
+        });
+
+        /***** OPTIONAL: open password tab or modal via URL hash *****/
+        document.addEventListener('DOMContentLoaded', () => {
+            if (location.hash === '#password') {
+                switchTab?.('password');
+            } else if (location.hash === '#password-reset') {
+                switchTab?.('password');
+                btnOpenPwReq?.click();
+            }
+        });
+    </script>
+
 </body>
 
 </html>

@@ -1,5 +1,5 @@
 <?php
-// /public/privacy.php - Public Privacy Page
+// /public/about.php - Public About Page
 require_once __DIR__ . '/../backend/config/app.php';
 require_once __DIR__ . '/../backend/lib/cms_helper.php';
 
@@ -15,7 +15,7 @@ $isPreview = isset($GLOBALS['cms_preview_content']) && !empty($GLOBALS['cms_prev
 if ($isPreview) {
     $content = $GLOBALS['cms_preview_content'];
 } else {
-    $content = getCMSContent('privacy'); // Gets published by default
+    $content = getCMSContent('about'); // Gets published by default
 }
 
 $user = $_SESSION['user'] ?? null;
@@ -23,7 +23,7 @@ $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
 
 // If customer is logged in, redirect to customer view
 if ($isCustomer) {
-    header('Location: /RADS-TOOLING/customer/privacy.php');
+    header('Location: /RADS-TOOLING/customer/about.php');
     exit;
 }
 ?>
@@ -77,24 +77,21 @@ if ($isCustomer) {
             </div>
 
             <nav class="navbar-menu">
-                <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item">Home</a>
+                <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item ">Home</a>
                 <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
                 <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
-                <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Testimonials</a>
+                <a href="/RADS-TOOLING/public/testimonials.php" class="nav-menu-item active">Testimonials</a>
             </nav>
         </header>
 
 
-        <!-- Main Content -->
-        <main class="rt-policy-main-content">
-            <div class="rt-container">
-                <div class="rt-about-narrative" style="margin-top: 3rem;">
-                    <div class="rt-policy-content">
-                        <?php echo $content['content'] ?? '<h1>Privacy Policy</h1><p>Loading content...</p>'; ?>
-                    </div>
-                </div>
+        <!-- Hero Section -->
+        <section class="sp-hero">
+            <div class="sp-container">
+                <h1><</h1>
             </div>
-        </main>
+        </section>
+
 
         <!-- RADS-TOOLING Chat Support Widget (Guest Mode) -->
         <button id="rtChatBtn" class="rt-chat-btn">
@@ -218,46 +215,6 @@ if ($isCustomer) {
                 </div>
             </div>
         </footer>
-
-        <!-- Mobile Menu Script -->
-        <script>
-            document.querySelector('.rt-nav-toggle').addEventListener('click', function() {
-                document.querySelector('.rt-nav-menu').classList.toggle('active');
-            });
-        </script>
-        <script>
-            // ========== CHAT BUTTON ==========
-            (function() {
-                const chatBtn = document.getElementById('chatBtn');
-                const chatPopup = document.getElementById('chatPopup');
-                const chatClose = document.getElementById('chatClose');
-
-                chatBtn?.addEventListener('click', () => {
-                    chatPopup.style.display = 'flex';
-                    chatBtn.style.display = 'none';
-                });
-
-                chatClose?.addEventListener('click', () => {
-                    chatPopup.style.display = 'none';
-                    chatBtn.style.display = 'flex';
-                });
-            })();
-
-            // ========== SMOOTH SCROLL ==========
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
-            });
-        </script>
-        <!-- Add before closing </body> tag -->
         <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 </body>
 

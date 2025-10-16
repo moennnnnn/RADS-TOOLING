@@ -13,7 +13,7 @@
 }
 
 body {
-    font-family: "Poppins", sans-serif;
+    font-family: Poppins;
     background: linear-gradient(135deg, var(--bg) 0%, #e3edfb 100%);
     color: var(--text);
     min-height: 100vh;
@@ -33,14 +33,14 @@ body {
     font-size: 2.5rem;
     font-weight: 800;
     color: var(--brand);
-    font-style: italic;
+    font-style: Poppins;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
 }
 
 .logo-text {
     font-size: 1.5rem;
-    font-style: italic;
+    font-style:Poppins;
     font-weight: 550;
     color: black;
     margin: 0 0.2rem;
@@ -160,7 +160,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-family: 'Poppins', sans-serif;
+  font-family: Poppins;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(47, 91, 136, 0.3);
 }
@@ -366,5 +366,6 @@ body {
     
     .logo-text {
         font-size: 1.2rem;
+        font-style: Poppins;
     }
 }

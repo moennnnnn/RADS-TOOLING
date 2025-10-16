@@ -24,7 +24,7 @@
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
+    font-family: Poppins;
     background: var(--bg-gray);
     color: var(--text-dark);
     line-height: 1.6;
@@ -274,7 +274,7 @@ body {
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: 2px;
-    font-family: 'Poppins', sans-serif;
+    font-family: Poppins;
     font-size: 0.95rem;
     transition: border-color 0.2s;
 }
@@ -345,7 +345,7 @@ textarea {
 .btn {
     padding: 10px 24px;
     border-radius: 2px;
-    font-family: 'Poppins', sans-serif;
+    font-family: Poppins;
     font-weight: 500;
     font-size: 0.9rem;
     cursor: pointer;
@@ -594,4 +594,116 @@ textarea {
 
 .profile-sidebar::-webkit-scrollbar-thumb:hover {
     background: var(--text-light);
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999
+}
+
+.modal.hidden {
+    display: none
+}
+
+.modal-card {
+    background: #fff;
+    border-radius: 12px;
+    min-width: 340px;
+    max-width: 420px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .2)
+}
+
+.modal-card h3 {
+    margin: 0 0 6px
+}
+
+.modal-card .muted {
+    color: #6b7280;
+    margin: 0 0 14px;
+    font-size: .95rem
+}
+
+.modal-card label {
+    display: block;
+    margin: 12px 0 6px;
+    font-weight: 600
+}
+
+.modal-card input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px
+}
+
+.modal-card .row {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px
+}
+
+.modal-card .btn {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 0;
+    cursor: pointer
+}
+
+.btn-primary {
+    background: #23486A;
+    color: #fff
+}
+
+.btn-outline {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    color: #111827
+}
+
+.msg {
+    margin-top: 10px;
+    font-size: .9rem
+}
+
+.msg.error {
+    color: #b91c1c
+}
+
+.msg.success {
+    color: #065f46
+}
+
+#nav-avatar,
+#dd-avatar {
+    border-radius: 50%;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#nav-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+#dd-avatar {
+    width: 50px;
+    height: 50px;
+}
+
+#nav-avatar img,
+#dd-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 50%;
 }

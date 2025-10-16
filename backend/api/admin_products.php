@@ -95,6 +95,9 @@ $action = $_GET['action'] ?? '';
 
 try {
     switch ($action) {
+        case 'toggle_release':
+            toggleRelease($conn);
+            break;
         case 'list':
             listProducts($conn);
             break;
@@ -465,6 +468,35 @@ function uploadModel(): void
         sendJSON(true, '3D model uploaded successfully', ['filename' => $filename]);
     } else {
         sendJSON(false, 'Failed to upload 3D model', null, 500);
+    }
+}
+
+function toggleRelease(PDO $conn): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
+    $input  = json_decode(file_get_contents('php://input'), true);
+    $id     = (int)($input['product_id'] ?? 0);
+    $status = $input['status'] ?? '';
+
+    if (!$id || !in_array($status, ['draft','released'], true)) {
+        sendJSON(false, 'Invalid payload', null, 422);
+    }
+
+    try {
+        if ($status === 'released') {
+            $sql = "UPDATE products SET status='released', released_at=NOW() WHERE id=? AND is_archived=0";
+        } else {
+            $sql = "UPDATE products SET status='draft', released_at=NULL WHERE id=?";
+        }
+        $stmt = $conn->prepare($sql);
+        $ok = $stmt->execute([$id]);
+
+        sendJSON($ok, $ok ? 'Status updated' : 'Failed to update', null, $ok ? 200 : 500);
+    } catch (Throwable $e) {
+        error_log('toggleRelease error: '.$e->getMessage());
+        sendJSON(false, 'Server error', null, 500);
     }
 }
 

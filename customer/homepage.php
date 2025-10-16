@@ -8,7 +8,7 @@ $isPreview = isset($GLOBALS['cms_preview_content']) && !empty($GLOBALS['cms_prev
 
 // STEP 3: Auth only if NOT preview
 if (!$isPreview) {
-  require_once __DIR__ . '/includes/guard.php';
+  require_once __DIR__ . '/../includes/guard.php';
   guard_require_customer();
 
   $user = $_SESSION['user'] ?? null;
@@ -49,6 +49,14 @@ $footerEmail = $cms['footer_email'] ?? 'RadsTooling@gmail.com';
 $footerPhone = $cms['footer_phone'] ?? '+63 976 228 4270';
 $footerAddress = $cms['footer_address'] ?? 'Green Breeze, Piela, Dasmariñas, Cavite';
 $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
+
+$img = $_SESSION['user']['profile_image'] ?? '';
+if ($img) {
+  $avatarHtml = '<img src="/RADS-TOOLING/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">';
+} else {
+  $avatarHtml = strtoupper(substr($customerName, 0, 1));
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -58,6 +66,7 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rads Tooling - <?= $customerName ?></title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -87,23 +96,23 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
           <div class="profile-menu">
             <button class="profile-toggle" id="profileToggle" type="button">
               <div class="profile-avatar-wrapper">
-                <div class="profile-avatar">
+                <div class="profile-avatar" id="nav-avatar">
                   <?= strtoupper(substr($customerName, 0, 1)) ?>
                 </div>
               </div>
               <div class="profile-info">
-                <span class="profile-name"><?= $customerName ?></span>
+                <span class="profile-name" id="nav-username"><?= $customerName ?></span>
                 <span class="material-symbols-rounded dropdown-icon">expand_more</span>
               </div>
             </button>
 
             <div class="profile-dropdown" id="profileDropdown">
               <div class="profile-dropdown-header">
-                <div class="dropdown-avatar">
+                <div class="dropdown-avatar" id="dd-avatar">
                   <?= strtoupper(substr($customerName, 0, 1)) ?>
                 </div>
                 <div class="dropdown-user-info">
-                  <div class="dropdown-name"><?= $customerName ?></div>
+                  <div class="dropdown-name" id="dd-name"><?= $customerName ?></div>
                   <div class="dropdown-email" id="userEmailDisplay">Loading...</div>
                 </div>
               </div>
@@ -139,7 +148,7 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
       <nav class="navbar-menu">
         <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item active">Home</a>
         <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-        <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
+        <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
       </nav>
     </header>
 
@@ -205,22 +214,7 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
         </div>
       </section>
 
-      <!-- FEATURED PRODUCTS -->
-      <section class="featured-section">
-        <div class="section-header-inline">
-          <h2 class="section-title">Recommended For You</h2>
-          <a href="/RADS-TOOLING/public/products.php" class="view-all-link">
-            <span>View All</span>
-            <span class="material-symbols-rounded">arrow_forward</span>
-          </a>
-        </div>
-        <div class="products-grid" id="recommendedProducts">
-          <div class="loading-state">
-            <span class="material-symbols-rounded spinning">progress_activity</span>
-            <span>Loading products...</span>
-          </div>
-        </div>
-      </section>
+
 
       <!-- RADS-TOOLING Chat Support Widget -->
       <button id="rtChatBtn" class="rt-chat-btn">
@@ -280,6 +274,73 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
         </div>
       </div>
     </main>
+<!-- ========== CABINETS GALLERY CAROUSEL ========== -->
+<section class="cabinets-section">
+  <div class="section-header">
+    <h2>Featured <span class="highlight">Cabinets</span></h2>
+    <p>Explore our collection of premium custom cabinets</p>
+  </div>
+
+  <?php
+  // Small helper so relative names work
+  if (!function_exists('rt_url')) {
+    function rt_url($raw) {
+      $raw = trim((string)$raw);
+      if ($raw === '') return '/RADS-TOOLING/assets/images/placeholder.jpg';
+      if (preg_match('~^https?://~i', $raw)) return $raw;   // absolute
+      if ($raw[0] === '/') return $raw;                     // site-absolute
+      // otherwise treat as a file under /assets/images/
+      return '/RADS-TOOLING/assets/images/' . $raw;
+    }
+  }
+
+  // 1) from CMS (correct var = $cms)
+  $imgs = $cms['carousel_images'] ?? [];
+
+  // 2) fallback if CMS has nothing
+  if (!$imgs) {
+    $imgs = [
+      ['image' => 'cab1.jpg', 'title' => 'Bathroom Vanity',  'description' => 'Water-resistant premium materials'],
+      ['image' => 'cab2.jpg', 'title' => 'Living Room Display', 'description' => 'Custom shelving with clean lines'],
+      ['image' => 'cab3.jpg', 'title' => 'Modern Kitchen',   'description' => 'Contemporary design with premium finishes'],
+      ['image' => 'cab4.jpg', 'title' => 'Office Storage',   'description' => 'Professional workspace solutions'],
+    ];
+  }
+  ?>
+
+  <div class="carousel-container">
+    <button class="carousel-btn prev" type="button" aria-label="Previous">
+      <span class="material-symbols-rounded">chevron_left</span>
+    </button>
+
+    <div class="carousel-track">
+      <?php foreach ($imgs as $img): 
+        $src  = rt_url($img['image'] ?? '');
+        $ttl  = $img['title'] ?? '';
+        $desc = $img['description'] ?? '';
+      ?>
+        <div class="carousel-item">
+          <img src="<?= htmlspecialchars($src) ?>"
+               alt="<?= htmlspecialchars($ttl) ?>"
+               onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+          <div class="carousel-caption">
+            <h4><?= htmlspecialchars($ttl) ?></h4>
+            <p><?= htmlspecialchars($desc) ?></p>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <button class="carousel-btn next" type="button" aria-label="Next">
+      <span class="material-symbols-rounded">chevron_right</span>
+    </button>
+  </div>
+
+  <div class="carousel-dots"></div>
+</section>
+
+   
+
 
     <!-- FOOTER -->
     <footer class="footer">
@@ -360,18 +421,98 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
       </div>
     </footer>
 
-  </div>
+   </div><!-- /.page-wrapper -->
 
-  <!-- /.page-wrapper -->
+<script>
+(() => {
+  // Elements
+  const viewport = document.querySelector('.carousel-viewport');
+  const track    = document.querySelector('.carousel-track');
+  const prevBtn  = document.querySelector('.carousel-btn.prev');
+  const nextBtn  = document.querySelector('.carousel-btn.next');
+  const dotsWrap = document.querySelector('.carousel-dots');
 
+  if (!viewport || !track || !dotsWrap) return;
+
+  let page  = 0;
+  let pages = 1;
+  let timer;
+
+  // ➕ Dagdagan natin ng 1 extra dot
+  const EXTRA_DOTS = 1;   // set to 0 kung ayaw mo na ng dagdag
+  const MIN_DOTS   = 0;   // set to 4 kung gusto mo may minimum na 4 dots
+
+  // Ilang cards ang sabay-sabay depende sa lapad (pareho ng public)
+  function perView() {
+    const w = viewport.clientWidth;
+    if (w >= 1100) return 3;  // desktop → 3 cards
+    if (w >= 720)  return 2;  // tablet  → 2 cards
+    return 1;                 // mobile  → 1 card
+  }
+
+  // Recompute pages + rebuild dots
+  function recalc() {
+    const totalItems = track.children.length;
+    pages = Math.max(1, Math.ceil(totalItems / perView()));
+
+    // total dots = pages + EXTRA_DOTS (o MIN_DOTS kung mas mataas)
+    const dotCount = Math.max(pages + EXTRA_DOTS, MIN_DOTS);
+
+    dotsWrap.innerHTML = '';
+    for (let i = 0; i < dotCount; i++) {
+      // kung extra dot na lampas sa pages, ituro sa last page
+      const target = i >= pages ? (pages - 1) : i;
+
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.dataset.target = String(target);
+      dot.addEventListener('click', () => { page = target; update(); restart(); });
+
+      dotsWrap.appendChild(dot);
+    }
+    update();
+  }
+
+  // Slide by "page" (isang viewport width bawat galaw)
+  function update() {
+    const offsetX = page * viewport.clientWidth;
+    track.style.transform = `translateX(-${offsetX}px)`;
+
+    const dots = [...dotsWrap.children];
+    const dotCount = dots.length;
+
+    // kapag nasa last page at may extra dot(s), yung pinakahuli ang i-activate
+    const activeIndex = (page === pages - 1 && dotCount > pages) ? (dotCount - 1) : page;
+
+    dots.forEach((d, i) => d.classList.toggle('active', i === activeIndex));
+  }
+
+  function next() { page = (page + 1) % pages; update(); }
+  function prev() { page = (page - 1 + pages) % pages; update(); }
+
+  prevBtn?.addEventListener('click', () => { prev();   restart(); });
+  nextBtn?.addEventListener('click', () => { next();   restart(); });
+
+  // Autoplay (stop on hover)
+  function start()   { stop(); timer = setInterval(next, 5000); }
+  function stop()    { if (timer) clearInterval(timer); }
+  function restart() { start(); }
+
+  viewport.addEventListener('mouseenter', stop);
+  viewport.addEventListener('mouseleave', start);
+  window.addEventListener('resize', recalc);
+
+  recalc();
+  start();
+})();
+</script>
   <script>
     // ========== INITIALIZE ON PAGE LOAD ==========
     document.addEventListener('DOMContentLoaded', function() {
       initProfileDropdown();
-      loadUserEmail();
-      loadUserStatistics();
-      loadRecentOrders();
-      loadRecommendedProducts();
+      //loadUserStatistics();
+      //loadRecentOrders();
+      //loadRecommendedProducts();
       updateCartCount();
     });
 
@@ -404,33 +545,8 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
       });
     }
 
-    // ========== LOAD USER EMAIL ==========
-    async function loadUserEmail() {
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/customer_profile.php?action=get_profile', {
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) throw new Error('Network response failed');
-
-        const result = await response.json();
-
-        if (result.success && result.data && result.data.email) {
-          const emailDisplay = document.getElementById('userEmailDisplay');
-          if (emailDisplay) {
-            emailDisplay.textContent = result.data.email;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load user email:', error);
-      }
-    }
-
     // ========== LOAD USER STATISTICS ==========
-    async function loadUserStatistics() {
+    /*async function loadUserStatistics() {
       try {
         const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
           credentials: 'same-origin'
@@ -452,10 +568,10 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
         document.getElementById('pendingOrders').textContent = '0';
         document.getElementById('completedOrders').textContent = '0';
       }
-    }
+    }*/
 
     // ========== LOAD RECENT ORDERS ==========
-    async function loadRecentOrders() {
+    /*async function loadRecentOrders() {
       const ordersContainer = document.getElementById('recentOrdersContainer');
       if (!ordersContainer) return;
 
@@ -484,7 +600,7 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
       } catch {
         ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
       }
-    }
+    }*/
 
     // ========== LOGOUT MODAL ==========
     function showLogoutModal() {
@@ -565,7 +681,7 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
       } catch (error) {
         console.error('Failed to load products:', error);
         productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
-      }
+      } 
     }
 
     // ========== CART COUNT ==========
@@ -593,7 +709,165 @@ $footerHours = $cms['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM';
       });
     }
   </script>
+  <script>
+    (() => {
+      const root = document.getElementById('custCarousel');
+      if (!root || root.dataset.inited) return;
+      root.dataset.inited = '1';
 
+      const track = root.querySelector('.carousel-track');
+      const items = Array.from(track.children);
+      const prev = root.querySelector('.prev');
+      const next = root.querySelector('.next');
+      const dotsC = root.querySelector('.carousel-dots');
+
+      // build dots
+      items.forEach((_, i) => {
+        const d = document.createElement('span');
+        d.className = 'dot' + (i === 0 ? ' active' : '');
+        d.addEventListener('click', () => goTo(i));
+        dotsC.appendChild(d);
+      });
+      const dots = Array.from(dotsC.children);
+
+      let idx = 0;
+      let step = () => (items[0].getBoundingClientRect().width + 22); // item width + gap
+
+      function update() {
+        track.style.transform = `translateX(-${idx * step()}px)`;
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+
+      function goTo(i) {
+        idx = (i + items.length) % items.length;
+        update();
+      }
+
+      next.addEventListener('click', () => goTo(idx + 1));
+      prev.addEventListener('click', () => goTo(idx - 1));
+      window.addEventListener('resize', () => requestAnimationFrame(update));
+
+      // autoplay
+      let timer = setInterval(() => goTo(idx + 1), 5000);
+      root.addEventListener('mouseenter', () => clearInterval(timer));
+      root.addEventListener('mouseleave', () => (timer = setInterval(() => goTo(idx + 1), 5000)));
+
+      // first paint
+      update();
+    })();
+  </script>
+
+   <script>
+    (() => {
+      const track = document.querySelector('.carousel-track');
+      const items0 = [...document.querySelectorAll('.carousel-item')];
+      const nextBtn = document.querySelector('.carousel-btn.next');
+      const prevBtn = document.querySelector('.carousel-btn.prev');
+      const dotsBox = document.querySelector('.carousel-dots');
+
+      if (!track || items0.length === 0) return;
+
+      // --- sizing helpers ---
+      const stepWidth = () => (items0[1] ? items0[1].offsetLeft - items0[0].offsetLeft :
+        items0[0].offsetWidth + 20);
+      const perView = Math.max(1, Math.round(track.parentElement.offsetWidth / stepWidth()));
+
+      // --- clone edges for seamless loop ---
+      for (let i = 0; i < perView; i++) {
+        const head = items0[i].cloneNode(true);
+        const tail = items0[items0.length - 1 - i].cloneNode(true);
+        head.classList.add('is-clone');
+        tail.classList.add('is-clone');
+        track.appendChild(head); // first N -> end
+        track.insertBefore(tail, track.firstChild); // last N  -> start
+      }
+
+      const origCount = items0.length;
+      let index = perView; // start at first real slide
+      let isAnimating = false,
+        tEndTimer;
+
+      // dots
+      dotsBox.innerHTML = '';
+      const dots = items0.map((_, i) => {
+        const d = document.createElement('span');
+        d.className = 'dot' + (i === 0 ? ' active' : '');
+        d.addEventListener('click', () => goTo(perView + i, true, true));
+        dotsBox.appendChild(d);
+        return d;
+      });
+
+      const setTransform = (withTransition) => {
+        track.style.transition = withTransition ? 'transform .45s ease' : 'none';
+        track.style.transform = `translateX(-${index * stepWidth()}px)`;
+        const active = ((index - perView) % origCount + origCount) % origCount;
+        dots.forEach((d, i) => d.classList.toggle('active', i === active));
+      };
+
+      const goTo = (i, withTransition = true, resetAuto = false) => {
+        index = i;
+        setTransform(withTransition);
+        if (withTransition) watchTransition();
+        if (resetAuto) restartAuto();
+      };
+
+      const watchTransition = () => {
+        clearTimeout(tEndTimer);
+        tEndTimer = setTimeout(onTransitionEnd, 600); // fallback if transitionend doesn’t fire
+        isAnimating = true;
+        toggleBtns(true);
+      };
+
+      const onTransitionEnd = () => {
+        // snap back from clones (no transition so walang “jump”)
+        if (index >= origCount + perView) index = perView;
+        if (index < perView) index = origCount + perView - 1;
+        setTransform(false);
+        // re-enable clicks
+        isAnimating = false;
+        toggleBtns(false);
+      };
+
+      const step = (dir) => {
+        if (isAnimating) return;
+        goTo(index + dir, true, true);
+      };
+
+      const toggleBtns = (lock) => {
+        [nextBtn, prevBtn].forEach(b => {
+          if (!b) return;
+          b.disabled = lock;
+        });
+      };
+
+      track.addEventListener('transitionend', (e) => {
+        if (e.propertyName === 'transform') onTransitionEnd();
+      });
+
+      nextBtn?.addEventListener('click', () => step(1));
+      prevBtn?.addEventListener('click', () => step(-1));
+
+      // autoplay
+      let auto;
+      const startAuto = () => auto = setInterval(() => step(1), 3500);
+      const stopAuto = () => clearInterval(auto);
+      const restartAuto = () => {
+        stopAuto();
+        startAuto();
+      };
+
+      track.parentElement.addEventListener('mouseenter', stopAuto);
+      track.parentElement.addEventListener('mouseleave', startAuto);
+
+      // init
+      setTransform(false);
+      startAuto();
+
+      // keep position on resize
+      window.addEventListener('resize', () => setTransform(false));
+    })();
+  </script>
+  <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
   <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 </body>
 

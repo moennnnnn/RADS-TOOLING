@@ -29,14 +29,62 @@ if ($isPreview) {
 
 $customerName = htmlspecialchars($user['name'] ?? $user['username']);
 $customerId = $user['id'] ?? 0;
+// -------- Filters + Query for customer products page --------
+$q          = trim($_GET['q'] ?? '');
+$type       = $_GET['type'] ?? 'All';
+$activeType = $type;
 
-$img = $_SESSION['user']['profile_image'] ?? '';
-if ($img) {
-    $avatarHtml = '<img src="/RADS-TOOLING/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">';
-} else {
-    $avatarHtml = strtoupper(substr($customerName, 0, 1));
+// Build query (released only)
+$sql = "SELECT * FROM products
+        WHERE status = 'released'";
+
+$params = [];
+
+if ($type !== 'All') {
+    $sql   .= " AND type = ?";
+    $params[] = $type;
+}
+if ($q !== '') {
+    $sql   .= " AND (name LIKE ? OR description LIKE ?)";
+    $like   = "%{$q}%";
+    $params[] = $like;
+    $params[] = $like;
 }
 
+$sql .= " ORDER BY id DESC";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// --- Image URL normalizer (works whether absolute, relative or filename only)
+function rt_img_url($raw)
+{
+    $raw = trim((string)$raw);
+    if ($raw === '') {
+        return '/RADS-TOOLING/assets/images/placeholder.png';
+    }
+
+    // absolute (http/https) or already site-absolute (/RADS-TOOLING/...)
+    if (preg_match('~^https?://~i', $raw)) return $raw;
+    if ($raw[0] === '/') return $raw;
+
+    // common relative roots saved in DB
+    $knownRoots = [
+        'uploads/products/',
+        'assets/uploads/',
+        'assets/images/',
+        'images/',
+        'backend/uploads/',
+    ];
+    foreach ($knownRoots as $root) {
+        if (strpos($raw, $root) === 0) {
+            return '/RADS-TOOLING/' . $raw;
+        }
+    }
+
+    // filename lang → assume nasa uploads/products
+    return '/RADS-TOOLING/uploads/products/' . $raw;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,6 +98,9 @@ if ($img) {
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
@@ -65,7 +116,7 @@ if ($img) {
                     </a>
                 </div>
 
-                <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+                <form class="search-container" action="/RADS-TOOLING/customer/products.php" method="get">
                     <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
                     <button type="submit" class="search-btn" aria-label="Search">
                         <span class="material-symbols-rounded">search</span>
@@ -129,99 +180,205 @@ if ($img) {
 
             <nav class="navbar-menu">
                 <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item ">Home</a>
-                <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item active">About</a>
-                <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
+                <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item active">Products</a>
             </nav>
+            <!-- thin divider line between rows -->
+            <div class="nav-container"></div>
+            <div class="navbar-cats-bar">
+                <div class="navbar-container navbar-container--cats">
+                    <nav class="navbar-cats">
+                        <?php
+                        $cat = function ($label) use ($q, $activeType) {
+                            $href   = "/RADS-TOOLING/customer/products.php?type=" . urlencode($label) . ($q !== '' ? "&q=" . urlencode($q) : "");
+                            $active = ($activeType === $label) ? 'active' : '';
+                            echo '<a class="nav-menu-item ' . $active . '" href="' . htmlspecialchars($href) . '">' . htmlspecialchars($label) . '</a>';
+                        };
+                        $cat('All');
+                        $cat('Kitchen Cabinet');
+                        $cat('Wardrobe');
+                        $cat('Office Cabinet');
+                        $cat('Bathroom Cabinet');
+                        $cat('Storage Cabinet');
+                        ?>
+                    </nav>
+                </div>
+            </div>
+
         </header>
 
+        <!-- ====================== CONTENT ====================== -->
+        <main class="products-wrap">
+            <?php if (empty($products)) : ?>
+                <div class="rt-empty">No released products found<?= $q !== '' ? " for “" . htmlspecialchars($q) . "”" : '' ?>.</div>
+            <?php else : ?>
+                <div class="rt-grid">
+                    <?php foreach ($products as $p):
+                        $id    = (int)($p['id'] ?? 0);
+                        $name  = $p['name'] ?? 'Untitled';
+                        $desc  = $p['short_desc'] ?? ($p['description'] ?? '');
+                        $price = (float)($p['base_price'] ?? ($p['price'] ?? 0));
+                        $img = rt_img_url($p['image'] ?? ($p['image_url'] ?? ''));
 
-        <!-- Hero Section -->
-        <section class="sp-hero">
-            <div class="sp-container">
-                <h1><?php echo $content['about_headline'] ?? 'About RADS Tooling'; ?></h1>
-                <?php echo $content['about_subheadline'] ?? '<p>Your trusted partner in precision tooling</p>'; ?>
-                <div class="sp-hero-buttons">
-                    <a href="signup.php" class="sp-btn sp-btn-primary">Get Started</a>
-                    <a href="products.php" class="sp-btn sp-btn-secondary">Browse Products</a>
-                </div>
-            </div>
-        </section>
+                    ?>
+                        <article class="rt-card" data-id="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>">
+                            <div class="rt-imgwrap">
+                                <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($name) ?>"
+                                    onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
 
-        <!-- Store Info and Hours Cards -->
-        <section class="sp-section">
-            <div class="sp-container">
-                <div class="sp-cards-grid">
-                    <!-- Store Information Card -->
-                    <div class="sp-card">
-                        <h2 class="sp-card-title">Store Information</h2>
-                        <div class="sp-info-list">
-                            <div class="sp-info-item">
-                                <span class="sp-icon">📍</span>
-                                <div>
-                                    <p><strong>Address:</strong> <?php echo htmlspecialchars($content['about_address'] ?? 'N/A'); ?></p>
+                                <!-- KEEP ONLY THIS LEFT ICON -->
+                                <button class="rt-ico rt-left-ico" title="Customize" data-act="customize">
+                                    <span class="material-symbols-rounded">edit_square</span>
+                                </button>
+                            </div>
+
+                            <div class="rt-content">
+                                <div class="rt-name"><?= htmlspecialchars($name) ?></div>
+                                <div class="rt-desc"><?= htmlspecialchars($desc) ?></div>
+                                <div class="rt-price">₱ <?= number_format($price, 2) ?></div>
+
+                                <!-- BOTTOM CTA: CART + BUY NOW ONLY -->
+                                <div class="rt-cta">
+                                    <button class="rt-btn ghost" data-act="cart">Add to Cart</button>
+                                    <button class="rt-btn main" data-act="buynow">Buy Now</button>
                                 </div>
                             </div>
-                            <div class="sp-info-item">
-                                <span class="sp-icon">📞</span>
-                                <div>
-                                    <p><strong>Phone:</strong> <?php echo htmlspecialchars($content['about_phone'] ?? 'N/A'); ?></p>
-                                </div>
-                            </div>
-                            <div class="sp-info-item">
-                                <span class="sp-icon">✉️</span>
-                                <div>
-                                    <p><strong>Email:</strong> <?php echo htmlspecialchars($content['about_email'] ?? 'N/A'); ?></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Operating Hours Card -->
-                    <div class="sp-card">
-                        <h2 class="sp-card-title">Operating Hours</h2>
-                        <div class="sp-hours-table">
-                            <div class="sp-hours-row">
-                                <p><strong>Hours:</strong> <?php echo htmlspecialchars($content['about_hours_weekday'] ?? 'N/A'); ?></p>
-                            </div>
-                            <div class="sp-hours-row">
-                                <p><?php echo htmlspecialchars($content['about_hours_sunday'] ?? 'Sunday: Closed'); ?></p>
-                            </div>
-                        </div>
-                        <div class="sp-notice">
-                            <span class="sp-icon">📢</span>
-                            <p>Special hours may apply during holidays. Please contact us for confirmation.</p>
-                        </div>
-                    </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </main>
+
+        <!-- NOTE: removed the "Saved" toast para wala na sa footer -->
+        <!-- ===== Login Required (Public) ===== -->
+        <style>
+            .rt-modal {
+                position: fixed;
+                inset: 0;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                background: rgba(15, 23, 42, .5);
+                z-index: 2000
+            }
+
+            .rt-modal.open {
+                display: flex
+            }
+
+            .rt-modal__box {
+                width: min(420px, 92vw);
+                background: #fff;
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 10px 30px rgba(2, 6, 23, .15);
+                text-align: center
+            }
+
+            .rt-modal__actions {
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                margin-top: 16px
+            }
+        </style>
+
+        <div id="rtLoginModal" class="rt-modal" aria-hidden="true">
+            <div class="rt-modal__box">
+                <div class="material-symbols-rounded" style="font-size:48px;color:#2f5b88;margin-bottom:8px">lock</div>
+                <h3 style="margin:0 0 8px">Please log in</h3>
+                <p style="color:#64748b;margin:0 0 16px">
+                    Login or create an account to customize, add to cart, or buy.
+                </p>
+                <div class="rt-modal__actions">
+                    <a class="rt-btn main" href="/RADS-TOOLING/customer/cust_login.php">Login</a>
+                    <a class="rt-btn ghost" href="/RADS-TOOLING/customer/register.php">Sign up</a>
+                    <button id="rtLoginClose" class="rt-btn">Close</button>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- Mission & Vision Section -->
-        <section class="sp-section sp-section-alt">
-            <div class="sp-container">
-                <div class="sp-mv-grid">
-                    <div class="sp-mv-panel">
-                        <div class="sp-mv-icon">🎯</div>
-                        <h2>Our Mission</h2>
-                        <?php echo $content['about_mission'] ?? '<p>To provide high-quality custom cabinets...</p>'; ?>
-                    </div>
-                    <div class="sp-mv-panel">
-                        <div class="sp-mv-icon">🔮</div>
-                        <h2>Our Vision</h2>
-                        <?php echo $content['about_vision'] ?? '<p>To be the leading cabinet manufacturer...</p>'; ?>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <script>
+            (() => {
+                // Public page: i-gate lahat ng order actions
+                // (Kung gusto mong i-allow kapag may session kahit nasa public page,
+                //  palitan mo ito ng PHP flag na naka-comment sa ibaba.)
+                const CAN_ORDER = false;
+                // const CAN_ORDER = <?= (isset($_SESSION['user']) && (($_SESSION['user']['aud'] ?? '') === 'customer')) ? 'true' : 'false' ?>;
 
-        <!-- Company Story Section -->
-        <section class="sp-section">
-            <div class="sp-container">
-                <div class="sp-story">
-                    <h2>Our Story</h2>
-                    <?php echo $content['about_story'] ?? '<p>Established in 2007...</p>'; ?>
-                </div>
-        </section>
+                const modal = document.getElementById('rtLoginModal');
+                const openLogin = () => {
+                    modal.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                };
+                const closeLogin = () => {
+                    modal.classList.remove('open');
+                    document.body.style.overflow = '';
+                };
+
+                modal?.addEventListener('click', (e) => {
+                    if (e.target === modal) closeLogin();
+                });
+
+                document.addEventListener('click', async (e) => {
+                    const btn = e.target.closest('[data-act]');
+                    if (!btn) return;
+
+                    // Gate: ipakita muna ang login modal
+                    if (!CAN_ORDER) {
+                        e.preventDefault();
+                        openLogin();
+                        return;
+                    }
+
+                    // — Below: actual actions kung papayagan mo itong page na ’to kapag logged-in —
+                    const card = btn.closest('.rt-card');
+                    const id = Number(card?.dataset?.id);
+                    const act = btn.dataset.act;
+                    if (!id) return;
+
+                    if (act === 'customize') {
+                        location.href = `/RADS-TOOLING/customer/customize.php?id=${id}`;
+                        return;
+                    }
+                    if (act === 'cart') {
+                        try {
+                            await fetch('/RADS-TOOLING/customer/api/cart_add.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    _csrf: '<?= $CSRF ?>',
+                                    product_id: id,
+                                    qty: 1
+                                })
+                            });
+                        } catch (_) {}
+                        return;
+                    }
+                    if (act === 'buynow') {
+                        try {
+                            await fetch('/RADS-TOOLING/customer/api/checkout_seed.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    _csrf: '<?= $CSRF ?>',
+                                    product_id: id
+                                })
+                            });
+                        } finally {
+                            location.href = '/RADS-TOOLING/customer/checkout.php';
+                        }
+                    }
+                });
+            })();
+        </script>
+
+
 
         <!-- RADS-TOOLING Chat Support Widget -->
         <button id="rtChatBtn" class="rt-chat-btn">
@@ -281,7 +438,6 @@ if ($img) {
             </div>
         </div>
         </main>
-
 
         <!-- FOOTER -->
         <footer class="footer">
@@ -507,9 +663,9 @@ if ($img) {
                     productsContainer.innerHTML = result.data.products.map(product => `
         <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
           <div class="product-image">
-            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.jpg'}" 
+            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.png'}" 
                  alt="${escapeHtml(product.name)}"
-                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.png'">
           </div>
           <div class="product-info">
             <h3>${escapeHtml(product.name)}</h3>
@@ -553,8 +709,8 @@ if ($img) {
         }
     </script>
 
-    <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
 
+    <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
     <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 </body>
 

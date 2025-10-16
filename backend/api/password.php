@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {
-    if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-}
+
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -49,6 +48,18 @@ class PasswordResetAPI
             return;
         }
 
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$input) {
+            $this->send(false, 'Invalid JSON input');
+            return;
+        }
+
+        if (($input['csrf_token'] ?? '') !== ($_SESSION['csrf_token'] ?? '')) {
+            $this->send(false, 'Invalid CSRF');
+            return;
+        }
+
+
         switch ($action) {
             case 'request':
                 $this->requestPasswordReset($input);
@@ -67,31 +78,31 @@ class PasswordResetAPI
             $this->send(false, 'Email is required');
             return;
         }
-    
-        $email = trim((string)$input['email']);
-    
+
+        $email = strtolower(trim((string)$input['email']));
+
         // Validate email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->send(false, 'Invalid email format');
             return;
         }
-    
+
         try {
             // Check if customer exists
             $stmt = $this->conn->prepare('SELECT id, full_name, email FROM customers WHERE email = ? AND email_verified = 1 LIMIT 1');
             $stmt->execute([$email]);
             $customer = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
             if (!$customer) {
                 // Don't reveal if email exists or not for security
                 $this->send(true, 'If the email exists in our system, a reset code has been sent');
                 return;
             }
-    
+
             // Generate reset code (6-digit numeric)
             $resetCode = sprintf('%06d', random_int(100000, 999999));
             $resetExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-    
+
             // REPLACE: Update customer with correct column names
             $updateStmt = $this->conn->prepare('
                 UPDATE customers 
@@ -101,12 +112,12 @@ class PasswordResetAPI
                 WHERE id = ?
             ');
             $updateStmt->execute([$resetCode, $resetExpires, $customer['id']]);
-    
+
             // Send password reset email
             if (class_exists('Mailer')) {
                 $mailer = new Mailer();
                 $emailSent = $mailer->sendPasswordResetCode($email, $customer['full_name'], $resetCode);
-                
+
                 if ($emailSent) {
                     error_log("Password reset email sent successfully to: {$email}");
                 } else {
@@ -116,9 +127,8 @@ class PasswordResetAPI
                 // Log reset code for testing without email
                 error_log("Password reset code for {$email}: {$resetCode}");
             }
-    
+
             $this->send(true, 'If the email exists in our system, a reset code has been sent');
-    
         } catch (PDOException $e) {
             error_log("Password reset request error: " . $e->getMessage());
             $this->send(false, 'Failed to process password reset request');
@@ -130,73 +140,73 @@ class PasswordResetAPI
         $required = ['email', 'code', 'new_password', 'confirm'];
         foreach ($required as $field) {
             if (empty(trim((string)($input[$field] ?? '')))) {
-            $this->send(false, "Field '$field' is required");
-            return;
+                $this->send(false, "Field '$field' is required");
+                return;
             }
         }
 
-        $email = trim((string)$input['email']);
+        $email = strtolower(trim((string)$input['email']));
         $code = trim((string)$input['code']);
         $newPassword = (string)$input['new_password'];
         $confirmPassword = (string)$input['confirm'];
 
-    // Validate email format
+        // Validate email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->send(false, 'Invalid email format');
             return;
         }
 
-    // Validate reset code format (6 digits)
+        // Validate reset code format (6 digits)
         if (!preg_match('/^\d{6}$/', $code)) {
             $this->send(false, 'Invalid reset code format');
-        return;
-    }
+            return;
+        }
 
-    // Validate passwords match
+        // Validate passwords match
         if ($newPassword !== $confirmPassword) {
             $this->send(false, 'Passwords do not match');
             return;
-    }
+        }
 
-    // Validate password strength (minimum 6 characters)
-    if (strlen($newPassword) < 6) {
-        $this->send(false, 'Password must be at least 6 characters long');
-        return;
-    }
+        if (strlen($newPassword) < 8) {
+            $this->send(false, 'Password must be at least 8 characters long');
+            return;
+        }
 
-    try {
-        // REPLACE: Check with correct column names
-        $stmt = $this->conn->prepare('
+
+        try {
+            // REPLACE: Check with correct column names
+            $stmt = $this->conn->prepare('
             SELECT id, full_name, password_reset_code, password_reset_expires 
             FROM customers 
             WHERE email = ? AND email_verified = 1 
             LIMIT 1
         ');
-        $stmt->execute([$email]);
-        $customer = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt->execute([$email]);
+            $customer = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$customer) {
-            $this->send(false, 'Invalid email or reset code');
-            return;
-        }
+            if (!$customer) {
+                $this->send(false, 'Invalid email or reset code');
+                return;
+            }
 
-        // Check if reset code matches
-        if ($customer['password_reset_code'] !== $code) {
-            $this->send(false, 'Invalid reset code');
-            return;
-        }
+            // Check if reset code matches
+            if ($customer['password_reset_code'] !== $code) {
+                $this->send(false, 'Invalid reset code');
+                return;
+            }
 
-        // Check if reset code has expired
-        if (strtotime($customer['password_reset_expires']) < time()) {
-            $this->send(false, 'Reset code has expired. Please request a new one.');
-            return;
-        }
+            // Check if reset code has expired
+            if (strtotime($customer['password_reset_expires']) < time()) {
+                $this->send(false, 'Reset code has expired. Please request a new one.');
+                return;
+            }
 
-        // Hash new password
-        $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            // Hash new password
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 
-        // REPLACE: Update password with correct column names
-        $updateStmt = $this->conn->prepare('
+            // REPLACE: Update password with correct column names
+            $updateStmt = $this->conn->prepare('
             UPDATE customers 
             SET password = ?, 
                 password_reset_code = NULL, 
@@ -204,15 +214,14 @@ class PasswordResetAPI
                 updated_at = NOW()
             WHERE id = ?
         ');
-        $updateStmt->execute([$hashedPassword, $customer['id']]);
+            $updateStmt->execute([$hashedPassword, $customer['id']]);
 
-        $this->send(true, 'Password has been reset successfully');
-
-    } catch (PDOException $e) {
-        error_log("Password reset error: " . $e->getMessage());
-        $this->send(false, 'Failed to reset password');
+            $this->send(true, 'Password has been reset successfully');
+        } catch (PDOException $e) {
+            error_log("Password reset error: " . $e->getMessage());
+            $this->send(false, 'Failed to reset password');
+        }
     }
-}
 
     private function send(bool $success, string $message, ?array $data = null, int $httpCode = 200): void
     {
@@ -238,4 +247,3 @@ try {
         'message' => 'Internal server error'
     ]);
 }
-

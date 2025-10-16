@@ -129,13 +129,13 @@ class Mailer
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
             <title>Verify Your Account</title>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+                body { font-family: Poppins; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
                 .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
                 .header { text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 20px; margin-bottom: 30px; }
                 .logo { font-size: 24px; font-weight: bold; color: #007bff; }
                 .content { margin-bottom: 30px; }
                 .verification-code { background: #f8f9fa; border: 2px dashed #007bff; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
-                .code { font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px; font-family: 'Courier New', monospace; }
+                .code { font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px; font-family: Poppins; }
                 .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
                 .footer { text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; padding-top: 20px; }
             </style>
@@ -222,13 +222,13 @@ This is an automated message, please do not reply to this email.";
             <meta name='viewport' content='width=device-width, initial-scale=1.0'>
             <title>Password Reset Code</title>
             <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+                body { font-family: Poppins; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
                 .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
                 .header { text-align: center; border-bottom: 2px solid #dc3545; padding-bottom: 20px; margin-bottom: 30px; }
                 .logo { font-size: 24px; font-weight: bold; color: #dc3545; }
                 .content { margin-bottom: 30px; }
                 .reset-code { background: #f8f9fa; border: 2px dashed #dc3545; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
-                .code { font-size: 32px; font-weight: bold; color: #dc3545; letter-spacing: 5px; font-family: 'Courier New', monospace; }
+                .code { font-size: 32px; font-weight: bold; color: #dc3545; letter-spacing: 5px; font-family: Poppins; }
                 .warning { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0; }
                 .footer { text-align: center; color: #666; font-size: 14px; border-top: 1px solid #eee; padding-top: 20px; }
             </style>

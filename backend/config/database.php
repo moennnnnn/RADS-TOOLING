@@ -1,12 +1,14 @@
 <?php
-class Database {
+class Database
+{
     private $host = "localhost";
     private $database_name = "rads_tooling";
     private $username = "root";
     private $password = "";
     private $conn = null;
 
-    public function getConnection() {
+    public function getConnection()
+    {
         if ($this->conn !== null) {
             return $this->conn;
         }
@@ -18,15 +20,14 @@ class Database {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
-            
+
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
-            
+
             return $this->conn;
-            
         } catch (PDOException $e) {
             // Log the error (in production, log to file instead of displaying)
             error_log("Database connection error: " . $e->getMessage());
-            
+
             // Don't expose sensitive database info in production
             if (defined('DEBUG')) {
                 throw new Exception("Database connection failed: " . $e->getMessage());
@@ -36,7 +37,8 @@ class Database {
         }
     }
 
-    public function testConnection() {
+    public function testConnection()
+    {
         try {
             $conn = $this->getConnection();
             $stmt = $conn->query("SELECT 1");

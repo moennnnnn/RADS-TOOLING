@@ -543,6 +543,7 @@ if (!$isLoggedIn) {
                             <th>Description</th>
                             <th>Price</th>
                             <th>Customizable</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>

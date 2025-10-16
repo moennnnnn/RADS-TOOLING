@@ -1,22 +1,24 @@
 <?php
 // backend/api/customer_profile.php
-require_once dirname(__DIR__, 2) . '/includes/guard.php';
-require_once dirname(__DIR__, 2) . '/config/database.php';
 
-header('Content-Type: application/json');
+declare(strict_types=1);
+session_start();
+header('Content-Type: application/json; charset=utf-8');
 
-// Start session if not started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Para hindi sumingit ang notices/warnings sa JSON:
+ini_set('display_errors', '0');
 
-// Check authentication
-if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? null) !== 'customer') {
+// ✅ CORRECT PATHS (important!)
+require_once dirname(__DIR__, 2) . '/includes/guard.php';   // from backend/api -> up 2 = project/, then /includes/guard.php
+require_once dirname(__DIR__)     . '/config/database.php'; // from backend/api -> up 1 = backend/, then /config/database.php
+
+// JSON auth guard (wag mag-HTML redirect)
+if (empty($_SESSION['user']) || (($_SESSION['user']['aud'] ?? '') !== 'customer')) {
     http_response_code(401);
     echo json_encode([
-        'success' => false,
-        'code' => 'AUTH',
-        'message' => 'Login required',
+        'success'  => false,
+        'code'     => 'AUTH',
+        'message'  => 'Login required',
         'redirect' => '/RADS-TOOLING/customer/login.php'
     ]);
     exit;
@@ -24,9 +26,9 @@ if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? null) !== 'customer
 
 $db = new Database();
 $conn = $db->getConnection();
-$customer_id = $_SESSION['user']['id'];
+$customer_id = (int) $_SESSION['user']['id'];
 
-// ... rest of the code continues
+
 
 // GET - Fetch profile data
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

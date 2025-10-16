@@ -29,6 +29,14 @@ if ($isPreview) {
 
 $customerName = htmlspecialchars($user['name'] ?? $user['username']);
 $customerId = $user['id'] ?? 0;
+
+$img = $_SESSION['user']['profile_image'] ?? '';
+if ($img) {
+    $avatarHtml = '<img src="/RADS-TOOLING/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">';
+} else {
+    $avatarHtml = strtoupper(substr($customerName, 0, 1));
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,6 +46,7 @@ $customerId = $user['id'] ?? 0;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rads Tooling - <?= $customerName ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
@@ -69,7 +78,7 @@ $customerId = $user['id'] ?? 0;
                     <div class="profile-menu">
                         <button class="profile-toggle" id="profileToggle" type="button">
                             <div class="profile-avatar-wrapper">
-                                <div class="profile-avatar">
+                                <div class="profile-avatar" id="nav-avatar">
                                     <?= strtoupper(substr($customerName, 0, 1)) ?>
                                 </div>
                             </div>
@@ -81,11 +90,11 @@ $customerId = $user['id'] ?? 0;
 
                         <div class="profile-dropdown" id="profileDropdown">
                             <div class="profile-dropdown-header">
-                                <div class="dropdown-avatar">
+                                <div class="dropdown-avatar" id="dd-avatar">
                                     <?= strtoupper(substr($customerName, 0, 1)) ?>
                                 </div>
                                 <div class="dropdown-user-info">
-                                    <div class="dropdown-name"><?= $customerName ?></div>
+                                    <div class="dropdown-name" id="dd-name"><?= $customerName ?></div>
                                     <div class="dropdown-email" id="userEmailDisplay">Loading...</div>
                                 </div>
                             </div>
@@ -272,10 +281,9 @@ $customerId = $user['id'] ?? 0;
             // ========== INITIALIZE ON PAGE LOAD ==========
             document.addEventListener('DOMContentLoaded', function() {
                 initProfileDropdown();
-                loadUserEmail();
-                loadUserStatistics();
-                loadRecentOrders();
-                loadRecommendedProducts();
+                //loadUserStatistics();
+                //loadRecentOrders();
+                //loadRecommendedProducts();
                 updateCartCount();
             });
 
@@ -308,33 +316,8 @@ $customerId = $user['id'] ?? 0;
                 });
             }
 
-            // ========== LOAD USER EMAIL ==========
-            async function loadUserEmail() {
-                try {
-                    const response = await fetch('/RADS-TOOLING/backend/api/customer_profile.php?action=get_profile', {
-                        credentials: 'same-origin',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-
-                    if (!response.ok) throw new Error('Network response failed');
-
-                    const result = await response.json();
-
-                    if (result.success && result.data && result.data.email) {
-                        const emailDisplay = document.getElementById('userEmailDisplay');
-                        if (emailDisplay) {
-                            emailDisplay.textContent = result.data.email;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Failed to load user email:', error);
-                }
-            }
-
             // ========== LOAD USER STATISTICS ==========
-            async function loadUserStatistics() {
+            /*async function loadUserStatistics() {
                 try {
                     const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
                         credentials: 'same-origin'
@@ -356,10 +339,10 @@ $customerId = $user['id'] ?? 0;
                     document.getElementById('pendingOrders').textContent = '0';
                     document.getElementById('completedOrders').textContent = '0';
                 }
-            }
+            }*/
 
             // ========== LOAD RECENT ORDERS ==========
-            async function loadRecentOrders() {
+            /*async function loadRecentOrders() {
                 const ordersContainer = document.getElementById('recentOrdersContainer');
                 if (!ordersContainer) return;
 
@@ -388,7 +371,7 @@ $customerId = $user['id'] ?? 0;
                 } catch {
                     ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
                 }
-            }
+            }*/
 
             // ========== LOGOUT MODAL ==========
             function showLogoutModal() {
@@ -427,7 +410,7 @@ $customerId = $user['id'] ?? 0;
             }
 
             // ========== LOAD PRODUCTS ==========
-            async function loadRecommendedProducts() {
+            /*async function loadRecommendedProducts() {
                 const productsContainer = document.getElementById('recommendedProducts');
                 if (!productsContainer) return;
 
@@ -463,7 +446,7 @@ $customerId = $user['id'] ?? 0;
                     console.error('Failed to load products:', error);
                     productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
                 }
-            }
+            }*/
 
             // ========== CART COUNT ==========
             function updateCartCount() {
@@ -491,6 +474,7 @@ $customerId = $user['id'] ?? 0;
             }
         </script>
 
+        <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
         <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 </body>
 

@@ -154,7 +154,7 @@ function displayProducts(products) {
           src="/RADS-TOOLING/uploads/products/${product.image || 'placeholder.jpg'}"
           alt="${product.name}"
           class="product-img"
-          onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+          onerror="this.onerror=null; this.src='/RADS-TOOLING/assets/images/placeholder.png'"
       </td>
       <td><strong>${product.name}</strong></td>
       <td><span class="badge badge-info">${product.type}</span></td>
@@ -166,6 +166,12 @@ function displayProducts(products) {
         </span>
       </td>
       <td>
+  <span class="badge ${product.status === 'released' ? 'badge-active' : 'badge-inactive'}">
+    ${product.status === 'released' ? 'released' : 'draft'}
+  </span>
+</td>
+
+      <td>
         <button class="btn-edit" title="Edit Product" onclick="handleEditProduct(${product.id})">
           <span class="material-symbols-rounded">edit</span>
         </button>
@@ -173,6 +179,15 @@ function displayProducts(products) {
           <button class="btn-edit" title="Manage Customization" onclick="openCustomizationModal(${product.id})">
             <span class="material-symbols-rounded">tune</span>
           </button>` : ''}
+          ${product.status === 'released' ? `
+  <button class="btn-edit" title="Unrelease" onclick="toggleRelease(${product.id}, 'draft')">
+    <span class="material-symbols-rounded">visibility_off</span>
+  </button>
+` : `
+  <button class="btn-edit" title="Release" onclick="toggleRelease(${product.id}, 'released')">
+    <span class="material-symbols-rounded">visibility</span>
+  </button>
+`}
         <button class="btn-delete" title="Delete Product" onclick="deleteProduct(${product.id})">
           <span class="material-symbols-rounded">delete</span>
         </button>
@@ -348,6 +363,24 @@ async function deleteProduct(productId) {
     showNotification('error', 'Failed to delete product');
   }
 }
+
+async function toggleRelease(productId, status) {
+  try {
+    const res = await fetch('/RADS-TOOLING/backend/api/admin_products.php?action=toggle_release', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: Number(productId), status })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Failed');
+    showNotification('success', status === 'released' ? 'Product released' : 'Product set to draft');
+    await loadProducts(); // refresh table
+  } catch (e) {
+    console.error(e);
+    showNotification('error', e.message || 'Server error');
+  }
+}
+
 
 // ===== Uploads =====
 async function handleImagePreview(e) {
