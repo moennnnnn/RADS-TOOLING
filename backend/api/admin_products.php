@@ -26,22 +26,26 @@ $action = $_GET['action'] ?? '';
 $id     = (int)($_GET['id'] ?? 0);
 
 $user = $_SESSION['user'] ?? null;
-$aud  = $user['aud'] ?? ''; // 'admin' or 'customer'
+$aud  = $user['aud']  ?? '';   // 'staff' | 'admin' | 'customer' (legacy)
+$role = $user['role'] ?? '';   // 'Owner' | 'Admin' | 'Secretary'
 
-// 🔐 Auth: admin-only for non-view; allow customer for view
+// ✅ Unified auth:
+// - Non-view actions: kailangan staff/admin audience
+// - View: pwede staff/admin/customer
 if ($action !== 'view') {
-    if ($aud !== 'admin') {
+    if (!in_array($aud, ['staff', 'admin'], true)) {
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Unauthorized access', 'data' => null]);
         exit;
     }
 } else {
-    if (!$user || !in_array($aud, ['admin', 'customer'], true)) {
+    if (!$user || !in_array($aud, ['staff', 'admin', 'customer'], true)) {
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Unauthorized access', 'data' => null]);
         exit;
     }
 }
+
 
 // Error handler
 set_error_handler(function ($severity, $message, $file, $line) {
@@ -82,9 +86,15 @@ function requireStaffAuth(): void
 }
 
 // Allow 'view' for logged-in admin OR customer; other actions require staff/admin
-if (!($action === 'view' && in_array($aud, ['admin', 'customer'], true))) {
+// NEW:
+if ($action !== 'view') {
     requireStaffAuth();
+} else {
+    if (!in_array($aud, ['customer', 'staff', 'admin'], true)) {
+        sendJSON(false, 'Unauthorized access', null, 401);
+    }
 }
+
 
 // Get database connection
 try {

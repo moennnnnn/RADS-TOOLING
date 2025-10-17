@@ -882,6 +882,8 @@ if (!$isLoggedIn) {
         <!-- ===== Scripts ===== -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="/RADS-TOOLING/assets/JS/script.js"></script>
+        <script src="/RADS-TOOLING/assets/JS/product_management.js"></script>
+
 
         <script>
             // Hide loading overlay once everything is loaded
@@ -1382,7 +1384,7 @@ if (!$isLoggedIn) {
         <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
         <script src="/RADS-TOOLING/assets/JS/content_mgmt.js"></script>
 
-        
+
         <!-- ========== ADD PRODUCT MODAL ========== -->
         <div id="addProductModal" class="modal" style="display: none;">
             <div class="modal-content" style="max-width: 800px;">
@@ -2186,8 +2188,6 @@ if (!$isLoggedIn) {
                 }
             });
         </script>
-        <script src="/RADS-TOOLING/assets/JS/script.js"></script>
-        <script src="/RADS-TOOLING/assets/JS/product_management.js"></script>
 </body>
 
 </html>

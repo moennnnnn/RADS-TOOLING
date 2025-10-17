@@ -150,11 +150,11 @@ function displayProducts(products) {
   tbody.innerHTML = products.map((product) => `
     <tr>
       <td>
-        <img
-          src="/RADS-TOOLING/uploads/products/${product.image || 'placeholder.jpg'}"
-          alt="${product.name}"
-          class="product-img"
-          onerror="this.onerror=null; this.src='/RADS-TOOLING/assets/images/placeholder.png'"
+      <img
+        src="/RADS-TOOLING/uploads/products/${product.image || 'placeholder.jpg'}"
+        alt="${product.name}"
+        class="product-img"
+        onerror="this.onerror=null; this.src='/RADS-TOOLING/assets/images/placeholder.png'">
       </td>
       <td><strong>${product.name}</strong></td>
       <td><span class="badge badge-info">${product.type}</span></td>
@@ -480,20 +480,20 @@ function populateCustomizationModal(product) {
 
   // HEIGHT
   if (asMap.height) {
-    document.getElementById('heightMinCustom').value   = asMap.height.min_value ?? 0;
-    document.getElementById('heightMaxCustom').value   = asMap.height.max_value ?? 0;
+    document.getElementById('heightMinCustom').value = asMap.height.min_value ?? 0;
+    document.getElementById('heightMaxCustom').value = asMap.height.max_value ?? 0;
     document.getElementById('heightPriceCustom').value = asMap.height.price_per_unit ?? 0;
   }
   // WIDTH
   if (asMap.width) {
-    document.getElementById('widthMinCustom').value   = asMap.width.min_value ?? 0;
-    document.getElementById('widthMaxCustom').value   = asMap.width.max_value ?? 0;
+    document.getElementById('widthMinCustom').value = asMap.width.min_value ?? 0;
+    document.getElementById('widthMaxCustom').value = asMap.width.max_value ?? 0;
     document.getElementById('widthPriceCustom').value = asMap.width.price_per_unit ?? 0;
   }
   // DEPTH
   if (asMap.depth) {
-    document.getElementById('depthMinCustom').value   = asMap.depth.min_value ?? 0;
-    document.getElementById('depthMaxCustom').value   = asMap.depth.max_value ?? 0;
+    document.getElementById('depthMinCustom').value = asMap.depth.min_value ?? 0;
+    document.getElementById('depthMaxCustom').value = asMap.depth.max_value ?? 0;
     document.getElementById('depthPriceCustom').value = asMap.depth.price_per_unit ?? 0;
   }
 
@@ -551,7 +551,7 @@ async function saveCustomizationOptions() {
 
   // keep only min, max, price_per_unit (+ measurement_unit for context)
   const sizeConfig = {
-    width:  {
+    width: {
       min_value: +document.getElementById('widthMinCustom').value,
       max_value: +document.getElementById('widthMaxCustom').value,
       price_per_unit: +document.getElementById('widthPriceCustom').value,
@@ -563,7 +563,7 @@ async function saveCustomizationOptions() {
       price_per_unit: +document.getElementById('heightPriceCustom').value,
       measurement_unit: currentProduct?.measurement_unit || 'cm'
     },
-    depth:  {
+    depth: {
       min_value: +document.getElementById('depthMinCustom').value,
       max_value: +document.getElementById('depthMaxCustom').value,
       price_per_unit: +document.getElementById('depthPriceCustom').value,
@@ -572,8 +572,8 @@ async function saveCustomizationOptions() {
   };
 
   const texture_ids = Array.from(document.querySelectorAll('#texturesListContainer input:checked')).map(cb => +cb.value);
-  const color_ids   = Array.from(document.querySelectorAll('#colorsListContainer   input:checked')).map(cb => +cb.value);
-  const handle_ids  = Array.from(document.querySelectorAll('#handlesListContainer  input:checked')).map(cb => +cb.value);
+  const color_ids = Array.from(document.querySelectorAll('#colorsListContainer   input:checked')).map(cb => +cb.value);
+  const handle_ids = Array.from(document.querySelectorAll('#handlesListContainer  input:checked')).map(cb => +cb.value);
 
   try {
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=update_size_config', {
