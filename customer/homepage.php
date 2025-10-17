@@ -181,7 +181,7 @@ if ($img) {
         <h2 class="section-title">Quick Actions</h2>
         <div class="actions-grid">
           <a href="/RADS-TOOLING/customer/customize.php" class="action-card">
-            <div class="action-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+            <div class="action-icon">
               <span class="material-symbols-rounded">view_in_ar</span>
             </div>
             <h3>Design Cabinet</h3>
@@ -189,7 +189,7 @@ if ($img) {
           </a>
 
           <a href="/RADS-TOOLING/public/products.php" class="action-card">
-            <div class="action-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+            <div class="action-icon">
               <span class="material-symbols-rounded">storefront</span>
             </div>
             <h3>Browse Gallery</h3>
@@ -197,7 +197,7 @@ if ($img) {
           </a>
 
           <a href="/RADS-TOOLING/customer/orders.php" class="action-card">
-            <div class="action-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+            <div class="action-icon">
               <span class="material-symbols-rounded">local_shipping</span>
             </div>
             <h3>Track Orders</h3>
@@ -205,7 +205,7 @@ if ($img) {
           </a>
 
           <a href="/RADS-TOOLING/cart.php" class="action-card">
-            <div class="action-icon" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+            <div class="action-icon">
               <span class="material-symbols-rounded">shopping_cart</span>
             </div>
             <h3>View Cart</h3>
@@ -274,72 +274,73 @@ if ($img) {
         </div>
       </div>
     </main>
-<!-- ========== CABINETS GALLERY CAROUSEL ========== -->
-<section class="cabinets-section">
-  <div class="section-header">
-    <h2>Featured <span class="highlight">Cabinets</span></h2>
-    <p>Explore our collection of premium custom cabinets</p>
-  </div>
+    <!-- ========== CABINETS GALLERY CAROUSEL ========== -->
+    <section class="cabinets-section">
+      <div class="section-header">
+        <h2>Featured <span class="highlight">Cabinets</span></h2>
+        <p>Explore our collection of premium custom cabinets</p>
+      </div>
 
-  <?php
-  // Small helper so relative names work
-  if (!function_exists('rt_url')) {
-    function rt_url($raw) {
-      $raw = trim((string)$raw);
-      if ($raw === '') return '/RADS-TOOLING/assets/images/placeholder.jpg';
-      if (preg_match('~^https?://~i', $raw)) return $raw;   // absolute
-      if ($raw[0] === '/') return $raw;                     // site-absolute
-      // otherwise treat as a file under /assets/images/
-      return '/RADS-TOOLING/assets/images/' . $raw;
-    }
-  }
+      <?php
+      // Small helper so relative names work
+      if (!function_exists('rt_url')) {
+        function rt_url($raw)
+        {
+          $raw = trim((string)$raw);
+          if ($raw === '') return '/RADS-TOOLING/assets/images/placeholder.jpg';
+          if (preg_match('~^https?://~i', $raw)) return $raw;   // absolute
+          if ($raw[0] === '/') return $raw;                     // site-absolute
+          // otherwise treat as a file under /assets/images/
+          return '/RADS-TOOLING/assets/images/' . $raw;
+        }
+      }
 
-  // 1) from CMS (correct var = $cms)
-  $imgs = $cms['carousel_images'] ?? [];
+      // 1) from CMS (correct var = $cms)
+      $imgs = $cms['carousel_images'] ?? [];
 
-  // 2) fallback if CMS has nothing
-  if (!$imgs) {
-    $imgs = [
-      ['image' => 'cab1.jpg', 'title' => 'Bathroom Vanity',  'description' => 'Water-resistant premium materials'],
-      ['image' => 'cab2.jpg', 'title' => 'Living Room Display', 'description' => 'Custom shelving with clean lines'],
-      ['image' => 'cab3.jpg', 'title' => 'Modern Kitchen',   'description' => 'Contemporary design with premium finishes'],
-      ['image' => 'cab4.jpg', 'title' => 'Office Storage',   'description' => 'Professional workspace solutions'],
-    ];
-  }
-  ?>
-
-  <div class="carousel-container">
-    <button class="carousel-btn prev" type="button" aria-label="Previous">
-      <span class="material-symbols-rounded">chevron_left</span>
-    </button>
-
-    <div class="carousel-track">
-      <?php foreach ($imgs as $img): 
-        $src  = rt_url($img['image'] ?? '');
-        $ttl  = $img['title'] ?? '';
-        $desc = $img['description'] ?? '';
+      // 2) fallback if CMS has nothing
+      if (!$imgs) {
+        $imgs = [
+          ['image' => 'cab1.jpg', 'title' => 'Bathroom Vanity',  'description' => 'Water-resistant premium materials'],
+          ['image' => 'cab2.jpg', 'title' => 'Living Room Display', 'description' => 'Custom shelving with clean lines'],
+          ['image' => 'cab3.jpg', 'title' => 'Modern Kitchen',   'description' => 'Contemporary design with premium finishes'],
+          ['image' => 'cab4.jpg', 'title' => 'Office Storage',   'description' => 'Professional workspace solutions'],
+        ];
+      }
       ?>
-        <div class="carousel-item">
-          <img src="<?= htmlspecialchars($src) ?>"
-               alt="<?= htmlspecialchars($ttl) ?>"
-               onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
-          <div class="carousel-caption">
-            <h4><?= htmlspecialchars($ttl) ?></h4>
-            <p><?= htmlspecialchars($desc) ?></p>
-          </div>
+
+      <div class="carousel-container">
+        <button class="carousel-btn prev" type="button" aria-label="Previous">
+          <span class="material-symbols-rounded">chevron_left</span>
+        </button>
+
+        <div class="carousel-track">
+          <?php foreach ($imgs as $img):
+            $src  = rt_url($img['image'] ?? '');
+            $ttl  = $img['title'] ?? '';
+            $desc = $img['description'] ?? '';
+          ?>
+            <div class="carousel-item">
+              <img src="<?= htmlspecialchars($src) ?>"
+                alt="<?= htmlspecialchars($ttl) ?>"
+                onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+              <div class="carousel-caption">
+                <h4><?= htmlspecialchars($ttl) ?></h4>
+                <p><?= htmlspecialchars($desc) ?></p>
+              </div>
+            </div>
+          <?php endforeach; ?>
         </div>
-      <?php endforeach; ?>
-    </div>
 
-    <button class="carousel-btn next" type="button" aria-label="Next">
-      <span class="material-symbols-rounded">chevron_right</span>
-    </button>
-  </div>
+        <button class="carousel-btn next" type="button" aria-label="Next">
+          <span class="material-symbols-rounded">chevron_right</span>
+        </button>
+      </div>
 
-  <div class="carousel-dots"></div>
-</section>
+      <div class="carousel-dots"></div>
+    </section>
 
-   
+
 
 
     <!-- FOOTER -->
@@ -369,8 +370,9 @@ if ($img) {
         <div class="footer-section">
           <h3>Quick Links</h3>
           <ul class="footer-links">
+            <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
             <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
-            <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
           </ul>
         </div>
 
@@ -378,11 +380,11 @@ if ($img) {
         <div class="footer-section">
           <h3>Categories</h3>
           <ul class="footer-links">
-            <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
-            <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
-            <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
-            <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
-            <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom">Bathroom</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
           </ul>
         </div>
 
@@ -421,91 +423,8 @@ if ($img) {
       </div>
     </footer>
 
-   </div><!-- /.page-wrapper -->
+  </div><!-- /.page-wrapper -->
 
-<script>
-(() => {
-  // Elements
-  const viewport = document.querySelector('.carousel-viewport');
-  const track    = document.querySelector('.carousel-track');
-  const prevBtn  = document.querySelector('.carousel-btn.prev');
-  const nextBtn  = document.querySelector('.carousel-btn.next');
-  const dotsWrap = document.querySelector('.carousel-dots');
-
-  if (!viewport || !track || !dotsWrap) return;
-
-  let page  = 0;
-  let pages = 1;
-  let timer;
-
-  // ➕ Dagdagan natin ng 1 extra dot
-  const EXTRA_DOTS = 1;   // set to 0 kung ayaw mo na ng dagdag
-  const MIN_DOTS   = 0;   // set to 4 kung gusto mo may minimum na 4 dots
-
-  // Ilang cards ang sabay-sabay depende sa lapad (pareho ng public)
-  function perView() {
-    const w = viewport.clientWidth;
-    if (w >= 1100) return 3;  // desktop → 3 cards
-    if (w >= 720)  return 2;  // tablet  → 2 cards
-    return 1;                 // mobile  → 1 card
-  }
-
-  // Recompute pages + rebuild dots
-  function recalc() {
-    const totalItems = track.children.length;
-    pages = Math.max(1, Math.ceil(totalItems / perView()));
-
-    // total dots = pages + EXTRA_DOTS (o MIN_DOTS kung mas mataas)
-    const dotCount = Math.max(pages + EXTRA_DOTS, MIN_DOTS);
-
-    dotsWrap.innerHTML = '';
-    for (let i = 0; i < dotCount; i++) {
-      // kung extra dot na lampas sa pages, ituro sa last page
-      const target = i >= pages ? (pages - 1) : i;
-
-      const dot = document.createElement('span');
-      dot.className = 'dot';
-      dot.dataset.target = String(target);
-      dot.addEventListener('click', () => { page = target; update(); restart(); });
-
-      dotsWrap.appendChild(dot);
-    }
-    update();
-  }
-
-  // Slide by "page" (isang viewport width bawat galaw)
-  function update() {
-    const offsetX = page * viewport.clientWidth;
-    track.style.transform = `translateX(-${offsetX}px)`;
-
-    const dots = [...dotsWrap.children];
-    const dotCount = dots.length;
-
-    // kapag nasa last page at may extra dot(s), yung pinakahuli ang i-activate
-    const activeIndex = (page === pages - 1 && dotCount > pages) ? (dotCount - 1) : page;
-
-    dots.forEach((d, i) => d.classList.toggle('active', i === activeIndex));
-  }
-
-  function next() { page = (page + 1) % pages; update(); }
-  function prev() { page = (page - 1 + pages) % pages; update(); }
-
-  prevBtn?.addEventListener('click', () => { prev();   restart(); });
-  nextBtn?.addEventListener('click', () => { next();   restart(); });
-
-  // Autoplay (stop on hover)
-  function start()   { stop(); timer = setInterval(next, 5000); }
-  function stop()    { if (timer) clearInterval(timer); }
-  function restart() { start(); }
-
-  viewport.addEventListener('mouseenter', stop);
-  viewport.addEventListener('mouseleave', start);
-  window.addEventListener('resize', recalc);
-
-  recalc();
-  start();
-})();
-</script>
   <script>
     // ========== INITIALIZE ON PAGE LOAD ==========
     document.addEventListener('DOMContentLoaded', function() {
@@ -681,7 +600,7 @@ if ($img) {
       } catch (error) {
         console.error('Failed to load products:', error);
         productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
-      } 
+      }
     }
 
     // ========== CART COUNT ==========
@@ -709,55 +628,8 @@ if ($img) {
       });
     }
   </script>
+
   <script>
-    (() => {
-      const root = document.getElementById('custCarousel');
-      if (!root || root.dataset.inited) return;
-      root.dataset.inited = '1';
-
-      const track = root.querySelector('.carousel-track');
-      const items = Array.from(track.children);
-      const prev = root.querySelector('.prev');
-      const next = root.querySelector('.next');
-      const dotsC = root.querySelector('.carousel-dots');
-
-      // build dots
-      items.forEach((_, i) => {
-        const d = document.createElement('span');
-        d.className = 'dot' + (i === 0 ? ' active' : '');
-        d.addEventListener('click', () => goTo(i));
-        dotsC.appendChild(d);
-      });
-      const dots = Array.from(dotsC.children);
-
-      let idx = 0;
-      let step = () => (items[0].getBoundingClientRect().width + 22); // item width + gap
-
-      function update() {
-        track.style.transform = `translateX(-${idx * step()}px)`;
-        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-      }
-
-      function goTo(i) {
-        idx = (i + items.length) % items.length;
-        update();
-      }
-
-      next.addEventListener('click', () => goTo(idx + 1));
-      prev.addEventListener('click', () => goTo(idx - 1));
-      window.addEventListener('resize', () => requestAnimationFrame(update));
-
-      // autoplay
-      let timer = setInterval(() => goTo(idx + 1), 5000);
-      root.addEventListener('mouseenter', () => clearInterval(timer));
-      root.addEventListener('mouseleave', () => (timer = setInterval(() => goTo(idx + 1), 5000)));
-
-      // first paint
-      update();
-    })();
-  </script>
-
-   <script>
     (() => {
       const track = document.querySelector('.carousel-track');
       const items0 = [...document.querySelectorAll('.carousel-item')];
@@ -787,22 +659,36 @@ if ($img) {
       let isAnimating = false,
         tEndTimer;
 
-      // dots
+      // dots  👉 add 1 extra dot
       dotsBox.innerHTML = '';
-      const dots = items0.map((_, i) => {
+      const EXTRA_DOTS = 1; // gawing 0 kung ayaw mo ng dagdag
+      const dots = [];
+      const totalDots = origCount + EXTRA_DOTS;
+
+      for (let i = 0; i < totalDots; i++) {
         const d = document.createElement('span');
         d.className = 'dot' + (i === 0 ? ' active' : '');
-        d.addEventListener('click', () => goTo(perView + i, true, true));
+        // kapag extra dot (lampas sa origCount), ituro sa last real slide
+        const targetIndex = i >= origCount ? (perView + origCount - 1) : (perView + i);
+        d.addEventListener('click', () => goTo(targetIndex, true, true));
         dotsBox.appendChild(d);
-        return d;
-      });
+        dots.push(d);
+      }
 
       const setTransform = (withTransition) => {
         track.style.transition = withTransition ? 'transform .45s ease' : 'none';
         track.style.transform = `translateX(-${index * stepWidth()}px)`;
-        const active = ((index - perView) % origCount + origCount) % origCount;
+
+        // real index (0..origCount-1)
+        const real = ((index - perView) % origCount + origCount) % origCount;
+        // kung nasa last slide at may extra dot, i-activate yung huling dot
+        const active = (real === origCount - 1 && dots.length > origCount) ?
+          (dots.length - 1) :
+          real;
+
         dots.forEach((d, i) => d.classList.toggle('active', i === active));
       };
+
 
       const goTo = (i, withTransition = true, resetAuto = false) => {
         index = i;

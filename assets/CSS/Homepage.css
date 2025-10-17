@@ -500,6 +500,7 @@ body {
   align-items: center;
   justify-content: center;
   color: white;
+  background: linear-gradient(135deg, #2f5b88, #3a77b8);
   font-size: 2rem;
 }
 
@@ -958,7 +959,7 @@ body {
 
 .section-header p {
   font-size: 1.1rem;
-  color: #7f8c8d;
+  color: #F5F7FA;
 }
 
 .highlight {

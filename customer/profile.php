@@ -114,8 +114,14 @@ $CSRF = $_SESSION['csrf_token'];
 
                                     <div class="form-group">
                                         <label>Phone Number</label>
-                                        <input type="tel" id="phone" name="phone" placeholder="+63 912 345 6789">
+                                        <div class="phone-group">
+                                            <span class="phone-prefix">+63</span>
+                                            <input type="tel" id="phoneLocal" inputmode="numeric" maxlength="10" placeholder="9123456789">
+                                            <!-- keep hidden for compatibility -->
+                                            <input type="hidden" id="phone" name="phone">
+                                        </div>
                                     </div>
+
 
                                     <div class="form-actions">
                                         <button type="submit" class="btn btn-primary" id="save-btn">
@@ -337,8 +343,16 @@ $CSRF = $_SESSION['csrf_token'];
             setVal('username', customer.username);
             setVal('full_name', fullName);
             setVal('email', customer.email);
-            setVal('phone', customer.phone);
             setVal('address', customer.address);
+
+            // Prefill phoneLocal (10 digits after +63)
+            const phoneLocalEl = document.getElementById('phoneLocal');
+            if (phoneLocalEl) {
+                const digits = String(customer.phone || '')
+                    .replace(/\D/g, '') // keep digits
+                    .replace(/^63/, ''); // drop country code
+                phoneLocalEl.value = digits.slice(0, 10);
+            }
 
             // avatar preview
             const avatarPreview = document.getElementById('avatar-preview');
@@ -360,12 +374,28 @@ $CSRF = $_SESSION['csrf_token'];
             btnText.style.display = 'none';
             btnSpinner.style.display = 'inline-block';
 
+            const local = (document.getElementById('phoneLocal')?.value || '')
+                .replace(/\D/g, '').slice(0, 10);
+            const composedPhone = local ? `+63${local}` : ''; // allow blank if gusto mo
+
+            // sync hidden (optional)
+            const hiddenPhone = document.getElementById('phone');
+            if (hiddenPhone) hiddenPhone.value = composedPhone;
+
             const formData = {
                 csrf_token: CSRF_TOKEN,
                 full_name: document.getElementById('full_name').value.trim(),
-                phone: document.getElementById('phone').value.trim(),
+                phone: composedPhone, // << ito na ipapasa
                 address: document.getElementById('address').value.trim()
             };
+
+            if (!local || local.length !== 10) {
+                showMessage('Enter 10 digits after +63 (e.g., 9123456789)', 'error');
+                saveBtn.disabled = false;
+                btnText.style.display = 'inline';
+                btnSpinner.style.display = 'none';
+                return;
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/customer_profile.php`, {
@@ -773,6 +803,10 @@ $CSRF = $_SESSION['csrf_token'];
                 switchTab?.('password');
                 btnOpenPwReq?.click();
             }
+        });
+
+        document.getElementById('phoneLocal')?.addEventListener('input', e => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
         });
     </script>
 

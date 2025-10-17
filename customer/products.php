@@ -99,6 +99,8 @@ function rt_img_url($raw)
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -209,47 +211,71 @@ function rt_img_url($raw)
 
         <!-- ====================== CONTENT ====================== -->
         <main class="products-wrap">
-            <?php if (empty($products)) : ?>
-                <div class="rt-empty">No released products found<?= $q !== '' ? " for “" . htmlspecialchars($q) . "”" : '' ?>.</div>
-            <?php else : ?>
-                <div class="rt-grid">
-                    <?php foreach ($products as $p):
-                        $id    = (int)($p['id'] ?? 0);
-                        $name  = $p['name'] ?? 'Untitled';
-                        $desc  = $p['short_desc'] ?? ($p['description'] ?? '');
-                        $price = (float)($p['base_price'] ?? ($p['price'] ?? 0));
-                        $img = rt_img_url($p['image'] ?? ($p['image_url'] ?? ''));
+  <?php if (empty($products)) : ?>
+    <div class="rt-empty">
+      No released products found<?= $q !== '' ? " for “" . htmlspecialchars($q) . "”" : '' ?>.
+    </div>
+  <?php else : ?>
+    <div class="rt-grid">
+      <?php foreach ($products as $p):
+        $id    = (int)($p['id'] ?? 0);
+        $name  = $p['name'] ?? 'Untitled';
+        $desc  = $p['short_desc'] ?? ($p['description'] ?? '');
+        $price = (float)($p['base_price'] ?? ($p['price'] ?? 0));
+        $img   = rt_img_url($p['image'] ?? ($p['image_url'] ?? ''));
+      ?>
+        <article class="rt-card"
+          data-id="<?= $id ?>"
+          data-name="<?= htmlspecialchars($name) ?>"
+          data-price="<?= number_format($price, 2, '.', '') ?>">
 
-                    ?>
-                        <article class="rt-card" data-id="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>">
-                            <div class="rt-imgwrap">
-                                <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($name) ?>"
-                                    onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
+          <div class="rt-imgwrap">
+            <!-- product image -->
+            <img
+              src="<?= htmlspecialchars($img) ?>"
+              alt="<?= htmlspecialchars($name) ?>"
+              onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
 
-                                <!-- KEEP ONLY THIS LEFT ICON -->
-                                <button class="rt-ico rt-left-ico" title="Customize" data-act="customize">
-                                    <span class="material-symbols-rounded">edit_square</span>
-                                </button>
-                            </div>
+            <!-- CUSTOMIZE (pencil) — now a real link -->
+            <a
+              class="rt-ico rt-left-ico"
+              href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
+              onclick="event.stopPropagation()"
+              title="Customize">
+              <span class="material-symbols-rounded">edit_square</span>
+            </a>
+          </div>
 
-                            <div class="rt-content">
-                                <div class="rt-name"><?= htmlspecialchars($name) ?></div>
-                                <div class="rt-desc"><?= htmlspecialchars($desc) ?></div>
-                                <div class="rt-price">₱ <?= number_format($price, 2) ?></div>
+          <div class="rt-content">
+            <div class="rt-name"><?= htmlspecialchars($name) ?></div>
+            <div class="rt-desc"><?= htmlspecialchars($desc) ?></div>
+            <div class="rt-price">₱ <?= number_format($price, 2) ?></div>
 
-                                <!-- BOTTOM CTA: CART + BUY NOW ONLY -->
-                                <div class="rt-cta">
-                                    <button class="rt-btn ghost" data-act="cart">Add to Cart</button>
-                                    <button class="rt-btn main" data-act="buynow">Buy Now</button>
-                                </div>
-                            </div>
+            <!-- BOTTOM CTA: CART + BUY NOW -->
+            <div class="rt-cta">
+              <button
+                type="button"
+                class="rt-btn ghost add-to-cart-btn"
+                data-action="add-to-cart"
+                data-pid="<?= (int)$id ?>">
+                <i class="bx bx-cart-add" style="margin-right:6px"></i>
+                <span>Add to Cart</span>
+              </button>
 
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </main>
+              <button
+                type="button"
+                class="rt-btn main js-buynow"
+                data-act="buynow">
+                Buy Now
+              </button>
+            </div>
+          </div>
 
+        </article>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</main>
         <!-- NOTE: removed the "Saved" toast para wala na sa footer -->
         <!-- ===== Login Required (Public) ===== -->
         <style>
@@ -466,8 +492,9 @@ function rt_img_url($raw)
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/about.php">Home</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
+                        <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
                     </ul>
                 </div>
 
@@ -475,11 +502,11 @@ function rt_img_url($raw)
                 <div class="footer-section">
                     <h3>Categories</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
                     </ul>
                 </div>
 
@@ -511,6 +538,32 @@ function rt_img_url($raw)
                 </div>
             </div>
         </footer>
+    </div>
+    <button
+        id="btnBuyNow"
+        class="rt-btn rt-btn-primary"
+        data-pid="<?= (int)$product['id'] ?>"
+        data-name="<?= htmlspecialchars($product['name']) ?>"
+        data-price="<?= number_format((float)$product['price'], 2, '.', '') ?>"
+        data-qty="1">
+        BUY NOW
+    </button>
+
+    <!-- ===== Buy Choice Modal (Deliver | Pick up) ===== -->
+    <div id="buyChoiceModal" class="rt-modal" hidden>
+        <div class="rt-modal__card">
+            <div class="rt-modal__head">
+                <h3>How do you want to get it?</h3>
+                <button class="rt-x" data-close>&times;</button>
+            </div>
+            <div class="rt-modal__body">
+                <p class="rt-muted">Choose delivery method for your order.</p>
+                <div class="rt-actions">
+                    <button id="chooseDeliver" class="rt-btn rt-btn-dark">Deliver</button>
+                    <button id="choosePickup" class="rt-btn rt-btn-outline">Pick up</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script>
         // ========== INITIALIZE ON PAGE LOAD ==========
@@ -578,35 +631,35 @@ function rt_img_url($raw)
 
         // ========== LOAD RECENT ORDERS ==========
         /*async function loadRecentOrders() {
-            const ordersContainer = document.getElementById('recentOrdersContainer');
-            if (!ordersContainer) return;
+                const ordersContainer = document.getElementById('recentOrdersContainer');
+                if (!ordersContainer) return;
 
-            try {
-                const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
-                    credentials: 'same-origin'
-                });
-                const data = await response.json();
+                try {
+                    const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
+                        credentials: 'same-origin'
+                    });
+                    const data = await response.json();
 
-                if (data.success && data.orders.length > 0) {
-                    ordersContainer.innerHTML = data.orders.map(order => `
-        <div class="order-item">
-          <div class="order-info">
-            <h4>Order #${escapeHtml(order.order_code)}</h4>
-            <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
-            <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
-          </div>
-          <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
-            ${escapeHtml(order.status)}
-          </span>
-        </div>
-      `).join('');
-                } else {
-                    ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
+                    if (data.success && data.orders.length > 0) {
+                        ordersContainer.innerHTML = data.orders.map(order => `
+            <div class="order-item">
+              <div class="order-info">
+                <h4>Order #${escapeHtml(order.order_code)}</h4>
+                <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
+                <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
+              </div>
+              <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
+                ${escapeHtml(order.status)}
+              </span>
+            </div>
+          `).join('');
+                    } else {
+                        ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
+                    }
+                } catch {
+                    ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
                 }
-            } catch {
-                ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
-            }
-        }*/
+            }*/
 
         // ========== LOGOUT MODAL ==========
         function showLogoutModal() {
@@ -646,42 +699,42 @@ function rt_img_url($raw)
 
         // ========== LOAD PRODUCTS ==========
         /*async function loadRecommendedProducts() {
-            const productsContainer = document.getElementById('recommendedProducts');
-            if (!productsContainer) return;
+                const productsContainer = document.getElementById('recommendedProducts');
+                if (!productsContainer) return;
 
-            try {
-                const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json'
+                try {
+                    const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success && result.data && result.data.products && result.data.products.length > 0) {
+                        productsContainer.innerHTML = result.data.products.map(product => `
+            <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
+              <div class="product-image">
+                <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.png'}" 
+                     alt="${escapeHtml(product.name)}"
+                     onerror="this.src='/RADS-TOOLING/assets/images/placeholder.png'">
+              </div>
+              <div class="product-info">
+                <h3>${escapeHtml(product.name)}</h3>
+                <p class="product-type">${escapeHtml(product.type || 'Cabinet')}</p>
+                <p class="product-price">₱${parseFloat(product.price || 0).toLocaleString()}</p>
+              </div>
+            </a>
+          `).join('');
+                    } else {
+                        productsContainer.innerHTML = '<div class="loading-state">No products available</div>';
                     }
-                });
-
-                const result = await response.json();
-
-                if (result.success && result.data && result.data.products && result.data.products.length > 0) {
-                    productsContainer.innerHTML = result.data.products.map(product => `
-        <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
-          <div class="product-image">
-            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.png'}" 
-                 alt="${escapeHtml(product.name)}"
-                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.png'">
-          </div>
-          <div class="product-info">
-            <h3>${escapeHtml(product.name)}</h3>
-            <p class="product-type">${escapeHtml(product.type || 'Cabinet')}</p>
-            <p class="product-price">₱${parseFloat(product.price || 0).toLocaleString()}</p>
-          </div>
-        </a>
-      `).join('');
-                } else {
-                    productsContainer.innerHTML = '<div class="loading-state">No products available</div>';
+                } catch (error) {
+                    console.error('Failed to load products:', error);
+                    productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
                 }
-            } catch (error) {
-                console.error('Failed to load products:', error);
-                productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
-            }
-        }*/
+            }*/
 
         // ========== CART COUNT ==========
         function updateCartCount() {
@@ -712,6 +765,7 @@ function rt_img_url($raw)
 
     <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
     <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+    <script defer src="/RADS-TOOLING/assets/JS/checkout.js"></script>
 </body>
 
 </html>

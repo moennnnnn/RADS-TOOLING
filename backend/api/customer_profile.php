@@ -9,6 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', '0');
 
 // ✅ CORRECT PATHS (important!)
+require_once dirname(__DIR__, 2) . '/includes/phone_util.php';
 require_once dirname(__DIR__, 2) . '/includes/guard.php';   // from backend/api -> up 2 = project/, then /includes/guard.php
 require_once dirname(__DIR__)     . '/config/database.php'; // from backend/api -> up 1 = backend/, then /config/database.php
 
@@ -86,26 +87,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $full_name = trim($input['full_name'] ?? '');
-    $phone = trim($input['phone'] ?? '');
-    $address = trim($input['address'] ?? '');
+    $phone     = trim($input['phone'] ?? '');   // can be "+63xxxxxxxxxx" or "09xxxxxxxxx" or "9123456789"
+    $address   = trim($input['address'] ?? '');
 
-    // Validation
-    if (empty($full_name)) {
+    // --- Basic name checks ---
+    if ($full_name === '') {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Full name is required']);
         exit;
     }
-
-    if (strlen($full_name) < 3) {
+    if (mb_strlen($full_name) < 3) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Full name must be at least 3 characters']);
         exit;
     }
 
-    if (!empty($phone) && !preg_match('/^\+?[0-9\s\-()]{10,20}$/', $phone)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Please enter a valid phone number']);
-        exit;
+    // --- Phone normalize & uniqueness ---
+    // Allow empty to keep/clear, else enforce PH mobile and unique
+    $phoneToSave = null;
+    if ($phone !== '') {
+        try {
+            // from includes/phone_util.php → ensures "+63" + 10 digits starting with 9
+            $normalizedPhone = normalize_ph_phone($phone);  // returns "+63xxxxxxxxxx"
+        } catch (RuntimeException $e) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Enter a valid PH mobile (+63 + 10 digits).']);
+            exit;
+        }
+
+        // unique except self
+        $stmt = $conn->prepare('SELECT 1 FROM customers WHERE phone = ? AND id <> ? LIMIT 1');
+        $stmt->execute([$normalizedPhone, $customer_id]);
+        if ($stmt->fetchColumn()) {
+            http_response_code(409);
+            echo json_encode(['success' => false, 'message' => 'Mobile number is already taken']);
+            exit;
+        }
+
+        $phoneToSave = $normalizedPhone;
     }
 
     try {
@@ -114,9 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SET full_name = ?, phone = ?, address = ?, updated_at = NOW()
             WHERE id = ?
         ");
-        $stmt->execute([$full_name, $phone, $address, $customer_id]);
+        // Note: if phone is empty string, we save NULL (allowed only if column permits NULL)
+        $stmt->execute([$full_name, $phoneToSave, $address, $customer_id]);
 
-        // Update session
+        // Update session display name
         $_SESSION['user']['full_name'] = $full_name;
 
         echo json_encode([
@@ -124,8 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'message' => 'Profile updated successfully',
             'data' => [
                 'full_name' => $full_name,
-                'phone' => $phone,
-                'address' => $address
+                'phone'     => $phoneToSave,  // returns normalized "+63xxxxxxxxxx" or null
+                'address'   => $address
             ]
         ]);
     } catch (PDOException $e) {

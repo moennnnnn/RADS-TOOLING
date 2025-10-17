@@ -130,7 +130,7 @@ if ($img) {
             <nav class="navbar-menu">
                 <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item ">Home</a>
                 <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-                <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
+                <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
             </nav>
         </header>
 
@@ -233,7 +233,7 @@ if ($img) {
                     <ul class="footer-links">
                         <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
                         <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
                     </ul>
                 </div>
 
@@ -241,11 +241,11 @@ if ($img) {
                 <div class="footer-section">
                     <h3>Categories</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Bedroom</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
                     </ul>
                 </div>
 

@@ -470,20 +470,40 @@ function populateCustomizationModal(product) {
   document.getElementById('customProductName').textContent = product.name;
   document.getElementById('customProductId').value = product.id;
 
-  if (product.size_config && product.size_config.length > 0) {
-    product.size_config.forEach((c) => {
-      const p = c.dimension_type;
-      document.getElementById(`${p}MinCustom`).value = c.min_value;
-      document.getElementById(`${p}MaxCustom`).value = c.max_value;
-      document.getElementById(`${p}DefaultCustom`).value = c.default_value;
-      document.getElementById(`${p}StepCustom`).value = c.step_value;
-      document.getElementById(`${p}PriceCustom`).value = c.price_per_unit;
-    });
+  // size_config may be array or object; normalize muna
+  const asMap = {};
+  if (Array.isArray(product.size_config)) {
+    product.size_config.forEach(c => { asMap[c.dimension_type] = c; });
+  } else if (product.size_config && typeof product.size_config === 'object') {
+    Object.assign(asMap, product.size_config);
   }
+
+  // HEIGHT
+  if (asMap.height) {
+    document.getElementById('heightMinCustom').value   = asMap.height.min_value ?? 0;
+    document.getElementById('heightMaxCustom').value   = asMap.height.max_value ?? 0;
+    document.getElementById('heightPriceCustom').value = asMap.height.price_per_unit ?? 0;
+  }
+  // WIDTH
+  if (asMap.width) {
+    document.getElementById('widthMinCustom').value   = asMap.width.min_value ?? 0;
+    document.getElementById('widthMaxCustom').value   = asMap.width.max_value ?? 0;
+    document.getElementById('widthPriceCustom').value = asMap.width.price_per_unit ?? 0;
+  }
+  // DEPTH
+  if (asMap.depth) {
+    document.getElementById('depthMinCustom').value   = asMap.depth.min_value ?? 0;
+    document.getElementById('depthMaxCustom').value   = asMap.depth.max_value ?? 0;
+    document.getElementById('depthPriceCustom').value = asMap.depth.price_per_unit ?? 0;
+  }
+
+  // Lists
   populateTexturesList(product.textures || []);
   populateColorsList(product.colors || []);
   populateHandlesList(product.handles || []);
 }
+
+
 
 function populateTexturesList(assigned) {
   const container = document.getElementById('texturesListContainer');
@@ -529,28 +549,49 @@ function populateHandlesList(assigned) {
 async function saveCustomizationOptions() {
   const product_id = document.getElementById('customProductId').value;
 
+  // keep only min, max, price_per_unit (+ measurement_unit for context)
   const sizeConfig = {
-    width: { min_value: +document.getElementById('widthMinCustom').value, max_value: +document.getElementById('widthMaxCustom').value, default_value: +document.getElementById('widthDefaultCustom').value, step_value: +document.getElementById('widthStepCustom').value, price_per_unit: +document.getElementById('widthPriceCustom').value, measurement_unit: currentProduct.measurement_unit },
-    height: { min_value: +document.getElementById('heightMinCustom').value, max_value: +document.getElementById('heightMaxCustom').value, default_value: +document.getElementById('heightDefaultCustom').value, step_value: +document.getElementById('heightStepCustom').value, price_per_unit: +document.getElementById('heightPriceCustom').value, measurement_unit: currentProduct.measurement_unit },
-    depth: { min_value: +document.getElementById('depthMinCustom').value, max_value: +document.getElementById('depthMaxCustom').value, default_value: +document.getElementById('depthDefaultCustom').value, step_value: +document.getElementById('depthStepCustom').value, price_per_unit: +document.getElementById('depthPriceCustom').value, measurement_unit: currentProduct.measurement_unit }
+    width:  {
+      min_value: +document.getElementById('widthMinCustom').value,
+      max_value: +document.getElementById('widthMaxCustom').value,
+      price_per_unit: +document.getElementById('widthPriceCustom').value,
+      measurement_unit: currentProduct?.measurement_unit || 'cm'
+    },
+    height: {
+      min_value: +document.getElementById('heightMinCustom').value,
+      max_value: +document.getElementById('heightMaxCustom').value,
+      price_per_unit: +document.getElementById('heightPriceCustom').value,
+      measurement_unit: currentProduct?.measurement_unit || 'cm'
+    },
+    depth:  {
+      min_value: +document.getElementById('depthMinCustom').value,
+      max_value: +document.getElementById('depthMaxCustom').value,
+      price_per_unit: +document.getElementById('depthPriceCustom').value,
+      measurement_unit: currentProduct?.measurement_unit || 'cm'
+    }
   };
 
   const texture_ids = Array.from(document.querySelectorAll('#texturesListContainer input:checked')).map(cb => +cb.value);
-  const color_ids = Array.from(document.querySelectorAll('#colorsListContainer   input:checked')).map(cb => +cb.value);
-  const handle_ids = Array.from(document.querySelectorAll('#handlesListContainer  input:checked')).map(cb => +cb.value);
+  const color_ids   = Array.from(document.querySelectorAll('#colorsListContainer   input:checked')).map(cb => +cb.value);
+  const handle_ids  = Array.from(document.querySelectorAll('#handlesListContainer  input:checked')).map(cb => +cb.value);
 
   try {
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=update_size_config', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id, size_config: sizeConfig })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id, size_config: sizeConfig })
     });
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_textures', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id, texture_ids })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id, texture_ids })
     });
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_colors', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id, color_ids })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id, color_ids })
     });
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_handles', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id, handle_ids })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id, handle_ids })
     });
 
     showNotification('success', 'Customization options saved successfully');
@@ -561,6 +602,8 @@ async function saveCustomizationOptions() {
     showNotification('error', 'Failed to save customization options');
   }
 }
+
+
 
 // ===== Small utilities / UI glue =====
 function initPMModalNotifier() {

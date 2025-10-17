@@ -1,0 +1,28 @@
+:root{
+  --brand:#1e73be;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--card:#fff;--radius:14px
+}
+
+/* ⬇️ Scoped ONLY to the modal para walang bangga sa product layout */
+#buyChoiceModal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:24px;z-index:50}
+#buyChoiceModal[hidden]{display:none}
+
+#buyChoiceModal .rt-modal__card{
+  width:100%;max-width:480px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:0 8px 24px rgba(0,0,0,.12)
+}
+#buyChoiceModal .rt-modal__head{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;border-bottom:1px solid var(--line)
+}
+#buyChoiceModal .rt-modal__body{padding:16px}
+#buyChoiceModal .rt-actions{display:flex;gap:12px;margin-top:8px}
+
+#buyChoiceModal .rt-btn{
+  appearance:none;border:0;padding:10px 16px;border-radius:999px;
+  cursor:pointer;font-weight:600
+}
+#buyChoiceModal .rt-btn-dark{background:var(--ink);color:#fff}
+#buyChoiceModal .rt-btn-outline{background:#fff;border:1px solid var(--line);color:var(--ink)}
+#buyChoiceModal .rt-x{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer}
+#buyChoiceModal .rt-muted{color:var(--muted)}

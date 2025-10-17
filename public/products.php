@@ -268,11 +268,11 @@ $CSRF = $_SESSION['csrf_token'];
                 <div class="footer-section">
                     <h3>Categories</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+                        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/public/products.php?type=Wardrobe">Wardrobe</a></li>
+                        <li><a href="/RADS-TOOLING/public/products.php?type=Office Cabinet">Office Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/public/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
                     </ul>
                 </div>
 

@@ -141,7 +141,6 @@ if ($img) {
                 <h1><?php echo $content['about_headline'] ?? 'About RADS Tooling'; ?></h1>
                 <?php echo $content['about_subheadline'] ?? '<p>Your trusted partner in precision tooling</p>'; ?>
                 <div class="sp-hero-buttons">
-                    <a href="signup.php" class="sp-btn sp-btn-primary">Get Started</a>
                     <a href="products.php" class="sp-btn sp-btn-secondary">Browse Products</a>
                 </div>
             </div>
@@ -310,8 +309,9 @@ if ($img) {
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/about.php">Home</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
+                        <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
                     </ul>
                 </div>
 
@@ -319,11 +319,11 @@ if ($img) {
                 <div class="footer-section">
                     <h3>Categories</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bedroom">Bedroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Living Room">Living Room</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom">Bathroom</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php?type=Commercial">Commercial</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+                        <li><a href="/RADS-TOOLING/customer/products.php?type=Commercial">Storage Cabinet</a></li>
                     </ul>
                 </div>
 

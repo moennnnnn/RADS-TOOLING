@@ -1,5 +1,16 @@
 <?php
 require_once __DIR__ . '/../backend/config/app.php';
+require __DIR__ . '/../includes/phone_util.php';
+
+try {
+  $phone = normalize_ph_phone($_POST['mobile'] ?? '');
+} catch (RuntimeException $e) {
+  $errors['mobile'] = 'Enter a valid PH mobile (+63 + 10 digits).';
+}
+
+if (empty($errors) && phone_exists($pdo, $phone)) {
+  $errors['mobile'] = 'Mobile number is already taken.';
+}
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
@@ -118,6 +129,36 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
       border-radius: 8px;
       padding: 10px 12px
     }
+
+    .field-error {
+      display: none;
+      color: #f56565;
+      font-size: .85rem;
+      margin-top: .25rem
+    }
+
+    .field-error {
+      display: none;
+      color: #f56565;
+      font-size: .85rem;
+      margin-top: .25rem
+    }
+
+    .form-group.has-error input,
+    .form-group.has-error .phone-group input {
+      border-color: #f56565 !important;
+      box-shadow: 0 0 0 3px rgba(245, 101, 101, .08) !important
+    }
+
+    .form-group.has-success input,
+    .form-group.has-success .phone-group input {
+      border-color: #48bb78 !important;
+      box-shadow: 0 0 0 3px rgba(72, 187, 120, .08) !important
+    }
+
+    .form-group.has-error .field-error {
+      display: block
+    }
   </style>
 </head>
 
@@ -147,13 +188,15 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
             <input id="email" name="email" type="email" placeholder="your.email@example.com" required>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" id="phoneGroup">
             <label for="phoneLocal">Mobile Number</label>
             <div class="phone-group">
               <span class="phone-prefix">+63</span>
-              <input id="phoneLocal" name="phone_local" type="tel" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="9123456789" required>
+              <input id="phoneLocal" name="phone_local" type="tel"
+                inputmode="numeric" maxlength="10" pattern="[0-9]{10}"
+                placeholder="9123456789" required>
             </div>
-            <!-- Optional: keep the old field hidden so nothing else breaks while transitioning -->
+            <div class="field-error" id="phoneLocalFeedback"></div>
             <input id="phone" name="phone" type="hidden">
           </div>
 

@@ -1,13 +1,13 @@
 // File: /assets/JS/register.js
 // CUSTOMER REGISTRATION WITH EMAIL VERIFICATION (+63 phone normalization + modal messages)
 
-document.addEventListener('DOMContentLoaded', function() {
-  const form       = document.getElementById('registerForm');
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('registerForm');
   if (!form) return;
 
-  const errorDiv   = document.getElementById('errorMessage');
+  const errorDiv = document.getElementById('errorMessage');
   const loadingDiv = document.getElementById('loadingMessage');
-  const submitBtn  = form.querySelector('.btn-signup-primary');
+  const submitBtn = form.querySelector('.btn-signup-primary');
 
   // Modal helper (falls back to alert if showModal isn't installed yet)
   const modal = (window.showModal)
@@ -15,6 +15,46 @@ document.addEventListener('DOMContentLoaded', function() {
     : ({ title = 'Notice', html = '' } = {}) => alert((title ? title + ': ' : '') + html.replace(/<[^>]*>/g, ''));
 
   const get = (id) => (document.getElementById(id)?.value || '').trim();
+
+  const phoneGrp = document.getElementById('phoneGroup');
+  const phoneFb = document.getElementById('phoneLocalFeedback');
+
+  // DIGITS ONLY + MAX 10 habang nagta-type
+  const phoneLocalEl = document.getElementById('phoneLocal');
+  let phoneTimeout;
+  if (phoneLocalEl) {
+    phoneLocalEl.addEventListener('input', () => {
+      phoneLocalEl.value = phoneLocalEl.value.replace(/\D/g, '').slice(0, 10);
+
+      // clear state habang nagta-type
+      phoneGrp?.classList.remove('has-error', 'has-success');
+      if (phoneFb) phoneFb.textContent = '';
+
+      clearTimeout(phoneTimeout);
+      if (phoneLocalEl.value.length !== 10) return;
+
+      // live duplicate check
+      phoneTimeout = setTimeout(async () => {
+        try {
+          const r = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_phone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ phone_local: phoneLocalEl.value })
+          });
+          const j = await r.json();
+          if (j.success && j.data && j.data.available) {
+            phoneGrp?.classList.add('has-success'); phoneGrp?.classList.remove('has-error');
+            if (phoneFb) phoneFb.textContent = '';
+          } else {
+            phoneGrp?.classList.add('has-error'); phoneGrp?.classList.remove('has-success');
+            if (phoneFb) phoneFb.textContent = 'Mobile number is already taken';
+          }
+        } catch { }
+      }, 400);
+    });
+  }
+
 
   function setLoading(on, msg) {
     if (loadingDiv) {
@@ -41,22 +81,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Build +63 phone from either #phoneLocal (10 digits) or existing #phone
-  function buildPhone() {
-    const local = get('phoneLocal'); // preferred UI (10 digits, e.g., 9123456789)
-    if (local) {
-      if (!/^\d{10}$/.test(local)) return null;
-      return `+63${local}`;
-    }
-    // Fallback to your existing #phone (accepts +63XXXXXXXXXX / 09XXXXXXXXX / 10-digit)
-    const raw = get('phone');
-    if (!raw) return null;
-    if (/^\+63\d{10}$/.test(raw)) return raw;
-    if (/^09\d{9}$/.test(raw))   return '+63' + raw.substring(1);
-    if (/^\d{10}$/.test(raw))    return '+63' + raw;
-    return null;
-  }
-
   // Submit handler
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -65,24 +89,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Collect form data (by IDs for safety)
     const payload = {
-      audience:   'customer',
+      audience: 'customer',
       first_name: get('firstName'),
-      last_name:  get('lastName'),
-      email:      get('email'),
-      username:   get('username'),
-      password:   get('password')
+      last_name: get('lastName'),
+      email: get('email'),
+      username: get('username'),
+      password: get('password')
     };
     const confirm = get('confirmPassword');
-    const phone   = buildPhone();
+
+    const local = (phoneLocalEl?.value || '').replace(/\D/g, '').slice(0, 10);
+    if (local.length !== 10) {
+      phoneGrp?.classList.add('has-error'); phoneGrp?.classList.remove('has-success');
+      if (phoneFb) phoneFb.textContent = 'Enter 10 digits after +63 (e.g., 9123456789).';
+      setLoading(false);
+      return;
+    }
 
     // Client-side validation (server re-validates too)
-    if (!payload.first_name || !payload.last_name)  return showError('Please enter your first and last name.');
+    if (!payload.first_name || !payload.last_name) return showError('Please enter your first and last name.');
     if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return showError('Please enter a valid email.');
     if (!payload.username || !/^[A-Za-z0-9_]{3,20}$/.test(payload.username)) return showError('Username must be 3–20 characters (letters, numbers, underscore).');
     if (!payload.password || payload.password.length < 6) return showError('Password must be at least 6 characters long.');
-    if (payload.password !== confirm)               return showError('Passwords do not match.');
-    if (!phone)                                     return showError('Invalid phone number. Enter 10 digits (e.g., 9123456789) or a valid +63 format.');
-    payload.phone = phone;
+    if (payload.password !== confirm) return showError('Passwords do not match.');
+
+    payload.phone_local = local;
 
     try {
       const res = await fetch('/RADS-TOOLING/backend/api/auth.php?action=register', {
@@ -97,16 +128,21 @@ document.addEventListener('DOMContentLoaded', function() {
       try { j = JSON.parse(text); } catch { throw new Error('Server returned invalid response.'); }
 
       if (!res.ok || !j.success) {
+        const m = (j.message || '').toLowerCase();
+        if (m.includes('mobile number') || m.includes('ph mobile')) {
+          phoneGrp?.classList.add('has-error'); phoneGrp?.classList.remove('has-success');
+          if (phoneFb) phoneFb.textContent = j.message;
+        }
         throw new Error(j.message || 'Registration failed. Please try again.');
       }
 
       // Store email (optional convenience)
-      try { sessionStorage.setItem('verify_email', payload.email); } catch (_) {}
+      try { sessionStorage.setItem('verify_email', payload.email); } catch (_) { }
 
       // Success → modal + redirect to verify
       modal({
         title: 'Account created',
-        html:  'Please check your email for the verification code.',
+        html: 'Please check your email for the verification code.',
         actions: [
           { label: 'Verify now', cls: 'btn btn-primary', onClick: () => { location.href = `/RADS-TOOLING/customer/verify.php?email=${encodeURIComponent(payload.email)}`; } }
         ]
@@ -126,11 +162,11 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   /* ===== Password strength (kept from your original) ===== */
-  const passwordInput      = document.getElementById('password');
-  const strengthContainer  = document.querySelector('.password-strength');
-  const strengthBar        = document.querySelector('.password-strength-bar');
+  const passwordInput = document.getElementById('password');
+  const strengthContainer = document.querySelector('.password-strength');
+  const strengthBar = document.querySelector('.password-strength-bar');
 
-  passwordInput?.addEventListener('input', function() {
+  passwordInput?.addEventListener('input', function () {
     const password = this.value;
 
     if (!strengthContainer || !strengthBar) return;
@@ -151,10 +187,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   /* ===== Real-time password confirmation ===== */
-  document.getElementById('confirmPassword')?.addEventListener('input', function() {
-    const pw   = document.getElementById('password')?.value || '';
+  document.getElementById('confirmPassword')?.addEventListener('input', function () {
+    const pw = document.getElementById('password')?.value || '';
     const conf = this.value;
-    const grp  = this.closest('.form-group');
+    const grp = this.closest('.form-group');
     if (!grp) return;
     if (!conf) { grp.classList.remove('has-success', 'has-error'); return; }
     if (pw === conf) { grp.classList.add('has-success'); grp.classList.remove('has-error'); }
@@ -163,9 +199,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   /* ===== Debounced email availability check (case-insensitive on server) ===== */
   let emailTimeout;
-  document.getElementById('email')?.addEventListener('input', function() {
+  document.getElementById('email')?.addEventListener('input', function () {
     const email = this.value.trim();
-    const grp   = this.closest('.form-group');
+    const grp = this.closest('.form-group');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (errorDiv?.textContent.includes('Email')) clearError();
@@ -179,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         const r = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_email', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ email })
         });
@@ -192,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   /* ===== Debounced username availability check (case-insensitive on server) ===== */
   let usernameTimeout;
-  document.getElementById('username')?.addEventListener('input', function() {
+  document.getElementById('username')?.addEventListener('input', function () {
     const username = this.value.trim();
     const grp = this.closest('.form-group');
     if (!grp) return;
@@ -205,7 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         const r = await fetch('/RADS-TOOLING/backend/api/auth.php?action=check_username', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({ username })
         });
@@ -220,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('input[required]')?.forEach(input => {
     const skip = ['password', 'confirmPassword', 'email', 'username', 'phone', 'phoneLocal'];
     if (skip.includes(input.id)) return;
-    input.addEventListener('blur', function() {
+    input.addEventListener('blur', function () {
       const grp = this.closest('.form-group');
       if (!grp) return;
       if (this.value.trim()) { grp.classList.add('has-success'); grp.classList.remove('has-error'); }

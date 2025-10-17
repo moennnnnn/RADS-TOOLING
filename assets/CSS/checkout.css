@@ -1,0 +1,44 @@
+:root{
+  --brand:#1e73be;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--card:#fff;
+  --ok:#10b981;--bad:#ef4444;--radius:14px
+}
+.rt-modal, .rt-modal *{box-sizing:border-box}
+.rt-btn{appearance:none;border:0;padding:10px 16px;border-radius:999px;cursor:pointer;font-weight:600}
+.rt-btn-primary{background:var(--brand);color:#fff}
+.rt-btn-dark{background:var(--ink);color:#fff}
+.rt-btn-outline{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.rt-btn[disabled]{opacity:.6;cursor:not-allowed}
+.rt-muted{color:var(--muted)}
+.rt-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:24px;z-index:50}
+.rt-modal[hidden]{display:none}
+.rt-modal__card{width:100%;max-width:480px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.rt-modal__head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.rt-modal__body{padding:16px}
+.rt-actions{display:flex;gap:12px;margin-top:8px}
+.rt-x{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer}
+.rt-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.rt-input{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.rt-grid{display:grid;gap:16px}
+@media (min-width:900px){.rt-grid-2{grid-template-columns:1.2fr .8fr}}
+.rt-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.rt-row{display:flex;justify-content:space-between;align-items:center}
+.rt-kbd{font:600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;background:#f3f4f6;border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+.rt-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line)}
+.rt-tag.ok{border-color:#c6f3df;color:#065f46;background:#ecfdf5}
+.rt-tag.bad{border-color:#ffd5d5;color:#7f1d1d;background:#fef2f2}
+canvas.rt-sign{border:1px dashed var(--line);border-radius:10px;width:100%;height:200px;touch-action:none}
+/* Show the small cart icon cleanly */
+.add-to-cart-btn{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  width:36px;height:36px;
+  border-radius:8px;
+  display:grid;place-items:center;
+  cursor:pointer;
+}
+.add-to-cart-btn i{font-size:18px;line-height:1}
+
+.product-card{position:relative}
+.product-card .add-to-cart-btn{
+  position:absolute; top:10px; right:10px;
+}

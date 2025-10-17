@@ -1512,14 +1512,6 @@ if (!$isLoggedIn) {
                                 <input type="number" id="widthMaxCustom" step="0.1" value="300">
                             </div>
                             <div class="form-group">
-                                <label>Default Value</label>
-                                <input type="number" id="widthDefaultCustom" step="0.1" value="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Step</label>
-                                <input type="number" id="widthStepCustom" step="0.1" value="1">
-                            </div>
-                            <div class="form-group">
                                 <label>Price per Unit (₱)</label>
                                 <input type="number" id="widthPriceCustom" step="0.01" value="0">
                             </div>
@@ -1538,14 +1530,6 @@ if (!$isLoggedIn) {
                                 <input type="number" id="heightMaxCustom" step="0.1" value="300">
                             </div>
                             <div class="form-group">
-                                <label>Default Value</label>
-                                <input type="number" id="heightDefaultCustom" step="0.1" value="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Step</label>
-                                <input type="number" id="heightStepCustom" step="0.1" value="1">
-                            </div>
-                            <div class="form-group">
                                 <label>Price per Unit (₱)</label>
                                 <input type="number" id="heightPriceCustom" step="0.01" value="0">
                             </div>
@@ -1562,14 +1546,6 @@ if (!$isLoggedIn) {
                             <div class="form-group">
                                 <label>Max Value</label>
                                 <input type="number" id="depthMaxCustom" step="0.1" value="300">
-                            </div>
-                            <div class="form-group">
-                                <label>Default Value</label>
-                                <input type="number" id="depthDefaultCustom" step="0.1" value="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Step</label>
-                                <input type="number" id="depthStepCustom" step="0.1" value="1">
                             </div>
                             <div class="form-group">
                                 <label>Price per Unit (₱)</label>
@@ -2033,7 +2009,7 @@ if (!$isLoggedIn) {
                 formData.append('image', file);
 
                 try {
-                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=upload_texture_image', {
+                    const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_texture_image', {
                         method: 'POST',
                         body: formData
                     });
@@ -2064,7 +2040,7 @@ if (!$isLoggedIn) {
                 formData.append('image', file);
 
                 try {
-                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=upload_handle_image', {
+                    const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_handle_image', {
                         method: 'POST',
                         body: formData
                     });
@@ -2100,7 +2076,7 @@ if (!$isLoggedIn) {
                 };
 
                 try {
-                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=add_texture', {
+                    const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_texture', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2137,7 +2113,7 @@ if (!$isLoggedIn) {
                 };
 
                 try {
-                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=add_color', {
+                    const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_color', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -2175,7 +2151,7 @@ if (!$isLoggedIn) {
                 };
 
                 try {
-                    const response = await fetch('/RADS-TOOLING/admin/backend/api/admin_customization.php?action=add_handle', {
+                    const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_handle', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

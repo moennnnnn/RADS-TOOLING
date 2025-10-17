@@ -1,44 +1,46 @@
 <?php
-// admin/backend/api/admin_products.php - FIXED VERSION
+
 declare(strict_types=1);
+session_start();
+header('Content-Type: application/json; charset=utf-8');
 
-// CRITICAL: Catch all errors before any output
-error_reporting(E_ALL);
-ini_set('display_errors', '0');
-ini_set('log_errors', '1');
-ini_set('error_log', __DIR__ . '/../logs/product_errors.log');
+require_once __DIR__ . '/../config/app.php';  // adjust if needed
 
-// Start output buffering to catch any accidental output
-ob_start();
-
-// Start session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// --- must exist BEFORE any call to sendJSON() ---
+if (!function_exists('sendJSON')) {
+    function sendJSON(bool $success, string $message = '', $data = null, int $status = 200): void
+    {
+        http_response_code($status);
+        echo json_encode([
+            'success' => $success,
+            'message' => $message,
+            'data'    => $data
+        ], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
 }
 
-// Set headers FIRST
-header('Content-Type: application/json');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+$db = $GLOBALS['db'] ?? $db ?? null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
+$action = $_GET['action'] ?? '';
+$id     = (int)($_GET['id'] ?? 0);
 
-// Helper function for JSON responses
-function sendJSON(bool $success, string $message, $data = null, int $code = 200): void
-{
-    // Clear any output buffer
-    if (ob_get_level()) ob_clean();
+$user = $_SESSION['user'] ?? null;
+$aud  = $user['aud'] ?? ''; // 'admin' or 'customer'
 
-    http_response_code($code);
-    echo json_encode([
-        'success' => $success,
-        'message' => $message,
-        'data' => $data
-    ], JSON_UNESCAPED_UNICODE);
-    exit;
+// 🔐 Auth: admin-only for non-view; allow customer for view
+if ($action !== 'view') {
+    if ($aud !== 'admin') {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized access', 'data' => null]);
+        exit;
+    }
+} else {
+    if (!$user || !in_array($aud, ['admin', 'customer'], true)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Unauthorized access', 'data' => null]);
+        exit;
+    }
 }
 
 // Error handler
@@ -79,8 +81,10 @@ function requireStaffAuth(): void
     sendJSON(false, 'Unauthorized access', null, 401);
 }
 
-// Check authentication
-requireStaffAuth();
+// Allow 'view' for logged-in admin OR customer; other actions require staff/admin
+if (!($action === 'view' && in_array($aud, ['admin', 'customer'], true))) {
+    requireStaffAuth();
+}
 
 // Get database connection
 try {
@@ -471,7 +475,8 @@ function uploadModel(): void
     }
 }
 
-function toggleRelease(PDO $conn): void {
+function toggleRelease(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
@@ -480,7 +485,7 @@ function toggleRelease(PDO $conn): void {
     $id     = (int)($input['product_id'] ?? 0);
     $status = $input['status'] ?? '';
 
-    if (!$id || !in_array($status, ['draft','released'], true)) {
+    if (!$id || !in_array($status, ['draft', 'released'], true)) {
         sendJSON(false, 'Invalid payload', null, 422);
     }
 
@@ -495,13 +500,10 @@ function toggleRelease(PDO $conn): void {
 
         sendJSON($ok, $ok ? 'Status updated' : 'Failed to update', null, $ok ? 200 : 500);
     } catch (Throwable $e) {
-        error_log('toggleRelease error: '.$e->getMessage());
+        error_log('toggleRelease error: ' . $e->getMessage());
         sendJSON(false, 'Server error', null, 500);
     }
 }
-
-// .... existing code above
-$action = $_GET['action'] ?? '';
 
 if ($action === 'set_availability') {
     header('Content-Type: application/json; charset=utf-8');
@@ -514,10 +516,9 @@ if ($action === 'set_availability') {
         exit;
     }
 
-    // Adjust table/column names if needed
-    // Example: UPDATE products SET is_available = ? WHERE id = ?
-    $stmt = $pdo->prepare('UPDATE products SET is_available = ? WHERE id = ?');
+    $stmt = $conn->prepare('UPDATE products SET is_available = ? WHERE id = ?');
     $ok = $stmt->execute([$is_available, $id]);
+
 
     if ($ok) {
         echo json_encode(['success' => true]);

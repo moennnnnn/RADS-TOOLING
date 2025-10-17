@@ -20,6 +20,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../../includes/guard.php';
+require_once dirname(__DIR__, 2) . '/includes/phone_util.php';
+
 
 // Include mailer if it exists
 $mailerPath = __DIR__ . '/../lib/mailer.php';
@@ -69,6 +71,9 @@ class AuthAPI
                 break;
             case 'resend_verification':
                 $this->resendVerification();
+                break;
+            case 'check_phone':
+                $this->checkPhone();
                 break;
             default:
                 $this->send(false, 'Invalid action');
@@ -128,6 +133,25 @@ class AuthAPI
             $this->send(false, 'Username check failed');
         }
     }
+
+    private function checkPhone(): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->send(false, 'Method not allowed');
+            return;
+        }
+        $in = json_decode(file_get_contents('php://input'), true) ?: [];
+        try {
+            $phone = normalize_ph_phone($in['phone_local'] ?? $in['phone'] ?? '');
+        } catch (RuntimeException $e) {
+            $this->send(true, 'Invalid', ['available' => false, 'invalid' => true]);
+            return;
+        }
+        $stmt = $this->conn->prepare('SELECT 1 FROM customers WHERE phone = ? LIMIT 1');
+        $stmt->execute([$phone]);
+        $this->send(true, 'OK', ['available' => !$stmt->fetchColumn()]);
+    }
+
 
     /* ------------------------------ Email verification ------------------------------ */
 
@@ -262,24 +286,21 @@ class AuthAPI
         $username  = trim((string)$input['username']);
         $password  = (string)$input['password'];
 
-        // Phone may arrive as +63XXXXXXXXXX or local (9123456789 / 09123456789)
-        $rawPhone  = trim((string)($input['phone'] ?? $input['phone_local'] ?? ''));
-        $rawPhone  = preg_replace('/\s+/', '', $rawPhone);
-
-        // Normalize phone to +63XXXXXXXXXX
-        if ($rawPhone === '') {
-            $phone = null;
-        } elseif (preg_match('/^\d{10}$/', $rawPhone)) {           // 9123456789
-            $phone = '+63' . $rawPhone;
-        } elseif (preg_match('/^09\d{9}$/', $rawPhone)) {          // 09123456789
-            $phone = '+63' . substr($rawPhone, 1);
-        } elseif (preg_match('/^\+63\d{10}$/', $rawPhone)) {       // +639123456789
-            $phone = $rawPhone;
-        } else {
-            $this->send(false, 'Invalide Phone Number');
+        // --- Normalize phone using util (accepts phone_local or phone) ---
+        try {
+            $phone = normalize_ph_phone($input['phone_local'] ?? $input['phone'] ?? '');
+        } catch (RuntimeException $e) {
+            $this->send(false, 'Enter a valid PH mobile (+63 + 10 digits).');
             return;
         }
 
+        // --- Uniqueness check for phone ---
+        $stmt = $this->conn->prepare('SELECT id FROM customers WHERE phone = ? LIMIT 1');
+        $stmt->execute([$phone]);
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+            $this->send(false, 'Mobile number is already taken');
+            return;
+        }
         // Validate email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->send(false, 'Invalid email format');
@@ -287,8 +308,8 @@ class AuthAPI
         }
 
         // Validate password strength (minimum 6 characters; keep your rule)
-        if (strlen($password) < 6) {
-            $this->send(false, 'Password must be at least 6 characters long');
+        if (strlen($password) < 8) {
+            $this->send(false, 'Password must be at least 8 characters long');
             return;
         }
 
