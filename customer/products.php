@@ -211,71 +211,117 @@ function rt_img_url($raw)
 
         <!-- ====================== CONTENT ====================== -->
         <main class="products-wrap">
-  <?php if (empty($products)) : ?>
-    <div class="rt-empty">
-      No released products found<?= $q !== '' ? " for “" . htmlspecialchars($q) . "”" : '' ?>.
+            <?php if (empty($products)) : ?>
+                <div class="rt-empty">
+                    No released products found<?= $q !== '' ? " for “" . htmlspecialchars($q) . "”" : '' ?>.
+                </div>
+            <?php else : ?>
+                <div class="rt-grid">
+                    <?php foreach ($products as $p):
+                        $id    = (int)($p['id'] ?? 0);
+                        $name  = $p['name'] ?? 'Untitled';
+                        $desc  = $p['short_desc'] ?? ($p['description'] ?? '');
+                        $price = (float)($p['base_price'] ?? ($p['price'] ?? 0));
+                        $img   = rt_img_url($p['image'] ?? ($p['image_url'] ?? ''));
+                    ?>
+                        <article class="rt-card"
+                            data-id="<?= $id ?>"
+                            data-name="<?= htmlspecialchars($name) ?>"
+                            data-price="<?= number_format($price, 2, '.', '') ?>">
+
+                            <div class="rt-imgwrap">
+                                <!-- product image -->
+                                <img
+                                    src="<?= htmlspecialchars($img) ?>"
+                                    alt="<?= htmlspecialchars($name) ?>"
+                                    onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
+
+                                <!-- CUSTOMIZE (pencil) — now a real link -->
+                                <a
+                                    class="rt-ico rt-left-ico"
+                                    href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
+                                    onclick="event.stopPropagation()"
+                                    title="Customize">
+                                    <span class="material-symbols-rounded">edit_square</span>
+                                </a>
+                            </div>
+
+                            <div class="rt-content">
+                                <div class="rt-name"><?= htmlspecialchars($name) ?></div>
+                                <div class="rt-desc"><?= htmlspecialchars($desc) ?></div>
+                                <div class="rt-price">₱ <?= number_format($price, 2) ?></div>
+
+                                <!-- BOTTOM CTA: CART + BUY NOW -->
+                                <div class="rt-cta">
+                                    <button
+                                        type="button"
+                                        class="rt-btn ghost add-to-cart-btn"
+                                        data-action="add-to-cart"
+                                        data-pid="<?= (int)$id ?>">
+                                        <i class="bx bx-cart-add" style="margin-right:6px"></i>
+                                        <span>Add to Cart</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="rt-btn main js-buynow"
+                                        data-act="buynow"
+                                        data-pid="<?= (int)$id ?>">
+                                        Buy Now
+                                    </button>
+                                </div>
+                            </div>
+
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </main>
+        </main>
+
+<!-- Buy Choice Modal -->
+<div id="buyChoiceModal" class="rt-modal" hidden>
+  <div class="rt-modal__dialog">
+    <h3>How do you want to get your order?</h3>
+    <p class="muted">Choose your preferred fulfillment method.</p>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button id="chooseDeliver" class="rt-btn rt-btn-dark">Delivery</button>
+      <button id="choosePickup"  class="rt-btn">Pick-up</button>
+      <button id="closeChoice"   class="rt-btn rt-btn-outline" style="margin-left:auto">Close</button>
     </div>
-  <?php else : ?>
-    <div class="rt-grid">
-      <?php foreach ($products as $p):
-        $id    = (int)($p['id'] ?? 0);
-        $name  = $p['name'] ?? 'Untitled';
-        $desc  = $p['short_desc'] ?? ($p['description'] ?? '');
-        $price = (float)($p['base_price'] ?? ($p['price'] ?? 0));
-        $img   = rt_img_url($p['image'] ?? ($p['image_url'] ?? ''));
-      ?>
-        <article class="rt-card"
-          data-id="<?= $id ?>"
-          data-name="<?= htmlspecialchars($name) ?>"
-          data-price="<?= number_format($price, 2, '.', '') ?>">
+  </div>
+</div>
 
-          <div class="rt-imgwrap">
-            <!-- product image -->
-            <img
-              src="<?= htmlspecialchars($img) ?>"
-              alt="<?= htmlspecialchars($name) ?>"
-              onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
+<script>
+(() => {
+  let currentPID = 0;
+  const modal = document.getElementById('buyChoiceModal');
+  const open  = () => modal.hidden = false;
+  const close = () => modal.hidden = true;
 
-            <!-- CUSTOMIZE (pencil) — now a real link -->
-            <a
-              class="rt-ico rt-left-ico"
-              href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
-              onclick="event.stopPropagation()"
-              title="Customize">
-              <span class="material-symbols-rounded">edit_square</span>
-            </a>
-          </div>
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.js-buynow');
+    if (!btn) return;
+    e.preventDefault();
+    currentPID = btn.getAttribute('data-pid') || 0;
+    open();
+  });
 
-          <div class="rt-content">
-            <div class="rt-name"><?= htmlspecialchars($name) ?></div>
-            <div class="rt-desc"><?= htmlspecialchars($desc) ?></div>
-            <div class="rt-price">₱ <?= number_format($price, 2) ?></div>
+  document.getElementById('closeChoice')?.addEventListener('click', close);
 
-            <!-- BOTTOM CTA: CART + BUY NOW -->
-            <div class="rt-cta">
-              <button
-                type="button"
-                class="rt-btn ghost add-to-cart-btn"
-                data-action="add-to-cart"
-                data-pid="<?= (int)$id ?>">
-                <i class="bx bx-cart-add" style="margin-right:6px"></i>
-                <span>Add to Cart</span>
-              </button>
+  function go(mode){
+    if (!currentPID) return close();
+    const qs = new URLSearchParams({ pid: currentPID, mode });
+    location.href = '/RADS-TOOLING/customer/checkout.php?' + qs.toString();
+  }
+  document.getElementById('chooseDeliver')?.addEventListener('click', () => go('delivery'));
+  document.getElementById('choosePickup') ?.addEventListener('click', () => go('pickup'));
+})();
+</script>
 
-              <button
-                type="button"
-                class="rt-btn main js-buynow"
-                data-act="buynow">
-                Buy Now
-              </button>
-            </div>
-          </div>
+</body>
+</html>
 
-        </article>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-</main>
         <!-- NOTE: removed the "Saved" toast para wala na sa footer -->
         <!-- ===== Login Required (Public) ===== -->
         <style>
@@ -548,224 +594,242 @@ function rt_img_url($raw)
         data-qty="1">
         BUY NOW
     </button>
-
-    <!-- ===== Buy Choice Modal (Deliver | Pick up) ===== -->
-    <div id="buyChoiceModal" class="rt-modal" hidden>
-        <div class="rt-modal__card">
-            <div class="rt-modal__head">
-                <h3>How do you want to get it?</h3>
-                <button class="rt-x" data-close>&times;</button>
-            </div>
-            <div class="rt-modal__body">
-                <p class="rt-muted">Choose delivery method for your order.</p>
-                <div class="rt-actions">
-                    <button id="chooseDeliver" class="rt-btn rt-btn-dark">Deliver</button>
-                    <button id="choosePickup" class="rt-btn rt-btn-outline">Pick up</button>
-                </div>
-            </div>
-        </div>
-    </div>
     <script>
-        // ========== INITIALIZE ON PAGE LOAD ==========
-        document.addEventListener('DOMContentLoaded', function() {
-            initProfileDropdown();
-            //loadUserStatistics();
-            //loadRecentOrders();
-            //loadRecommendedProducts();
-            updateCartCount();
-        });
+        (() => {
+            let currentPID = 0;
+            const modal = document.getElementById('buyChoiceModal');
+            const open = () => modal.hidden = false;
+            const close = () => modal.hidden = true;
 
-        // ========== PROFILE DROPDOWN TOGGLE ==========
-        function initProfileDropdown() {
-            const profileToggle = document.getElementById('profileToggle');
-            const profileDropdown = document.getElementById('profileDropdown');
-
-            if (!profileToggle || !profileDropdown) {
-                console.error('Profile elements not found');
-                return;
-            }
-
-            profileToggle.addEventListener('click', function(e) {
+            // open modal pag-click ng Buy Now sa kahit anong card
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('.js-buynow');
+                if (!btn) return;
                 e.preventDefault();
-                e.stopPropagation();
-                profileDropdown.classList.toggle('show');
+                currentPID = btn.getAttribute('data-pid') || 0;
+                open();
             });
 
-            document.addEventListener('click', function(e) {
-                if (!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
-                    profileDropdown.classList.remove('show');
-                }
-            });
+            document.getElementById('closeChoice')?.addEventListener('click', close);
 
-            profileDropdown.querySelectorAll('a, button').forEach(item => {
-                item.addEventListener('click', function() {
-                    profileDropdown.classList.remove('show');
+            function go(mode) {
+                if (!currentPID) return close();
+                const qs = new URLSearchParams({
+                    pid: currentPID,
+                    mode
                 });
-            });
+                location.href = '/RADS-TOOLING/customer/checkout.php?' + qs.toString();
+            }
+            document.getElementById('chooseDeliver')?.addEventListener('click', () => go('delivery'));
+            document.getElementById('choosePickup')?.addEventListener('click', () => go('pickup'));
+        })();
+    </script>
+
+</body>
+
+</html>
+
+<script>
+    // ========== INITIALIZE ON PAGE LOAD ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        initProfileDropdown();
+        //loadUserStatistics();
+        //loadRecentOrders();
+        //loadRecommendedProducts();
+        updateCartCount();
+    });
+
+    // ========== PROFILE DROPDOWN TOGGLE ==========
+    function initProfileDropdown() {
+        const profileToggle = document.getElementById('profileToggle');
+        const profileDropdown = document.getElementById('profileDropdown');
+
+        if (!profileToggle || !profileDropdown) {
+            console.error('Profile elements not found');
+            return;
         }
 
-        // ========== LOAD USER STATISTICS ==========
-        /*async function loadUserStatistics() {
-            try {
-                const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
-                    credentials: 'same-origin'
-                });
-                const data = await response.json();
+        profileToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            profileDropdown.classList.toggle('show');
+        });
 
-                if (data.success) {
-                    document.getElementById('totalOrders').textContent = data.stats.total || 0;
-                    document.getElementById('pendingOrders').textContent = data.stats.pending || 0;
-                    document.getElementById('completedOrders').textContent = data.stats.completed || 0;
-                } else {
-                    document.getElementById('totalOrders').textContent = '0';
-                    document.getElementById('pendingOrders').textContent = '0';
-                    document.getElementById('completedOrders').textContent = '0';
-                }
-            } catch (err) {
-                console.error('Failed to load stats:', err);
+        document.addEventListener('click', function(e) {
+            if (!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDropdown.classList.remove('show');
+            }
+        });
+
+        profileDropdown.querySelectorAll('a, button').forEach(item => {
+            item.addEventListener('click', function() {
+                profileDropdown.classList.remove('show');
+            });
+        });
+    }
+
+    // ========== LOAD USER STATISTICS ==========
+    /*async function loadUserStatistics() {
+        try {
+            const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('totalOrders').textContent = data.stats.total || 0;
+                document.getElementById('pendingOrders').textContent = data.stats.pending || 0;
+                document.getElementById('completedOrders').textContent = data.stats.completed || 0;
+            } else {
                 document.getElementById('totalOrders').textContent = '0';
                 document.getElementById('pendingOrders').textContent = '0';
                 document.getElementById('completedOrders').textContent = '0';
             }
-        }*/
-
-        // ========== LOAD RECENT ORDERS ==========
-        /*async function loadRecentOrders() {
-                const ordersContainer = document.getElementById('recentOrdersContainer');
-                if (!ordersContainer) return;
-
-                try {
-                    const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
-                        credentials: 'same-origin'
-                    });
-                    const data = await response.json();
-
-                    if (data.success && data.orders.length > 0) {
-                        ordersContainer.innerHTML = data.orders.map(order => `
-            <div class="order-item">
-              <div class="order-info">
-                <h4>Order #${escapeHtml(order.order_code)}</h4>
-                <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
-                <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
-              </div>
-              <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
-                ${escapeHtml(order.status)}
-              </span>
-            </div>
-          `).join('');
-                    } else {
-                        ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
-                    }
-                } catch {
-                    ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
-                }
-            }*/
-
-        // ========== LOGOUT MODAL ==========
-        function showLogoutModal() {
-            const modal = document.getElementById('logoutModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-            const dropdown = document.getElementById('profileDropdown');
-            if (dropdown) dropdown.classList.remove('show');
+        } catch (err) {
+            console.error('Failed to load stats:', err);
+            document.getElementById('totalOrders').textContent = '0';
+            document.getElementById('pendingOrders').textContent = '0';
+            document.getElementById('completedOrders').textContent = '0';
         }
+    }*/
 
-        function closeLogoutModal() {
-            const modal = document.getElementById('logoutModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-        }
+    // ========== LOAD RECENT ORDERS ==========
+    /*async function loadRecentOrders() {
+            const ordersContainer = document.getElementById('recentOrdersContainer');
+            if (!ordersContainer) return;
 
-        async function confirmLogout() {
             try {
-                await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
-                    method: 'POST',
+                const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
                     credentials: 'same-origin'
                 });
+                const data = await response.json();
 
-                localStorage.removeItem('cart');
-                window.location.href = '/RADS-TOOLING/public/index.php';
-
-            } catch (error) {
-                console.error('Logout error:', error);
-                localStorage.removeItem('cart');
-                window.location.href = '/RADS-TOOLING/public/index.php';
-            }
-        }
-
-        // ========== LOAD PRODUCTS ==========
-        /*async function loadRecommendedProducts() {
-                const productsContainer = document.getElementById('recommendedProducts');
-                if (!productsContainer) return;
-
-                try {
-                    const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
-                        credentials: 'same-origin',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success && result.data && result.data.products && result.data.products.length > 0) {
-                        productsContainer.innerHTML = result.data.products.map(product => `
-            <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
-              <div class="product-image">
-                <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.png'}" 
-                     alt="${escapeHtml(product.name)}"
-                     onerror="this.src='/RADS-TOOLING/assets/images/placeholder.png'">
-              </div>
-              <div class="product-info">
-                <h3>${escapeHtml(product.name)}</h3>
-                <p class="product-type">${escapeHtml(product.type || 'Cabinet')}</p>
-                <p class="product-price">₱${parseFloat(product.price || 0).toLocaleString()}</p>
-              </div>
-            </a>
-          `).join('');
-                    } else {
-                        productsContainer.innerHTML = '<div class="loading-state">No products available</div>';
-                    }
-                } catch (error) {
-                    console.error('Failed to load products:', error);
-                    productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
+                if (data.success && data.orders.length > 0) {
+                    ordersContainer.innerHTML = data.orders.map(order => `
+        <div class="order-item">
+          <div class="order-info">
+            <h4>Order #${escapeHtml(order.order_code)}</h4>
+            <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
+            <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
+          </div>
+          <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
+            ${escapeHtml(order.status)}
+          </span>
+        </div>
+      `).join('');
+                } else {
+                    ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
                 }
-            }*/
-
-        // ========== CART COUNT ==========
-        function updateCartCount() {
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const cartCount = document.getElementById('cartCount');
-            if (cartCount) {
-                cartCount.textContent = cart.length;
+            } catch {
+                ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
             }
-        }
+        }*/
 
-        // ========== UTILITY FUNCTIONS ==========
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+    // ========== LOGOUT MODAL ==========
+    function showLogoutModal() {
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
         }
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown) dropdown.classList.remove('show');
+    }
 
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
+    function closeLogoutModal() {
+        const modal = document.getElementById('logoutModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+    async function confirmLogout() {
+        try {
+            await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
+                method: 'POST',
+                credentials: 'same-origin'
             });
+
+            localStorage.removeItem('cart');
+            window.location.href = '/RADS-TOOLING/public/index.php';
+
+        } catch (error) {
+            console.error('Logout error:', error);
+            localStorage.removeItem('cart');
+            window.location.href = '/RADS-TOOLING/public/index.php';
         }
-    </script>
+    }
+
+    // ========== LOAD PRODUCTS ==========
+    /*async function loadRecommendedProducts() {
+            const productsContainer = document.getElementById('recommendedProducts');
+            if (!productsContainer) return;
+
+            try {
+                const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.data && result.data.products && result.data.products.length > 0) {
+                    productsContainer.innerHTML = result.data.products.map(product => `
+        <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
+          <div class="product-image">
+            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.png'}" 
+                 alt="${escapeHtml(product.name)}"
+                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.png'">
+          </div>
+          <div class="product-info">
+            <h3>${escapeHtml(product.name)}</h3>
+            <p class="product-type">${escapeHtml(product.type || 'Cabinet')}</p>
+            <p class="product-price">₱${parseFloat(product.price || 0).toLocaleString()}</p>
+          </div>
+        </a>
+      `).join('');
+                } else {
+                    productsContainer.innerHTML = '<div class="loading-state">No products available</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load products:', error);
+                productsContainer.innerHTML = '<div class="loading-state">Failed to load products</div>';
+            }
+        }*/
+
+    // ========== CART COUNT ==========
+    function updateCartCount() {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const cartCount = document.getElementById('cartCount');
+        if (cartCount) {
+            cartCount.textContent = cart.length;
+        }
+    }
+
+    // ========== UTILITY FUNCTIONS ==========
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+</script>
 
 
-    <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
-    <script defer src="/RADS-TOOLING/assets/JS/checkout.js"></script>
+<script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
+<script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+<script defer src="/RADS-TOOLING/assets/JS/checkout.js"></script>
 </body>
 
 </html>

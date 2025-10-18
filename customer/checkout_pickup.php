@@ -1,172 +1,276 @@
 <?php
+// /RADS-TOOLING/customer/checkout_pickup.php
 declare(strict_types=1);
 session_start();
 
-// Product params (fallback; palitan mo pag may DB fetch ka)
-$pid   = (int)($_GET['pid'] ?? 0);
-$name  = $_GET['name'] ?? 'Kitchen Cabinet';
-$price = (float)($_GET['price'] ?? 0);
-$qty   = (int)($_GET['qty'] ?? 1);
+require_once __DIR__ . '/../includes/guard.php';
+guard_require_customer();
 
-$sub   = $price * $qty;
-$vat   = round($sub * 0.12, 2); // 12% VAT
-$ship  = 0.00;                  // PICK-UP → no shipping
-$grand = $sub + $vat + $ship;
+$pid = isset($_GET['pid']) ? trim((string)$_GET['pid']) : '';
+$user = $_SESSION['user'] ?? null;
+$customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer');
+$customerId   = $user['id'] ?? 0;
+
+$img = $_SESSION['user']['profile_image'] ?? '';
+$avatarHtml = $img
+  ? '<img src="/RADS-TOOLING/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">'
+  : strtoupper(substr($customerName, 0, 1));
+
+
 ?>
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
-  <title>Checkout — Pick up</title>
-  <link rel="stylesheet" href="/assets/css/checkout.css">
-  <style>
-    .co-shell{max-width:1200px;margin:0 auto;padding:12px 20px;font-family:Inter,system-ui,Arial;color:#0f172a}
-    .co-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px}
-    .co-h{margin:0 0 8px;font-size:14px;font-weight:800}
-    .co-muted{font-size:12px;color:#6b7280}
-
-    .co-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .co-field{display:flex;flex-direction:column;gap:6px}
-    .co-field label{font-size:12px;color:#374151}
-    .co-field input{height:36px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;outline:none}
-    .co-field input:focus{border-color:#377dff}
-
-    .co-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px}
-    @media (max-width:1024px){.co-form{grid-template-columns:1fr} .co-row{grid-template-columns:1fr}}
-
-    .co-sum .line{display:flex;justify-content:space-between;margin:6px 0;font-size:13px}
-    .co-sum .total{font-weight:800;border-top:1px dashed #e5e7eb;padding-top:8px}
-
-    .co-payhead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-    .co-badge{font-size:12px;background:#f3f4f6;padding:2px 8px;border-radius:999px}
-    .co-badge.ok{background:#e7f8ec;color:#05603a}
-    .co-qr{display:grid;grid-template-columns:1fr;gap:8px}
-    .co-btn{height:36px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer}
-    .co-btn:hover{border-color:#377dff}
-    .co-buy{height:38px;border:none;border-radius:10px;background:#111;color:#fff;font-weight:800;cursor:pointer;width:160px}
-    .co-buy[disabled]{opacity:.5;cursor:not-allowed}
-
-    .co-back{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:9999}
-    .co-modal{width:520px;max-width:calc(100% - 24px);background:#fff;border-radius:12px;border:1px solid #e5e7eb}
-    .co-mhd{padding:10px 14px;border-bottom:1px solid #e5e7eb;font-weight:800}
-    .co-mbd{padding:14px}
-    .co-mft{padding:12px 14px;border-top:1px solid #e5e7eb;display:flex;gap:10px;justify-content:flex-end}
-    .co-mfield{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-    .co-mfield input{height:36px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
-    .co-pbtn{height:36px;padding:0 12px;border-radius:8px;border:1px solid #d1d5db;background:#fff;cursor:pointer}
-    .co-pbtn.primary{background:#111;color:#fff;border-color:#111}
-  </style>
+  <title>Delivery Details</title><!-- (or Pick-up Details) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+  <!-- Site styles used by navbar/footer -->
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css">
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
+  <!-- Page-specific -->
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout.css">
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
-  <div class="co-shell">
-    <div class="co-card">
-      <div class="co-h">PICK UP — Enter your Name and Contact</div>
-
-      <form id="pickupForm" method="post" action="/backend/api/order_create.php">
-        <input type="hidden" name="type" value="pickup">
-        <input type="hidden" name="pid" value="<?= $pid ?>">
-        <input type="hidden" name="name" value="<?= htmlspecialchars($name) ?>">
-        <input type="hidden" name="price" value="<?= number_format($price,2,'.','') ?>">
-        <input type="hidden" name="qty" value="<?= $qty ?>">
-        <input type="hidden" name="vat" value="<?= number_format($vat,2,'.','') ?>">
-        <input type="hidden" name="shipping_fee" value="<?= number_format($ship,2,'.','') ?>">
-        <input type="hidden" name="total" value="<?= number_format($grand,2,'.','') ?>">
-
-        <input type="hidden" id="payMethod" name="payment_method" value="">
-        <input type="hidden" id="payVerified" name="payment_verified" value="0">
-
-        <div class="co-form">
-          <div class="co-field"><label>First Name</label><input name="first_name" required></div>
-          <div class="co-field"><label>Last Name</label><input name="last_name" required></div>
-
-          <div class="co-field"><label>Email</label><input type="email" name="email" required></div>
-          <div class="co-field"><label>Phone Number</label><input name="phone" inputmode="numeric" maxlength="11" pattern="\d{11}" placeholder="09xxxxxxxxx" required></div>
+  <div class="page-wrapper">
+    <!-- HEADER -->
+    <header class="navbar">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          <a href="/RADS-TOOLING/customer/homepage.php" class="logo-link">
+            <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+          </a>
         </div>
 
-        <div class="co-row">
-          <!-- Summary (left) -->
-          <div class="co-card co-sum">
-            <div class="co-h">Order Summary</div>
-            <div class="line"><span><?= htmlspecialchars($name) ?> <span class="co-muted">× <?= $qty ?></span></span><strong>₱ <?= number_format($sub,2) ?></strong></div>
-            <div class="line"><span>VAT (12%)</span><span>₱ <?= number_format($vat,2) ?></span></div>
-            <div class="line"><span>Shipping Fee</span><span>₱ <?= number_format($ship,2) ?></span></div>
-            <div class="line total"><span>Total</span><span>₱ <?= number_format($grand,2) ?></span></div>
+        <form class="search-container" action="/RADS-TOOLING/customer/products.php" method="get">
+          <input type="text" name="q" class="search-input" placeholder="Search cabinets...">
+          <button type="submit" class="search-btn" aria-label="Search">
+            <span class="material-symbols-rounded">search</span>
+          </button>
+        </form>
+
+        <div class="navbar-actions">
+          <!-- Profile Dropdown -->
+          <div class="profile-menu">
+            <button class="profile-toggle" id="profileToggle" type="button">
+              <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="nav-avatar">
+                  <?= strtoupper(substr($customerName, 0, 1)) ?>
+                </div>
+              </div>
+              <div class="profile-info">
+                <span class="profile-name"><?= $customerName ?></span>
+                <span class="material-symbols-rounded dropdown-icon">expand_more</span>
+              </div>
+            </button>
+
+            <div class="profile-dropdown" id="profileDropdown">
+              <div class="profile-dropdown-header">
+                <div class="dropdown-avatar" id="dd-avatar">
+                  <?= strtoupper(substr($customerName, 0, 1)) ?>
+                </div>
+                <div class="dropdown-user-info">
+                  <div class="dropdown-name" id="dd-name"><?= $customerName ?></div>
+                  <div class="dropdown-email" id="userEmailDisplay">Loading...</div>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a href="/RADS-TOOLING/customer/profile.php" class="dropdown-item">
+                <span class="material-symbols-rounded">person</span><span>My Profile</span>
+              </a>
+              <a href="/RADS-TOOLING/customer/orders.php" class="dropdown-item">
+                <span class="material-symbols-rounded">receipt_long</span><span>My Orders</span>
+              </a>
+              <a href="/RADS-TOOLING/customer/customizations.php" class="dropdown-item">
+                <span class="material-symbols-rounded">palette</span><span>My Designs</span>
+              </a>
+              <div class="dropdown-divider"></div>
+              <button onclick="showLogoutModal()" class="dropdown-item dropdown-logout" type="button">
+                <span class="material-symbols-rounded">logout</span><span>Logout</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Payment (right) -->
-          <div class="co-card">
-            <div class="co-h">Payment</div>
-            <div class="co-payhead">
-              <div class="co-muted">Choose QR code</div>
-              <span id="payBadge" class="co-badge">Awaiting verification</span>
-            </div>
+          <!-- Cart -->
+          <a href="/RADS-TOOLING/cart.php" class="cart-button">
+            <span class="material-symbols-rounded">shopping_cart</span>
+            <span id="cartCount" class="cart-badge">0</span>
+          </a>
+        </div>
+      </div>
 
-            <div class="co-qr" style="margin-bottom:10px">
-              <button type="button" class="co-btn" id="btnGCash">GCash</button>
-              <button type="button" class="co-btn" id="btnInsta">InstaPay</button>
-            </div>
+      <nav class="navbar-menu">
+        <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
+        <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
+        <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+      </nav>
+    </header>
 
-            <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end">
-              <a class="co-btn" style="padding:0 12px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;height:38px"
-                 href="/customer/products.php">Back</a>
-              <button class="co-buy" id="btnBuy" type="submit" disabled>BUY NOW</button>
-            </div>
-            <div class="co-muted" style="margin-top:6px">BUY NOW unlocks after successful payment verification.</div>
+    <!--  👉 KEEP your existing checkout container (cz-shell + form) right after the header  -->
+
+    <div class="cz-shell">
+      <div class="cz-header">
+        <a class="cz-back" href="/RADS-TOOLING/customer/checkout.php?pid=<?php echo urlencode($pid) ?>">← Back</a>
+        <h2>Pick-up Details</h2>
+      </div>
+
+      <form id="pickupForm" class="card" method="post"
+        action="/RADS-TOOLING/customer/checkout_delivery_review.php">
+        <input type="hidden" name="mode" value="pickup">
+        <input type="hidden" name="pid" value="<?php echo htmlspecialchars($pid, ENT_QUOTES) ?>">
+
+        <div class="form-two">
+          <div class="rt-field">
+            <label>Surname</label>
+            <input class="rt-input" type="text" name="last_name" required>
           </div>
+          <div class="rt-field">
+            <label>First Name</label>
+            <input class="rt-input" type="text" name="first_name" required>
+          </div>
+        </div>
+
+        <div class="form-two">
+          <div class="rt-field">
+            <label>Mobile Number</label>
+            <div class="phone-row">
+              <span class="prefix">+63</span>
+              <input id="phoneLocal" class="rt-input" type="text" inputmode="numeric" maxlength="10"
+                pattern="\d{10}" placeholder="9123456789" required>
+              <input id="phoneFull" type="hidden" name="phone">
+            </div>
+            <div class="hint">Enter 10 digits only.</div>
+          </div>
+
+          <div class="rt-field">
+            <label>Email</label>
+            <input class="rt-input" type="email" name="email" placeholder="you@example.com" required>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="rt-btn rt-btn-outline" id="btnClear">Clear</button>
+          <button id="btnContinue" type="button" class="rt-btn rt-btn-dark">Continue</button>
         </div>
       </form>
-    </div>
-  </div>
 
-  <!-- Verify Payment Modal -->
-  <div id="coBack" class="co-back" role="dialog" aria-modal="true">
-    <div class="co-modal">
-      <div id="coModalTitle" class="co-mhd">Verifying Payment</div>
-      <div class="co-mbd">
-        <div class="co-mfield"><label>Amount</label><input id="vpAmount" value="<?= number_format($grand,2,'.','') ?>"></div>
-        <div class="co-mfield"><label>Account / Number</label><input id="vpNumber" placeholder="09xxxxxxxxx or bank ref"></div>
-        <div class="co-mfield"><label>Account Name</label><input id="vpName" placeholder="Juan Dela Cruz"></div>
-        <div class="co-mfield"><label>Transaction / Reference No.</label><input id="vpRef" placeholder="eg. 7GJ4X..."></div>
-      </div>
-      <div class="co-mft">
-        <button class="co-pbtn" id="vpCancel">Cancel</button>
-        <button class="co-pbtn primary" id="vpConfirm">Confirm Payment</button>
+      <!-- keep this modal as is -->
+      <div id="invalidModal" class="rt-modal" hidden>
+        <div class="rt-modal__dialog">
+          <h3>Incomplete form</h3>
+          <p>Please fill the highlighted fields.</p>
+          <div class="right">
+            <button class="rt-btn rt-btn-dark" data-close="#invalidModal">OK</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+        <!-- FOOTER -->
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>About RADS TOOLING</h3>
+          <p class="footer-description">
+            Premium custom cabinet manufacturer serving clients since 2007.
+            Quality craftsmanship, affordable prices, and exceptional service.
+          </p>
+          <div class="footer-social">
+            <a href="#" class="social-icon" aria-label="Facebook">
+              <span class="material-symbols-rounded">facebook</span>
+            </a>
+            <a href="#" class="social-icon" aria-label="Instagram">
+              <span class="material-symbols-rounded">photo_camera</span>
+            </a>
+            <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+              <span class="material-symbols-rounded">mail</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h3>Quick Links</h3>
+          <ul class="footer-links">
+            <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
+            <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3>Categories</h3>
+          <ul class="footer-links">
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+            <li><a href="/RADS-TOOLING/customer/products.php?type=Commercial">Storage Cabinet</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h3>Contact Info</h3>
+          <div class="contact-info-item">
+            <span class="material-symbols-rounded">location_on</span>
+            <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+          </div>
+          <div class="contact-info-item">
+            <span class="material-symbols-rounded">mail</span>
+            <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+          </div>
+          <div class="contact-info-item">
+            <span class="material-symbols-rounded">schedule</span>
+            <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copyright">© 2025 RADS TOOLING INC. All rights reserved.</p>
+        <div class="footer-legal">
+          <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
+          <a href="/RADS-TOOLING/customer/terms.php">Terms & Conditions</a>
+        </div>
+      </div>
+    </footer>
+  </div><!-- /.page-wrapper -->
 
   <script>
-    (function(){
-      const back   = document.getElementById('coBack');
-      const title  = document.getElementById('coModalTitle');
-      const buyBtn = document.getElementById('btnBuy');
-      const badge  = document.getElementById('payBadge');
-      const mthd   = document.getElementById('payMethod');
-      const ok     = document.getElementById('payVerified');
-
-      function openModal(label){
-        title.textContent = 'Verifying Payment (' + label + ')';
-        back.style.display = 'flex';
+  // Simple init for profile dropdown + cart badge
+  document.addEventListener('DOMContentLoaded', function () {
+    const profileToggle = document.getElementById('profileToggle');
+    const profileDropdown = document.getElementById('profileDropdown');
+    profileToggle?.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      profileDropdown?.classList.toggle('show');
+    });
+    document.addEventListener('click', function (e) {
+      if (!profileToggle?.contains(e.target) && !profileDropdown?.contains(e.target)) {
+        profileDropdown?.classList.remove('show');
       }
-      document.getElementById('btnGCash').addEventListener('click', ()=>{ mthd.value='gcash';    openModal('GCash');   });
-      document.getElementById('btnInsta').addEventListener('click', ()=>{ mthd.value='instapay'; openModal('InstaPay');});
+    });
+    const cartCount = document.getElementById('cartCount');
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (cartCount) cartCount.textContent = cart.length || 0;
+  });
 
-      document.getElementById('vpCancel').addEventListener('click', ()=> back.style.display='none');
-      back.addEventListener('click', (e)=>{ if(e.target===back) back.style.display='none'; });
+  function showLogoutModal(){ /* optional: hook up your modal if present */ }
+</script>
 
-      document.getElementById('vpConfirm').addEventListener('click', ()=>{
-        const amt = document.getElementById('vpAmount').value.trim();
-        const num = document.getElementById('vpNumber').value.trim();
-        const nam = document.getElementById('vpName').value.trim();
-        const ref = document.getElementById('vpRef').value.trim();
-        if(!amt || !num || !nam || !ref){ alert('Please complete all fields.'); return; }
-        ok.value = '1';
-        badge.textContent = (mthd.value==='gcash' ? 'GCash' : 'InstaPay') + ' ✓ Verified';
-        badge.classList.add('ok');
-        buyBtn.disabled = false;
-        back.style.display = 'none';
-      });
-    })();
-  </script>
+<script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
+<script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+<script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
 </body>
+</html>
+
+
+
+    <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
+</body>
+
 </html>
