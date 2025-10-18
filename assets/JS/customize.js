@@ -291,7 +291,7 @@
         // build possible URLs
         const candidates = [
             resolveAsset(MODEL_DIR, modelFile),
-            resolveAsset('/RADS-TOOLING/public/uploads/models/', modelFile), // fallback kung public/ ang tama sa machine mo
+            resolveAsset('/RADS-TOOLING/public/uploads/models/', modelFile), // fallback kung public/ ang tama sa machine 
             resolveAsset('/', modelFile) // kung DB already stores '/RADS-TOOLING/uploads/...'
         ];
 
