@@ -377,7 +377,15 @@ if (!$isLoggedIn) {
 
             <div class="dashboard-row">
                 <div class="dashboard-chart">
-                    <h2>Sales Overview</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2>Sales Overview</h2>
+                        <div class="chart-period-selector" style="display: flex; gap: 0.5rem;">
+                            <button class="period-btn active" data-period="day">1 Day</button>
+                            <button class="period-btn" data-period="week">1 Week</button>
+                            <button class="period-btn" data-period="month">1 Month</button>
+                            <button class="period-btn" data-period="year">1 Year</button>
+                        </div>
+                    </div>
                     <canvas id="salesChart"></canvas>
                 </div>
                 <div class="dashboard-orders">
@@ -606,15 +614,15 @@ if (!$isLoggedIn) {
         <section class="main-section" data-section="reports">
             <div class="section-header">
                 <h1>Report Generation</h1>
-                <button class="btn-export" id="exportReportBtn">
-                    <span class="material-symbols-rounded">download</span> Export Report
-                </button>
             </div>
 
             <div class="report-controls">
                 <label>From: <input type="date" class="report-date" id="report-from" /></label>
                 <label>To: <input type="date" class="report-date" id="report-to" /></label>
                 <button class="btn-generate" id="generateReportBtn">Generate Report</button>
+                <button class="btn-export" id="exportPdfBtn">
+                    <span class="material-symbols-rounded">picture_as_pdf</span> Download PDF
+                </button>
             </div>
 
             <!-- Visual Summary Cards (backend-ready placeholders) -->
@@ -767,31 +775,64 @@ if (!$isLoggedIn) {
             </div>
         </section>
 
-        <!-- ===== PAYMENT VERIFICATION ===== -->
         <section class="main-section" data-section="payment">
-            <div class="section-header">
-                <h1>Payment Verification</h1>
+    <div class="section-header">
+        <h1>Payment Verification</h1>
+    </div>
+    
+    <div class="payments-table-container">
+        <table class="payments-table">
+            <thead>
+                <tr>
+                    <th>Order Code</th>
+                    <th>Customer</th>
+                    <th>Amount Paid</th>
+                    <th>Method</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="paymentsTableBody">
+                <tr>
+                    <td colspan="7" style="text-align:center;">Loading payments...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+        <!-- Payment Details Modal -->
+        <div class="modal" id="paymentDetailsModal">
+            <div class="modal-content" style="max-width: 900px;">
+                <button class="modal-close" onclick="closeModal('paymentDetailsModal')">×</button>
+                <h2>Payment Verification Details</h2>
+
+                <div id="paymentDetailsContent" style="display: grid; gap: 1.5rem;">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+
+                <div class="modal-actions" style="margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('paymentDetailsModal')">Close</button>
+                    <button type="button" id="btnRejectPayment" class="btn-danger" style="background: #e14d4d;">Reject</button>
+                    <button type="button" id="btnApprovePayment" class="btn-primary" style="background: #3db36b;">Approve</button>
+                </div>
             </div>
-            <div class="payments-table-container">
-                <table class="payments-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Customer</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Proof</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="paymentsTableBody">
-                        <tr>
-                            <td colspan="6" style="text-align:center;">Loading payments...</td>
-                        </tr>
-                    </tbody>
-                </table>
+        </div>
+
+        <!-- Reject Reason Modal -->
+        <div class="modal" id="rejectReasonModal">
+            <div class="modal-content" style="max-width: 500px;">
+                <button class="modal-close" onclick="closeModal('rejectReasonModal')">×</button>
+                <h2>Reject Payment</h2>
+                <p>Please provide a reason for rejecting this payment:</p>
+                <textarea id="rejectReason" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
+                <div class="modal-actions" style="margin-top: 1rem;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('rejectReasonModal')">Cancel</button>
+                    <button type="button" id="btnConfirmReject" class="btn-danger" style="background: #e14d4d;">Confirm Reject</button>
+                </div>
             </div>
-        </section>
+        </div>
 
         <!-- ===== MODALS ===== -->
 

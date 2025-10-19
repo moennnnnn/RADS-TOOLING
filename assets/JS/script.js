@@ -780,6 +780,223 @@ async function loadOrders(search = '') {
         showNotification('Failed to load orders: ' + error.message, 'error');
     }
 }
+async function viewAdminOrderDetails(orderId) {
+    try {
+        const response = await fetch(`/RADS-TOOLING/backend/api/admin_orders.php?action=details&id=${orderId}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to load order details');
+        }
+
+        const { order, items } = result.data;
+
+        // Create modal content
+        const existingModal = document.getElementById('adminOrderDetailsModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalHtml = `
+            <div class="modal" id="adminOrderDetailsModal" style="display: flex;">
+                <div class="modal-content" style="max-width: 900px;">
+                    <button class="modal-close" onclick="closeAdminOrderModal()">×</button>
+                    <h2>Order Details - ${escapeHtml(order.order_code)}</h2>
+                    
+                    <div style="display: grid; gap: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <h3 style="color: var(--brand); margin-bottom: 0.5rem;">Customer Information</h3>
+                                <p><strong>Name:</strong> ${escapeHtml(order.customer_name)}</p>
+                                <p><strong>Email:</strong> ${escapeHtml(order.customer_email)}</p>
+                                <p><strong>Phone:</strong> ${escapeHtml(order.customer_phone || 'N/A')}</p>
+                            </div>
+                            
+                            <div>
+                                <h3 style="color: var(--brand); margin-bottom: 0.5rem;">Order Information</h3>
+                                <p><strong>Order Date:</strong> ${formatDate(order.order_date)}</p>
+                                <p><strong>Delivery Mode:</strong> ${escapeHtml(order.mode)}</p>
+                                <p><strong>Status:</strong> <span class="badge badge-${getStatusBadgeClass(order.status)}">${escapeHtml(order.status)}</span></p>
+                                <p><strong>Payment Status:</strong> <span class="badge badge-${getPaymentBadgeClass(order.payment_status)}">${escapeHtml(order.payment_status)}</span></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="color: var(--brand); margin-bottom: 0.5rem;">Order Items</h3>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #e3e3e3;">
+                                        <th style="text-align: left; padding: 0.5rem;">Item</th>
+                                        <th style="text-align: center; padding: 0.5rem;">Qty</th>
+                                        <th style="text-align: right; padding: 0.5rem;">Price</th>
+                                        <th style="text-align: right; padding: 0.5rem;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.map(item => `
+                                        <tr style="border-bottom: 1px solid #e3e3e3;">
+                                            <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
+                                            <td style="text-align: center; padding: 0.5rem;">${item.qty}</td>
+                                            <td style="text-align: right; padding: 0.5rem;">₱${parseFloat(item.unit_price).toLocaleString()}</td>
+                                            <td style="text-align: right; padding: 0.5rem;">₱${parseFloat(item.line_total).toLocaleString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                                <tfoot>
+                                    <tr style="border-top: 2px solid var(--brand);">
+                                        <td colspan="3" style="text-align: right; padding: 0.5rem; font-weight: 700;">Total:</td>
+                                        <td style="text-align: right; padding: 0.5rem; font-weight: 700; font-size: 1.2rem; color: var(--brand);">₱${parseFloat(order.total_amount).toLocaleString()}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        ${order.payment_method ? `
+                            <div>
+                                <h3 style="color: var(--brand); margin-bottom: 0.5rem;">Payment Information</h3>
+                                <p><strong>Method:</strong> ${escapeHtml(order.payment_method)}</p>
+                                <p><strong>Deposit Rate:</strong> ${order.deposit_rate}%</p>
+                                <p><strong>Amount Paid:</strong> ₱${parseFloat(order.amount_paid || 0).toLocaleString()}</p>
+                                <p><strong>Verification Status:</strong> <span class="badge badge-${order.payment_verification_status === 'APPROVED' ? 'completed' : 'pending'}">${escapeHtml(order.payment_verification_status || 'PENDING')}</span></p>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button onclick="closeAdminOrderModal()" class="btn-secondary">Close</button>
+                        ${(['Owner', 'Admin'].includes(currentUserRole)) ? `
+                            <button onclick="updateOrderStatus(${order.id}, '${escapeHtml(order.status)}')" class="btn-primary">Update Status</button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    } catch (error) {
+        console.error('Error loading order details:', error);
+        showNotification('Failed to load order details: ' + error.message, 'error');
+    }
+}
+
+function closeAdminOrderModal() {
+    const modal = document.getElementById('adminOrderDetailsModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.remove();
+    }
+}
+
+function updateOrderStatus(orderId, currentStatus) {
+    // Close detail modal if open
+    closeAdminOrderModal();
+
+    // Create status update modal
+    const existingModal = document.getElementById('updateStatusModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modalHtml = `
+        <div class="modal" id="updateStatusModal" style="display: flex;">
+            <div class="modal-content" style="max-width: 500px;">
+                <button class="modal-close" onclick="closeUpdateStatusModal()">×</button>
+                <h2>Update Order Status</h2>
+                
+                <form id="updateStatusForm">
+                    <input type="hidden" id="update-order-id" value="${orderId}">
+                    
+                    <div style="margin: 1.5rem 0;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Current Status:</label>
+                        <p style="margin: 0; padding: 0.5rem; background: #f7fafc; border-radius: 6px;">
+                            <span class="badge badge-${getStatusBadgeClass(currentStatus)}">${escapeHtml(currentStatus)}</span>
+                        </p>
+                    </div>
+
+                    <div style="margin: 1.5rem 0;">
+                        <label for="new-status" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">New Status:</label>
+                        <select id="new-status" required style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                            <option value="">Select Status</option>
+                            <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Processing" ${currentStatus === 'Processing' ? 'selected' : ''}>Processing</option>
+                            <option value="Completed" ${currentStatus === 'Completed' ? 'selected' : ''}>Completed</option>
+                            <option value="Cancelled" ${currentStatus === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div style="background: #e8f4f8; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #2f5b88;">
+                            <strong>Note:</strong> Changing the order status will notify the customer and update their order tracking.
+                        </p>
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
+                        <button type="button" onclick="closeUpdateStatusModal()" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Update Status</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Add form submit handler
+    document.getElementById('updateStatusForm').addEventListener('submit', handleStatusUpdate);
+}
+
+function closeUpdateStatusModal() {
+    const modal = document.getElementById('updateStatusModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.remove();
+    }
+}
+
+async function handleStatusUpdate(e) {
+    e.preventDefault();
+
+    const orderId = parseInt(document.getElementById('update-order-id').value);
+    const newStatus = document.getElementById('new-status').value;
+
+    if (!newStatus) {
+        showNotification('Please select a status', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/admin_orders.php?action=update_status', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                order_id: orderId,
+                status: newStatus
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Order status updated successfully!', 'success');
+            closeUpdateStatusModal();
+            loadOrders(); // Reload orders table
+        } else {
+            showNotification(result.message || 'Failed to update status', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        showNotification('Failed to update order status', 'error');
+    }
+}
 
 function displayOrders(orders) {
     const tbody = document.getElementById('orderTableBody');
@@ -800,12 +1017,12 @@ function displayOrders(orders) {
             <td><span class="badge badge-${getPaymentBadgeClass(order.payment_status)}">${order.payment_status || 'Unknown'}</span></td>
             <td><span class="badge badge-${getStatusBadgeClass(order.status)}">${order.status || 'Unknown'}</span></td>
             <td>
-                <button class="btn-action btn-view" title="View Details">
+                <button class="btn-action btn-view" onclick="viewAdminOrderDetails(${order.id})" title="View Details">
                     <span class="material-symbols-rounded">visibility</span>
                 </button>
                 ${(['Owner', 'Admin'].includes(currentUserRole)) ? `
-                    <button class="btn-action btn-verify" title="Verify Order">
-                        <span class="material-symbols-rounded">verified</span>
+                    <button class="btn-action btn-edit" onclick="updateOrderStatus(${order.id}, '${escapeHtml(order.status)}')" title="Update Status">
+                        <span class="material-symbols-rounded">edit</span>
                     </button>
                 ` : ''}
             </td>
@@ -839,13 +1056,125 @@ function formatDate(dateString) {
         return dateString;
     }
 }
+// /assets/JS/checkout.js
+document.addEventListener('DOMContentLoaded', function () {
+    const proceedBtn = document.getElementById('proceedToPayBtn') || document.querySelector('.btn-proceed');
 
+    if (!proceedBtn) return;
+
+    proceedBtn.addEventListener('click', async function (e) {
+        e.preventDefault();
+
+        // Get selected deposit rate
+        const selectedDeposit = document.querySelector('input[name="deposit"]:checked');
+        if (!selectedDeposit) {
+            alert('Please select a deposit option (30%, 50%, or 100%)');
+            return;
+        }
+
+        const depositRate = parseInt(selectedDeposit.value);
+
+        // Determine if delivery or pickup mode
+        const isDelivery = window.location.pathname.includes('checkout_delivery');
+
+        // Get form values
+        const firstName = document.getElementById('firstName')?.value || '';
+        const lastName = document.getElementById('lastName')?.value || '';
+        const phone = document.getElementById('phone')?.value || '';
+        const email = document.getElementById('email')?.value || '';
+
+        // Validate required fields
+        if (!firstName || !lastName || !phone || !email) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Additional validation for delivery
+        if (isDelivery) {
+            const province = document.getElementById('province')?.value || '';
+            const city = document.getElementById('city')?.value || '';
+            const barangay = document.getElementById('barangay')?.value || '';
+            const street = document.getElementById('street')?.value || '';
+
+            if (!province || !city || !barangay || !street) {
+                alert('Please fill in all delivery address fields');
+                return;
+            }
+        }
+
+        // Get product and pricing info
+        const urlParams = new URLSearchParams(window.location.search);
+        const pid = urlParams.get('pid') || '';
+        const totalAmount = parseFloat(document.getElementById('totalAmount')?.textContent?.replace(/[₱,]/g, '') || '0');
+        const subtotalAmount = parseFloat(document.getElementById('subtotalAmount')?.textContent?.replace(/[₱,]/g, '') || '0');
+        const vatAmount = parseFloat(document.getElementById('vatAmount')?.textContent?.replace(/[₱,]/g, '') || '0');
+
+        if (!pid || totalAmount <= 0) {
+            alert('Invalid order information');
+            return;
+        }
+
+        try {
+            const orderData = {
+                pid: pid,
+                qty: 1,
+                subtotal: subtotalAmount,
+                vat: vatAmount,
+                total: totalAmount,
+                mode: isDelivery ? 'delivery' : 'pickup',
+                deposit_rate: depositRate,
+                info: {
+                    first_name: firstName,
+                    last_name: lastName,
+                    phone: phone,
+                    email: email,
+                    province: document.getElementById('province')?.value || '',
+                    city: document.getElementById('city')?.value || '',
+                    barangay: document.getElementById('barangay')?.value || '',
+                    street: document.getElementById('street')?.value || '',
+                    postal: document.getElementById('postal')?.value || ''
+                }
+            };
+
+            console.log('Sending order data:', orderData);
+
+            const response = await fetch('/RADS-TOOLING/backend/api/order_create.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(orderData)
+            });
+
+            const result = await response.json();
+            console.log('Server response:', result);
+
+            if (!result.success) {
+                if (result.redirect) {
+                    alert(result.message);
+                    window.location.href = result.redirect;
+                    return;
+                }
+                throw new Error(result.message || 'Failed to create order');
+            }
+
+            // Success - redirect to payment submission page
+            window.location.href = '/RADS-TOOLING/customer/payment_submit.php?order_id=' + result.order_id + '&deposit_rate=' + depositRate;
+
+        } catch (error) {
+            console.error('Order creation error:', error);
+            alert('Failed to create order: ' + error.message);
+        }
+    });
+});
 // ============================================================================
 // DASHBOARD
 // ============================================================================
 
 function initializeDashboard() {
-    initializeChart();
+    initializeChart('week');
     setupReports();
     updateDashboardStats();
     loadRecentOrders();
@@ -949,44 +1278,203 @@ async function loadRecentFeedback() {
     }
 }
 
-function initializeChart() {
+let salesChart = null;
+
+function initializeChart(period = 'week') {
     const ctx = document.getElementById('salesChart');
     if (!ctx || typeof Chart === 'undefined') return;
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [{
-                label: 'Sales',
-                data: [12000, 19000, 15000, 25000, 22000, 30000],
-                borderColor: '#3db36b',
-                backgroundColor: 'rgba(61,179,107,.1)',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function (value) {
-                            return '₱' + value.toLocaleString();
+
+    // Add event listeners to period buttons
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            loadSalesChart(this.dataset.period);
+        });
+    });
+
+    // Load initial chart
+    loadSalesChart(period);
+}
+
+async function loadSalesChart(period) {
+    try {
+        const response = await fetch(`/RADS-TOOLING/backend/api/dashboard.php?action=sales_chart&period=${period}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to load chart data');
+        }
+
+        const ctx = document.getElementById('salesChart');
+
+        // Destroy existing chart if it exists
+        if (salesChart) {
+            salesChart.destroy();
+        }
+
+        // Create new chart
+        salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: result.data.labels,
+                datasets: [{
+                    label: 'Sales',
+                    data: result.data.values,
+                    borderColor: '#3db36b',
+                    backgroundColor: 'rgba(61,179,107,.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                return 'Sales: ₱' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return '₱' + value.toLocaleString();
+                            }
                         }
                     }
                 }
             }
+        });
+    } catch (error) {
+        console.error('Error loading sales chart:', error);
+        showNotification('Failed to load sales chart', 'error');
+    }
+}
+
+function setupReports() {
+    // Set default dates
+    const fromInput = document.getElementById('report-from');
+    const toInput = document.getElementById('report-to');
+
+    if (fromInput && toInput) {
+        // Set default to current month
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        fromInput.valueAsDate = firstDay;
+        toInput.valueAsDate = today;
+    }
+
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', generateReport);
+    }
+
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', exportReportPdf);
+    }
+}
+
+async function generateReport() {
+    const fromDate = document.getElementById('report-from').value;
+    const toDate = document.getElementById('report-to').value;
+
+    if (!fromDate || !toDate) {
+        showNotification('Please select both From and To dates', 'error');
+        return;
+    }
+
+    if (new Date(fromDate) > new Date(toDate)) {
+        showNotification('From date must be before To date', 'error');
+        return;
+    }
+
+    try {
+        // Fetch report data
+        const response = await fetch(`/RADS-TOOLING/backend/api/report_data.php?from=${fromDate}&to=${toDate}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to generate report');
+        }
+
+        // Update summary cards
+        updateReportSummary(result.data);
+        showNotification('Report generated successfully!', 'success');
+
+    } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification('Failed to generate report: ' + error.message, 'error');
+    }
+}
+
+function updateReportSummary(data) {
+    // Update each summary card
+    const updates = {
+        'rg-total-sales': '₱' + (data.total_sales || 0).toLocaleString(),
+        'rg-total-orders': (data.total_orders || 0).toLocaleString(),
+        'rg-avg-order': '₱' + (data.avg_order || 0).toLocaleString(),
+        'rg-fully-paid': (data.fully_paid || 0).toLocaleString(),
+        'rg-cancelled': (data.cancelled || 0).toLocaleString(),
+        'rg-pending': (data.pending || 0).toLocaleString(),
+        'rg-new-customers': (data.new_customers || 0).toLocaleString(),
+        'rg-feedbacks': (data.feedbacks || 0).toLocaleString(),
+        'rg-most-item': data.most_ordered_item || '—'
+    };
+
+    Object.entries(updates).forEach(([id, value]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
         }
     });
 }
 
-function setupReports() {
-    const generateReportBtn = document.getElementById('generateReportBtn');
-    if (generateReportBtn) {
-        generateReportBtn.addEventListener('click', () => {
-            showNotification('Report generated successfully!', 'success');
-        });
+function exportReportPdf() {
+    const fromDate = document.getElementById('report-from').value;
+    const toDate = document.getElementById('report-to').value;
+
+    if (!fromDate || !toDate) {
+        showNotification('Please select both From and To dates', 'error');
+        return;
     }
+
+    if (new Date(fromDate) > new Date(toDate)) {
+        showNotification('From date must be before To date', 'error');
+        return;
+    }
+
+    // Show loading notification
+    showNotification('Generating PDF report...', 'info');
+
+    // Open PDF in new window (will trigger download)
+    window.open(
+        `/RADS-TOOLING/backend/api/generate_report.php?from=${fromDate}&to=${toDate}`,
+        '_blank'
+    );
+
+    setTimeout(() => {
+        showNotification('PDF report downloaded!', 'success');
+    }, 1500);
 }
 
 // ============================================================================
@@ -1014,6 +1502,7 @@ function initializeNavigation() {
             if (targetSection === 'account') loadUsers();
             else if (targetSection === 'customer') loadCustomers();
             else if (targetSection === 'orders') loadOrders();
+            else if (targetSection === 'payment') loadPaymentVerifications(); // ✅ Add this
             else if (targetSection === 'dashboard') {
                 updateDashboardStats();
                 loadRecentOrders();
@@ -1022,7 +1511,6 @@ function initializeNavigation() {
         }, 100);
     });
 }
-
 function initializeProfileDropdown() {
     const profileBtn = document.getElementById('profileIcon');
     const profileDropdown = document.getElementById('profileDropdown');
@@ -1431,3 +1919,258 @@ if (document.querySelector('.nav-item[data-section="chat"]')) {
 }
 
 console.log('Enhanced Admin Dashboard Script Loaded Successfully!');
+
+// ============================================================================
+// PAYMENT VERIFICATION
+// ============================================================================
+
+function initializePaymentVerification() {
+    const paymentNavItem = document.querySelector('[data-section="payment"]');
+    if (paymentNavItem) {
+        paymentNavItem.addEventListener('click', function () {
+            setTimeout(() => loadPaymentVerifications(), 100);
+        });
+    }
+
+    const currentSection = document.querySelector('.nav-item.active');
+    if (currentSection && currentSection.dataset.section === 'payment') {
+        loadPaymentVerifications();
+    }
+}
+
+async function loadPaymentVerifications() {
+    const tbody = document.getElementById('paymentsTableBody');
+    
+    // If element doesn't exist, don't try to load
+    if (!tbody) {
+        console.log('Payment table not found - skipping payment verification load');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=list', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load payment verifications');
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to load payments');
+        }
+
+        displayPaymentVerifications(result.data || []);
+
+    } catch (error) {
+        console.error('Error loading payment verifications:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">No payment verifications found</td></tr>';
+    }
+}
+
+function displayPaymentVerifications(verifications) {
+    const tbody = document.getElementById('paymentsTableBody');
+    if (!tbody) return;
+
+    if (!verifications || verifications.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666;">No payment verifications found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = verifications.map(payment => {
+        const statusClass = payment.status === 'PENDING' ? 'pending' :
+            payment.status === 'APPROVED' ? 'completed' : 'cancelled';
+        const statusText = payment.status.charAt(0) + payment.status.slice(1).toLowerCase();
+
+        return `
+            <tr data-payment-id="${payment.id}">
+                <td>${escapeHtml(payment.order_code)}</td>
+                <td>${escapeHtml(payment.customer_name)}</td>
+                <td>₱${parseFloat(payment.amount_reported || 0).toLocaleString()}</td>
+                <td>${escapeHtml(payment.method.toUpperCase())}</td>
+                <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+                <td>${formatDate(payment.created_at)}</td>
+                <td>
+                    <button class="btn-action btn-view" onclick="viewPaymentDetails(${payment.id})" title="View Details">
+                        <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function viewPaymentDetails(verificationId) {
+    try {
+        const response = await fetch(`/RADS-TOOLING/backend/api/payment_verification.php?action=details&id=${verificationId}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to load payment details');
+        }
+
+        const payment = result.data;
+
+        const content = document.getElementById('paymentDetailsContent');
+        content.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Order Information</h3>
+                    <p><strong>Order Code:</strong> ${escapeHtml(payment.order_code)}</p>
+                    <p><strong>Order Date:</strong> ${formatDate(payment.order_date)}</p>
+                    <p><strong>Total Amount:</strong> ₱${parseFloat(payment.total_amount).toLocaleString()}</p>
+                    <p><strong>Items:</strong> ${escapeHtml(payment.items || 'N/A')}</p>
+                    <p><strong>Delivery Mode:</strong> ${escapeHtml(payment.delivery_mode)}</p>
+                </div>
+
+                <div>
+                    <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Customer Information</h3>
+                    <p><strong>Name:</strong> ${escapeHtml(payment.customer_name)}</p>
+                    <p><strong>Email:</strong> ${escapeHtml(payment.customer_email)}</p>
+                    <p><strong>Phone:</strong> ${escapeHtml(payment.customer_phone || 'N/A')}</p>
+                    ${payment.delivery_mode === 'delivery' ? `
+                        <p><strong>Address:</strong> ${escapeHtml(payment.street || '')}, ${escapeHtml(payment.barangay || '')}, ${escapeHtml(payment.city || '')}, ${escapeHtml(payment.province || '')}</p>
+                    ` : ''}
+                </div>
+            </div>
+
+            <div style="background: #f7fafc; padding: 1rem; border-radius: 8px;">
+                <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Payment Details</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <p><strong>Payment Method:</strong> ${escapeHtml(payment.method.toUpperCase())}</p>
+                    <p><strong>Account Name:</strong> ${escapeHtml(payment.account_name)}</p>
+                    <p><strong>Account Number:</strong> ${escapeHtml(payment.account_number || 'N/A')}</p>
+                    <p><strong>Reference Number:</strong> ${escapeHtml(payment.reference_number)}</p>
+                    <p><strong>Amount Paid:</strong> ₱${parseFloat(payment.amount_reported).toLocaleString()}</p>
+                    <p><strong>Deposit Rate:</strong> ${payment.deposit_rate}%</p>
+                    <p><strong>Amount Due:</strong> ₱${parseFloat(payment.amount_due).toLocaleString()}</p>
+                    <p><strong>Status:</strong> <span class="badge badge-${payment.status === 'PENDING' ? 'pending' : payment.status === 'APPROVED' ? 'completed' : 'cancelled'}">${payment.status}</span></p>
+                </div>
+            </div>
+
+            ${payment.screenshot_path ? `
+                <div>
+                    <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Payment Proof</h3>
+                    <img src="/RADS-TOOLING/${escapeHtml(payment.screenshot_path)}" 
+                         alt="Payment Screenshot" 
+                         style="max-width: 100%; border-radius: 8px; border: 1px solid #e3edfb; cursor: pointer;"
+                         onclick="window.open(this.src, '_blank')" />
+                </div>
+            ` : ''}
+        `;
+
+        // Store verification ID for approve/reject actions
+        document.getElementById('btnApprovePayment').dataset.verificationId = verificationId;
+        document.getElementById('btnRejectPayment').dataset.verificationId = verificationId;
+
+        // Hide approve/reject buttons if already processed
+        if (payment.status !== 'PENDING') {
+            document.getElementById('btnApprovePayment').style.display = 'none';
+            document.getElementById('btnRejectPayment').style.display = 'none';
+        } else {
+            document.getElementById('btnApprovePayment').style.display = 'inline-block';
+            document.getElementById('btnRejectPayment').style.display = 'inline-block';
+        }
+
+        openModal('paymentDetailsModal');
+
+    } catch (error) {
+        console.error('Error viewing payment details:', error);
+        showNotification('Failed to load payment details: ' + error.message, 'error');
+    }
+}
+
+async function approvePayment(verificationId) {
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=approve', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: verificationId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Payment approved successfully!', 'success');
+            closeModal('paymentDetailsModal');
+            loadPaymentVerifications();
+        } else {
+            showNotification(result.message || 'Failed to approve payment', 'error');
+        }
+    } catch (error) {
+        console.error('Error approving payment:', error);
+        showNotification('Failed to approve payment', 'error');
+    }
+}
+
+async function rejectPayment(verificationId, reason) {
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=reject', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: verificationId, reason: reason })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Payment rejected', 'success');
+            closeModal('rejectReasonModal');
+            closeModal('paymentDetailsModal');
+            loadPaymentVerifications();
+        } else {
+            showNotification(result.message || 'Failed to reject payment', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting payment:', error);
+        showNotification('Failed to reject payment', 'error');
+    }
+}
+
+// Event listeners for payment actions
+document.getElementById('btnApprovePayment')?.addEventListener('click', function () {
+    const verificationId = this.dataset.verificationId;
+    if (!verificationId) return;
+
+    showConfirm({
+        title: 'Approve Payment',
+        message: 'Are you sure you want to approve this payment? The order will be moved to Processing status.',
+        okText: 'Approve',
+        onConfirm: () => approvePayment(parseInt(verificationId))
+    });
+});
+
+document.getElementById('btnRejectPayment')?.addEventListener('click', function () {
+    const verificationId = this.dataset.verificationId;
+    if (!verificationId) return;
+
+    document.getElementById('btnConfirmReject').dataset.verificationId = verificationId;
+    openModal('rejectReasonModal');
+});
+
+document.getElementById('btnConfirmReject')?.addEventListener('click', function () {
+    const verificationId = this.dataset.verificationId;
+    const reason = document.getElementById('rejectReason').value.trim();
+
+    if (!reason) {
+        showNotification('Please provide a reason for rejection', 'error');
+        return;
+    }
+
+    rejectPayment(parseInt(verificationId), reason);
+});

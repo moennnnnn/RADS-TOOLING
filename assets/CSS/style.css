@@ -915,3 +915,25 @@ body {
 .nav-item {
     position: relative;
 }
+
+.period-btn {
+    padding: 0.4rem 0.8rem;
+    background: #f7fafc;
+    border: 1px solid #e3edfb;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--brand);
+    transition: all 0.2s;
+}
+
+.period-btn:hover {
+    background: #e3edfb;
+}
+
+.period-btn.active {
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand);
+}

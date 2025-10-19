@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 16, 2025 at 08:46 PM
+-- Generation Time: Oct 19, 2025 at 03:39 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -100,7 +100,7 @@ CREATE TABLE `cart_items` (
   `customization_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT 1,
   `added_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -149,7 +149,7 @@ CREATE TABLE `customers` (
 INSERT INTO `customers` (`id`, `username`, `full_name`, `email`, `profile_image`, `email_verified`, `verification_code`, `verification_expires`, `password_reset_code`, `password_reset_expires`, `phone`, `address`, `password`, `created_at`, `updated_at`) VALUES
 (16, 'kooqi', 'Moen Secapupu', 'moen.secapuri27@gmail.com', 'assets/uploads/avatars/customer_16_1760622859.jpg', 1, NULL, NULL, '884490', '2025-10-10 15:17:17', '+639192004234', 'Blk 4 Lot 47 Laterraza Phase A', '$2y$10$5nm.I29rcsZTm3CvPHayYOC3B7GHa/qY8seqlWXxjinHaB0sJRhDy', '2025-10-06 01:16:30', '2025-10-16 13:54:19'),
 (17, 'moen', 'Moen Secapuri', 'kooqicookie@gmail.com', NULL, 1, NULL, NULL, NULL, NULL, '+639192088080', NULL, '$2y$10$l5kgj0CZ8/g1knnrhReSAOPJV5FDSIP3pMlJgqxJ5YSAax51bFLzG', '2025-10-06 01:32:09', '2025-10-08 17:08:04'),
-(32, 'vim', 'Vien Santos', 'viensantos98@gmail.com', NULL, 1, NULL, NULL, NULL, NULL, '+639873214351', NULL, '$2y$10$9HEFFnKkLGBSBMunwN4O4egxJOXnUL7tD79591RqZvGvZj7TyLQva', '2025-10-15 15:20:52', '2025-10-15 15:21:21');
+(32, 'vim', 'Vien Santos', 'viensantos98@gmail.com', NULL, 1, NULL, NULL, NULL, NULL, '+639873214351', '', '$2y$10$9HEFFnKkLGBSBMunwN4O4egxJOXnUL7tD79591RqZvGvZj7TyLQva', '2025-10-15 15:20:52', '2025-10-19 03:06:52');
 
 -- --------------------------------------------------------
 
@@ -272,8 +272,65 @@ CREATE TABLE `orders` (
   `order_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `cancelled_by` enum('customer','admin') DEFAULT NULL,
   `cancellation_reason` text DEFAULT NULL,
-  `cancelled_at` timestamp NULL DEFAULT NULL
+  `cancelled_at` timestamp NULL DEFAULT NULL,
+  `mode` enum('delivery','pickup') NOT NULL DEFAULT 'pickup',
+  `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `vat` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `order_code`, `customer_id`, `total_amount`, `payment_status`, `status`, `order_date`, `cancelled_by`, `cancellation_reason`, `cancelled_at`, `mode`, `subtotal`, `vat`, `created_at`) VALUES
+(1, 'RT2510191662', 32, 6100.00, 'Partially Paid', 'Processing', '2025-10-19 02:54:47', NULL, NULL, NULL, 'delivery', 5000.00, 600.00, '2025-10-19 02:54:47'),
+(2, 'RT2510197711', 32, 6100.00, 'Pending', '', '2025-10-19 02:55:40', NULL, NULL, NULL, 'delivery', 5000.00, 600.00, '2025-10-19 02:55:40'),
+(3, 'RT2510199547', 32, 22400500.00, 'Pending', '', '2025-10-19 02:58:49', NULL, NULL, NULL, 'delivery', 20000000.00, 2400000.00, '2025-10-19 02:58:49'),
+(4, 'RT2510195084', 32, 612.00, 'Pending', '', '2025-10-19 07:43:37', NULL, NULL, NULL, 'delivery', 100.00, 12.00, '2025-10-19 07:43:37'),
+(5, 'RT2510196971', 32, 612.00, 'Pending', 'Processing', '2025-10-19 07:43:45', NULL, NULL, NULL, 'delivery', 100.00, 12.00, '2025-10-19 07:43:45'),
+(6, 'RT2510194314', 32, 612.00, 'Pending', '', '2025-10-19 08:10:05', NULL, NULL, NULL, 'delivery', 100.00, 12.00, '2025-10-19 08:10:05'),
+(7, 'RT2510192809', 32, 612.00, 'Pending', '', '2025-10-19 08:10:23', NULL, NULL, NULL, 'delivery', 100.00, 12.00, '2025-10-19 08:10:23'),
+(8, 'RT2510190690', 32, 612.00, 'Pending', '', '2025-10-19 08:12:19', NULL, NULL, NULL, 'delivery', 100.00, 12.00, '2025-10-19 08:12:19'),
+(9, 'RT2510197430', 32, 612.00, 'Pending', '', '2025-10-19 10:53:53', NULL, NULL, NULL, 'delivery', 100.00, 12.00, '2025-10-19 10:53:53'),
+(10, 'RT2510197755', 32, 5600.00, 'Pending', 'Completed', '2025-10-19 13:04:03', NULL, NULL, NULL, 'pickup', 5000.00, 600.00, '2025-10-19 13:04:03');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_addresses`
+--
+
+CREATE TABLE `order_addresses` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `type` enum('delivery','pickup') NOT NULL,
+  `first_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `province` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `barangay` varchar(120) DEFAULT NULL,
+  `street` varchar(255) DEFAULT NULL,
+  `postal` varchar(20) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_addresses`
+--
+
+INSERT INTO `order_addresses` (`id`, `order_id`, `type`, `first_name`, `last_name`, `phone`, `email`, `province`, `city`, `barangay`, `street`, `postal`) VALUES
+(1, 1, 'delivery', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Guinsiliban', 'Maac', 'Barangay Severino, Delas Alas', '4117'),
+(2, 2, 'delivery', 'vien ezekiel', 'santos', '', '', 'Benguet', 'Kabayan', 'Gusaran', 'Barangay Severino, Delas Alas', '4117'),
+(3, 3, 'delivery', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Mahinog', 'San Jose', 'Barangay Severino, Delas Alas', '4117'),
+(4, 4, '', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Guinsiliban', 'Liong', 'Barangay Severino, Delas Alas', '4117'),
+(5, 5, '', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Guinsiliban', 'Liong', 'Barangay Severino, Delas Alas', '4117'),
+(6, 6, '', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Mahinog', 'San Isidro', 'Barangay Severino, Delas Alas', '4117'),
+(7, 7, '', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Mahinog', 'San Isidro', 'Barangay Severino, Delas Alas', '4117'),
+(8, 8, '', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Mahinog', 'San Isidro', 'Barangay Severino, Delas Alas', '4117'),
+(9, 9, '', 'vien ezekiel', 'santos', '+639762284470', '', 'Camiguin', 'Guinsiliban', 'Cantaan', 'Barangay Severino, Delas Alas', '4117'),
+(10, 10, '', 'vien ezekiel', 'santos', '+639762284470', 'viensantos98@gmail.com', '', '', '', '', '');
 
 -- --------------------------------------------------------
 
@@ -290,8 +347,27 @@ CREATE TABLE `order_items` (
   `customization_id` int(11) DEFAULT NULL,
   `quantity` int(11) DEFAULT 1,
   `unit_price` decimal(10,2) NOT NULL,
-  `subtotal` decimal(10,2) NOT NULL
-) ;
+  `subtotal` decimal(10,2) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `qty` int(11) DEFAULT NULL,
+  `line_total` decimal(12,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`id`, `order_id`, `item_type`, `product_id`, `cabinet_id`, `customization_id`, `quantity`, `unit_price`, `subtotal`, `name`, `qty`, `line_total`) VALUES
+(1, 1, 'product', 12, NULL, NULL, 1, 5000.00, 0.00, 'Selected Cabinet', 1, 5000.00),
+(2, 2, 'product', 12, NULL, NULL, 1, 5000.00, 0.00, 'Selected Cabinet', 1, 5000.00),
+(3, 3, 'product', 11, NULL, NULL, 1, 20000000.00, 0.00, 'Selected Cabinet', 1, 20000000.00),
+(4, 4, 'product', 13, NULL, NULL, 1, 100.00, 0.00, 'Selected Cabinet', 1, 100.00),
+(5, 5, 'product', 13, NULL, NULL, 1, 100.00, 0.00, 'Selected Cabinet', 1, 100.00),
+(6, 6, 'product', 13, NULL, NULL, 1, 100.00, 0.00, 'Selected Cabinet', 1, 100.00),
+(7, 7, 'product', 13, NULL, NULL, 1, 100.00, 0.00, 'Selected Cabinet', 1, 100.00),
+(8, 8, 'product', 13, NULL, NULL, 1, 100.00, 0.00, 'Selected Cabinet', 1, 100.00),
+(9, 9, 'product', 13, NULL, NULL, 1, 100.00, 0.00, 'Selected Cabinet', 1, 100.00),
+(10, 10, 'product', 12, NULL, NULL, 1, 5000.00, 0.00, 'Selected Cabinet', 1, 5000.00);
 
 -- --------------------------------------------------------
 
@@ -338,8 +414,70 @@ CREATE TABLE `payments` (
   `qr_code` varchar(255) DEFAULT NULL,
   `payment_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `verified_by` int(11) DEFAULT NULL,
-  `verified_at` timestamp NULL DEFAULT NULL
+  `verified_at` timestamp NULL DEFAULT NULL,
+  `method` enum('gcash','bpi') DEFAULT NULL,
+  `deposit_rate` int(11) DEFAULT NULL,
+  `amount_due` decimal(12,2) DEFAULT NULL,
+  `status` enum('PENDING_VERIFICATION','VERIFIED','REJECTED') DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`id`, `order_id`, `amount_paid`, `payment_method`, `qr_code`, `payment_date`, `verified_by`, `verified_at`, `method`, `deposit_rate`, `amount_due`, `status`, `updated_at`) VALUES
+(1, 1, 123.00, 'GCash QR', NULL, '2025-10-19 02:54:47', 1, '2025-10-19 05:06:36', 'gcash', 50, 3050.00, 'VERIFIED', '2025-10-19 05:06:36'),
+(3, 2, 123.00, 'GCash QR', NULL, '2025-10-19 02:55:40', NULL, NULL, 'bpi', 50, 3050.00, 'REJECTED', '2025-10-19 13:05:54'),
+(5, 3, 0.00, 'GCash QR', NULL, '2025-10-19 02:58:49', NULL, NULL, 'bpi', 50, 11200250.00, 'PENDING_VERIFICATION', '2025-10-19 02:58:49');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_qr`
+--
+
+CREATE TABLE `payment_qr` (
+  `id` int(11) NOT NULL,
+  `method` enum('gcash','bpi') NOT NULL,
+  `image_path` varchar(255) NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payment_qr`
+--
+
+INSERT INTO `payment_qr` (`id`, `method`, `image_path`, `is_active`) VALUES
+(1, 'gcash', 'uploads/qrs/gcash.png', 1),
+(2, 'bpi', 'uploads/qrs/bpi.png', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payment_verifications`
+--
+
+CREATE TABLE `payment_verifications` (
+  `id` int(11) NOT NULL,
+  `order_id` int(11) NOT NULL,
+  `method` enum('gcash','bpi') NOT NULL,
+  `account_name` varchar(150) NOT NULL,
+  `account_number` varchar(100) DEFAULT NULL,
+  `reference_number` varchar(120) NOT NULL,
+  `amount_reported` decimal(12,2) NOT NULL,
+  `screenshot_path` varchar(255) DEFAULT NULL,
+  `status` enum('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payment_verifications`
+--
+
+INSERT INTO `payment_verifications` (`id`, `order_id`, `method`, `account_name`, `account_number`, `reference_number`, `amount_reported`, `screenshot_path`, `status`, `created_at`) VALUES
+(1, 1, 'gcash', 'dascasdasd', '1231231231', 'd12231123', 123.00, 'uploads/payments/proof_1_1760842501.png', 'APPROVED', '2025-10-19 02:55:01'),
+(2, 2, 'bpi', 'dascasdasd', '1231231231', 'd12231123', 123.00, 'uploads/payments/proof_2_1760842557.png', 'REJECTED', '2025-10-19 02:55:57');
 
 -- --------------------------------------------------------
 
@@ -609,7 +747,8 @@ INSERT INTO `rt_chat_threads` (`id`, `thread_code`, `customer_id`, `customer_nam
 (2, '57F84B08CC89FE1733CF3FA628487512', 19, 'vien santos', NULL, NULL, 'open', '2025-10-09 19:47:48', '2025-10-08 16:36:33', '2025-10-13 01:54:45', '2025-10-09 19:48:14'),
 (3, '8A4C83FDA3C3E38DD3548FF63EC0EF06', 17, 'Moen Secapuri', NULL, NULL, 'open', '2025-10-09 22:39:58', '2025-10-08 17:08:12', '2025-10-13 01:54:46', '2025-10-09 19:16:21'),
 (4, 'EFEE22638F01990688999B16CA09EEB8', 23, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:27:07', '2025-10-10 14:07:16', '2025-10-13 01:54:47', NULL),
-(5, '1D71C7F2C061F237DD7B2EDCF001569B', 24, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:29:09', '2025-10-10 15:28:51', '2025-10-13 01:54:46', '2025-10-10 23:29:23');
+(5, '1D71C7F2C061F237DD7B2EDCF001569B', 24, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:29:09', '2025-10-10 15:28:51', '2025-10-13 01:54:46', '2025-10-10 23:29:23'),
+(6, '0FC92274A86149522300CAEC5BF3D4BF', 32, 'Vien Santos', NULL, NULL, 'open', '2025-10-18 21:08:53', '2025-10-18 13:08:53', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -712,7 +851,6 @@ CREATE TABLE `user_logs` (
 --
 ALTER TABLE `admin_users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `admin_username_unique` (`username`);
 
 --
@@ -814,6 +952,13 @@ ALTER TABLE `orders`
   ADD KEY `idx_customer_id` (`customer_id`);
 
 --
+-- Indexes for table `order_addresses`
+--
+ALTER TABLE `order_addresses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`);
+
+--
 -- Indexes for table `order_items`
 --
 ALTER TABLE `order_items`
@@ -839,7 +984,6 @@ ALTER TABLE `order_status_history`
 ALTER TABLE `password_resets`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `token` (`token`),
-  ADD KEY `idx_token` (`token`),
   ADD KEY `idx_user_type_id` (`user_type`,`user_id`),
   ADD KEY `idx_expires_at` (`expires_at`);
 
@@ -848,9 +992,23 @@ ALTER TABLE `password_resets`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_pay_order` (`order_id`),
   ADD KEY `verified_by` (`verified_by`),
   ADD KEY `idx_order_id` (`order_id`),
   ADD KEY `idx_payment_date` (`payment_date`);
+
+--
+-- Indexes for table `payment_qr`
+--
+ALTER TABLE `payment_qr`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `payment_verifications`
+--
+ALTER TABLE `payment_verifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `order_id` (`order_id`);
 
 --
 -- Indexes for table `products`
@@ -859,7 +1017,6 @@ ALTER TABLE `products`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_type` (`type`),
   ADD KEY `idx_stock` (`stock`),
-  ADD KEY `fk_products_created_by` (`created_by`),
   ADD KEY `idx_products_created_by` (`created_by`),
   ADD KEY `idx_products_created_by_20251015` (`created_by`);
 
@@ -1027,13 +1184,19 @@ ALTER TABLE `messages`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `order_addresses`
+--
+ALTER TABLE `order_addresses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `order_status_history`
@@ -1051,7 +1214,19 @@ ALTER TABLE `password_resets`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `payment_qr`
+--
+ALTER TABLE `payment_qr`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `payment_verifications`
+--
+ALTER TABLE `payment_verifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -1093,7 +1268,7 @@ ALTER TABLE `rt_chat_messages`
 -- AUTO_INCREMENT for table `rt_chat_threads`
 --
 ALTER TABLE `rt_chat_threads`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `rt_cms_pages`
@@ -1165,6 +1340,12 @@ ALTER TABLE `orders`
   ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`);
 
 --
+-- Constraints for table `order_addresses`
+--
+ALTER TABLE `order_addresses`
+  ADD CONSTRAINT `order_addresses_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints for table `order_items`
 --
 ALTER TABLE `order_items`
@@ -1186,6 +1367,12 @@ ALTER TABLE `order_status_history`
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`verified_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `payment_verifications`
+--
+ALTER TABLE `payment_verifications`
+  ADD CONSTRAINT `payment_verifications_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `products`

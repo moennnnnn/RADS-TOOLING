@@ -3,9 +3,7 @@
 declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {
-    if (session_status() === PHP_SESSION_NONE) {
     session_start();
-}
 }
 
 header('Content-Type: application/json');
@@ -30,7 +28,7 @@ class AdminOrdersAPI {
             $database = new Database();
             $this->conn = $database->getConnection();
         } catch (Throwable $e) {
-            $this->send(false, 'Database connection failed');
+            $this->send(false, 'Database connection failed', null, 500);
         }
 
         // Check if user is authenticated staff
@@ -51,6 +49,9 @@ class AdminOrdersAPI {
                 break;
             case 'view':
                 $this->viewOrder();
+                break;
+            case 'details':
+                $this->getOrderDetails();
                 break;
             case 'update_status':
                 $this->updateOrderStatus();
@@ -76,9 +77,8 @@ class AdminOrdersAPI {
             $params = [];
 
             if (!empty($search)) {
-                $whereClauses[] = '(o.order_code LIKE ? OR c.full_name LIKE ? OR p.name LIKE ?)';
+                $whereClauses[] = '(o.order_code LIKE ? OR c.full_name LIKE ?)';
                 $searchTerm = '%' . $search . '%';
-                $params[] = $searchTerm;
                 $params[] = $searchTerm;
                 $params[] = $searchTerm;
             }
@@ -89,8 +89,11 @@ class AdminOrdersAPI {
             }
 
             if (!empty($paymentStatus)) {
-                $whereClauses[] = 'o.payment_status = ?';
-                $params[] = $paymentStatus;
+                if ($paymentStatus === 'Fully Paid') {
+                    $whereClauses[] = "o.payment_status = 'Fully Paid'";
+                } elseif ($paymentStatus === 'With Balance') {
+                    $whereClauses[] = "o.payment_status IN ('Pending', 'Partially Paid')";
+                }
             }
 
             $whereClause = !empty($whereClauses) ? 'WHERE ' . implode(' AND ', $whereClauses) : '';
@@ -102,13 +105,15 @@ class AdminOrdersAPI {
                         o.payment_status,
                         o.status,
                         o.order_date,
+                        o.mode,
                         c.full_name as customer_name,
                         c.email as customer_email,
-                        p.name as product_name
+                        GROUP_CONCAT(DISTINCT oi.name SEPARATOR ', ') as product_name
                     FROM orders o
                     LEFT JOIN customers c ON o.customer_id = c.id
-                    LEFT JOIN products p ON o.product_id = p.id
+                    LEFT JOIN order_items oi ON oi.order_id = o.id
                     $whereClause
+                    GROUP BY o.id
                     ORDER BY o.order_date DESC
                     LIMIT ? OFFSET ?";
 
@@ -120,10 +125,10 @@ class AdminOrdersAPI {
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Get total count for pagination
-            $countSql = "SELECT COUNT(*) as total 
+            $countSql = "SELECT COUNT(DISTINCT o.id) as total 
                         FROM orders o
                         LEFT JOIN customers c ON o.customer_id = c.id
-                        LEFT JOIN products p ON o.product_id = p.id
+                        LEFT JOIN order_items oi ON oi.order_id = o.id
                         $whereClause";
             
             $countParams = array_slice($params, 0, -2); // Remove limit and offset
@@ -159,13 +164,9 @@ class AdminOrdersAPI {
                         c.full_name as customer_name,
                         c.email as customer_email,
                         c.phone as customer_phone,
-                        c.address as customer_address,
-                        p.name as product_name,
-                        p.description as product_description,
-                        p.price as product_price
+                        c.address as customer_address
                     FROM orders o
                     LEFT JOIN customers c ON o.customer_id = c.id
-                    LEFT JOIN products p ON o.product_id = p.id
                     WHERE o.id = ?
                     LIMIT 1";
 
@@ -178,6 +179,14 @@ class AdminOrdersAPI {
                 return;
             }
 
+            // Get order items
+            $itemsSql = "SELECT * FROM order_items WHERE order_id = ?";
+            $itemsStmt = $this->conn->prepare($itemsSql);
+            $itemsStmt->execute([$orderId]);
+            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $order['items'] = $items;
+
             $this->send(true, 'Order details retrieved successfully', $order);
 
         } catch (Throwable $e) {
@@ -186,31 +195,85 @@ class AdminOrdersAPI {
         }
     }
 
+    private function getOrderDetails(): void {
+        $orderId = $_GET['id'] ?? '';
+        
+        if (empty($orderId)) {
+            $this->send(false, 'Order ID is required');
+            return;
+        }
+
+        try {
+            // Get order details with payment info
+            $sql = "SELECT 
+                        o.*,
+                        c.full_name as customer_name,
+                        c.email as customer_email,
+                        c.phone as customer_phone,
+                        p.amount_paid,
+                        p.payment_method,
+                        p.deposit_rate,
+                        p.amount_due,
+                        p.status as payment_status_detail,
+                        pv.status as payment_verification_status
+                    FROM orders o
+                    JOIN customers c ON o.customer_id = c.id
+                    LEFT JOIN payments p ON p.order_id = o.id
+                    LEFT JOIN payment_verifications pv ON pv.order_id = o.id
+                    WHERE o.id = ?
+                    LIMIT 1";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([$orderId]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$order) {
+                $this->send(false, 'Order not found');
+                return;
+            }
+
+            // Get order items
+            $itemsSql = "SELECT * FROM order_items WHERE order_id = ?";
+            $itemsStmt = $this->conn->prepare($itemsSql);
+            $itemsStmt->execute([$orderId]);
+            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->send(true, 'Order details retrieved successfully', [
+                'order' => $order,
+                'items' => $items
+            ]);
+
+        } catch (Throwable $e) {
+            error_log("Get order details error: " . $e->getMessage());
+            $this->send(false, 'Failed to retrieve order details');
+        }
+    }
+
     private function updateOrderStatus(): void {
         // Only Owner and Admin can update order status
         if (!in_array($this->currentRole, ['Owner', 'Admin'])) {
-            $this->send(false, 'You do not have permission to update order status');
+            $this->send(false, 'You do not have permission to update order status', null, 403);
             return;
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->send(false, 'Method not allowed');
+            $this->send(false, 'Method not allowed', null, 405);
             return;
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
-        if (!$input || empty($input['id']) || empty($input['status'])) {
-            $this->send(false, 'Order ID and status are required');
+        if (!$input || !isset($input['order_id']) || empty($input['status'])) {
+            $this->send(false, 'Order ID and status are required', null, 400);
             return;
         }
 
-        $orderId = (int)$input['id'];
+        $orderId = (int)$input['order_id'];
         $newStatus = trim((string)$input['status']);
 
         // Validate status
         $validStatuses = ['Pending', 'Processing', 'Completed', 'Cancelled'];
         if (!in_array($newStatus, $validStatuses)) {
-            $this->send(false, 'Invalid status value');
+            $this->send(false, 'Invalid status value', null, 400);
             return;
         }
 
@@ -221,7 +284,7 @@ class AdminOrdersAPI {
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$order) {
-                $this->send(false, 'Order not found');
+                $this->send(false, 'Order not found', null, 404);
                 return;
             }
 
@@ -237,25 +300,25 @@ class AdminOrdersAPI {
 
         } catch (Throwable $e) {
             error_log("Update order status error: " . $e->getMessage());
-            $this->send(false, 'Failed to update order status');
+            $this->send(false, 'Failed to update order status', null, 500);
         }
     }
 
     private function updatePaymentStatus(): void {
         // Only Owner and Admin can update payment status
         if (!in_array($this->currentRole, ['Owner', 'Admin'])) {
-            $this->send(false, 'You do not have permission to update payment status');
+            $this->send(false, 'You do not have permission to update payment status', null, 403);
             return;
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->send(false, 'Method not allowed');
+            $this->send(false, 'Method not allowed', null, 405);
             return;
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
         if (!$input || empty($input['id']) || empty($input['payment_status'])) {
-            $this->send(false, 'Order ID and payment status are required');
+            $this->send(false, 'Order ID and payment status are required', null, 400);
             return;
         }
 
@@ -263,9 +326,9 @@ class AdminOrdersAPI {
         $newPaymentStatus = trim((string)$input['payment_status']);
 
         // Validate payment status
-        $validPaymentStatuses = ['Fully Paid', 'With Balance'];
+        $validPaymentStatuses = ['Fully Paid', 'Partially Paid', 'Pending'];
         if (!in_array($newPaymentStatus, $validPaymentStatuses)) {
-            $this->send(false, 'Invalid payment status value');
+            $this->send(false, 'Invalid payment status value', null, 400);
             return;
         }
 
@@ -276,7 +339,7 @@ class AdminOrdersAPI {
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$order) {
-                $this->send(false, 'Order not found');
+                $this->send(false, 'Order not found', null, 404);
                 return;
             }
 
@@ -292,7 +355,7 @@ class AdminOrdersAPI {
 
         } catch (Throwable $e) {
             error_log("Update payment status error: " . $e->getMessage());
-            $this->send(false, 'Failed to update payment status');
+            $this->send(false, 'Failed to update payment status', null, 500);
         }
     }
 
