@@ -15,23 +15,18 @@ $img = $_SESSION['user']['profile_image'] ?? '';
 $avatarHtml = $img
   ? '<img src="/RADS-TOOLING/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">'
   : strtoupper(substr($customerName, 0, 1));
-
-
 ?>
 <!doctype html>
 <html lang="en">
 
 <head>
   <meta charset="utf-8">
-  <title>Delivery Details</title><!-- (or Pick-up Details) -->
+  <title>Pick-up Details</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <!-- Fonts -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
-  <!-- Site styles used by navbar/footer -->
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css">
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
-  <!-- Page-specific -->
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout.css">
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -56,7 +51,6 @@ $avatarHtml = $img
         </form>
 
         <div class="navbar-actions">
-          <!-- Profile Dropdown -->
           <div class="profile-menu">
             <button class="profile-toggle" id="profileToggle" type="button">
               <div class="profile-avatar-wrapper">
@@ -97,7 +91,6 @@ $avatarHtml = $img
             </div>
           </div>
 
-          <!-- Cart -->
           <a href="/RADS-TOOLING/cart.php" class="cart-button">
             <span class="material-symbols-rounded">shopping_cart</span>
             <span id="cartCount" class="cart-badge">0</span>
@@ -111,8 +104,6 @@ $avatarHtml = $img
         <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
       </nav>
     </header>
-
-    <!--  👉 KEEP your existing checkout container (cz-shell + form) right after the header  -->
 
     <div class="cz-shell">
       <div class="cz-header">
@@ -160,7 +151,6 @@ $avatarHtml = $img
         </div>
       </form>
 
-      <!-- keep this modal as is -->
       <div id="invalidModal" class="rt-modal" hidden>
         <div class="rt-modal__dialog">
           <h3>Incomplete form</h3>
@@ -171,7 +161,8 @@ $avatarHtml = $img
         </div>
       </div>
     </div>
-        <!-- FOOTER -->
+
+    <!-- FOOTER -->
     <footer class="footer">
       <div class="footer-content">
         <div class="footer-section">
@@ -238,10 +229,9 @@ $avatarHtml = $img
         </div>
       </div>
     </footer>
-  </div><!-- /.page-wrapper -->
+  </div>
 
   <script>
-  // Simple init for profile dropdown + cart badge
   document.addEventListener('DOMContentLoaded', function () {
     const profileToggle = document.getElementById('profileToggle');
     const profileDropdown = document.getElementById('profileDropdown');
@@ -266,11 +256,4 @@ $avatarHtml = $img
 <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
 </body>
-</html>
-
-
-
-    <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
-</body>
-
 </html>

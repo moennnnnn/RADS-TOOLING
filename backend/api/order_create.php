@@ -1,37 +1,68 @@
 <?php
-declare(strict_types=1);
-require __DIR__ . '/helpers.php';
+require_once __DIR__ . '/_bootstrap.php';
 
-$type  = $_POST['type'] ?? '';
-$pid   = (int)($_POST['pid'] ?? 0);
-$name  = $_POST['name'] ?? 'Item';
-$price = (float)($_POST['price'] ?? 0);
-$qty   = (int)($_POST['qty'] ?? 1);
-$vat   = (float)($_POST['vat'] ?? 0);
+$uid = require_customer_id();
+
+$raw = file_get_contents('php://input');
+$body = json_decode($raw, true) ?: [];
+
+$pid      = (int)($body['pid'] ?? 0);
+$qty      = max(1, (int)($body['qty'] ?? 1));
+$subtotal = (float)($body['subtotal'] ?? 0);
+$vat      = (float)($body['vat'] ?? 0);
+$total    = (float)($body['total'] ?? 0);
+$mode     = ($body['mode'] ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
+$info     = (array)($body['info'] ?? []);
+
+if ($pid <= 0 || $total <= 0) fail('Invalid order payload.');
 
 $pdo = db();
 $pdo->beginTransaction();
-try{
-  $totals = compute_totals($price,$qty);
-  $stmt = $pdo->prepare("INSERT INTO orders (order_no, type, product_id, product_name, price, qty, subtotal, vat, total, status, created_at) VALUES (UUID(), :type, :pid, :name, :price, :qty, :sub, :vat, :total, 'pending_payment', NOW())");
-  $stmt->execute([
-    ':type'=>$type, ':pid'=>$pid, ':name'=>$name, ':price'=>$price, ':qty'=>$qty,
-    ':sub'=>$totals['sub'], ':vat'=>$totals['vat'], ':total'=>$totals['total']
-  ]);
-  $orderId = $pdo->lastInsertId();
 
-  if($type==='delivery'){
-    $stmt = $pdo->prepare("INSERT INTO order_delivery (order_id, first_name,last_name,email,phone,province,city,street,postal) VALUES (?,?,?,?,?,?,?,?,?)");
-    $stmt->execute([
-      $orderId,
-      $_POST['first_name']??'', $_POST['last_name']??'', $_POST['email']??'',
-      $_POST['phone']??'', $_POST['province']??'', $_POST['city']??'',
-      $_POST['street']??'', $_POST['postal']??''
-    ]);
-  }
+try {
+  // Create order
+  $stmt = $pdo->prepare("INSERT INTO orders
+    (order_code, customer_id, mode, status, subtotal, vat, total_amount)
+    VALUES (CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
+            :cid, :mode, 'PENDING_PAYMENT', :sub, :vat, :tot)");
+  $stmt->execute([
+    ':cid'=>$uid, ':mode'=>$mode, ':sub'=>$subtotal, ':vat'=>$vat, ':tot'=>$total
+  ]);
+  $order_id = (int)$pdo->lastInsertId();
+
+  // (You can pull real product info here if needed)
+  $prodName = 'Selected Cabinet';
+  $unitPrice = $subtotal / $qty;
+  $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, name, unit_price, qty, line_total)
+                         VALUES (:oid, :pid, :name, :price, :qty, :lt)");
+  $stmt->execute([
+    ':oid'=>$order_id, ':pid'=>$pid, ':name'=>$prodName,
+    ':price'=>$unitPrice, ':qty'=>$qty, ':lt'=>$subtotal
+  ]);
+
+  // Save address/contact snapshot
+  $stmt = $pdo->prepare("INSERT INTO order_addresses
+    (order_id, type, first_name, last_name, phone, email, province, city, barangay, street, postal)
+    VALUES (:oid, :type, :fn, :ln, :ph, :em, :pv, :ct, :br, :st, :po)");
+  $stmt->execute([
+    ':oid'=>$order_id,
+    ':type'=>$mode,
+    ':fn'=>$info['first_name'] ?? ($info['full_name'] ?? ''),
+    ':ln'=>$info['last_name'] ?? '',
+    ':ph'=>$info['phone'] ?? '',
+    ':em'=>$info['email'] ?? '',
+    ':pv'=>$info['province'] ?? '',
+    ':ct'=>$info['city'] ?? '',
+    ':br'=>$info['barangay'] ?? '',
+    ':st'=>$info['street'] ?? ($info['address'] ?? ''),
+    ':po'=>$info['postal'] ?? ''
+  ]);
+
+  $code = $pdo->query("SELECT order_code FROM orders WHERE id={$order_id}")->fetchColumn();
+
   $pdo->commit();
-  json_out(true, ['order_id'=>$orderId]);
-}catch(Throwable $e){
+  ok(['order_id'=>$order_id, 'order_code'=>$code]);
+} catch (Throwable $e) {
   $pdo->rollBack();
-  json_out(false, ['message'=>$e->getMessage()]);
+  fail('DB error: ' . $e->getMessage(), 500);
 }

@@ -1,189 +1,278 @@
 <?php
-// /RADS-TOOLING/customer/checkout_delivery_review.php
 declare(strict_types=1);
 session_start();
 
-require_once __DIR__ . '/../includes/guard.php';
-guard_require_customer();
+require_once __DIR__ . '/../backend/config/app.php';
 
-$mode = $_POST['mode'] ?? '';
-$pid  = $_POST['pid']  ?? '';
+// Get form data
+$mode = $_POST['mode'] ?? 'pickup';
+$pid  = (int)($_POST['pid'] ?? 0);
 
-// Save submitted form in session (basic pass-through for the review UI)
-$_SESSION['checkout'] = [
-  'mode' => $mode,
-  'pid'  => $pid,
-  'first_name' => $_POST['first_name'] ?? null,
-  'last_name'  => $_POST['last_name']  ?? null,
-  'full_name'  => $_POST['full_name']  ?? null,
-  'phone'      => $_POST['phone']      ?? null,
-  'province'   => $_POST['province']   ?? null,
-  'city'       => $_POST['city']       ?? null,
-  'barangay'   => $_POST['barangay']   ?? null,
-  'street'     => $_POST['street']     ?? null,
-  'postal'     => $_POST['postal']     ?? null,
-  'address'    => $_POST['address']    ?? null,
-];
+// Get customer contact info
+$first    = $_POST['first_name'] ?? '';
+$last     = $_POST['last_name'] ?? '';
+$email    = $_POST['email'] ?? '';
+$phone    = $_POST['phone'] ?? '';
 
-// TODO: Pull product info by $pid from your DB.
-// For now, simple placeholders to avoid errors:
-$productName = 'Selected Cabinet';
-$price       = 10000.00; // sample
-$qty         = 1;
-$subtotal    = $price * $qty;
-$vat         = round($subtotal * 0.12, 2);
-$total       = $subtotal + $vat;
+// Address (for delivery only)
+$province = $_POST['province'] ?? '';
+$city     = $_POST['city'] ?? '';
+$barangay = $_POST['barangay'] ?? '';
+$postal   = $_POST['postal'] ?? '';
+$street   = $_POST['street'] ?? '';
+
+// Fetch product details from database
+$product = null;
+if ($pid > 0) {
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND status = 'released'");
+    $stmt->execute([$pid]);
+    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+// Redirect back if no product found
+if (!$product) {
+    header('Location: /RADS-TOOLING/customer/products.php');
+    exit;
+}
+
+// Calculate prices
+$qty       = 1; // Default quantity
+$basePrice = (float)($product['base_price'] ?? $product['price'] ?? 0);
+$subtotal  = $basePrice * $qty;
+$vat       = $subtotal * 0.12; // 12% VAT
+$shipping  = 0;
+
+// Add shipping for delivery (you can make this dynamic based on location)
+if ($mode === 'delivery') {
+    $shipping = 500; // Example flat rate, or calculate based on location
+}
+
+$total = $subtotal + $vat + $shipping;
+
+$user = $_SESSION['user'] ?? null;
+$customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer');
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Review & Payment</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout.css">
+  <title>Review & Payment - Rads Tooling</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="../assets/CSS/Homepage.css">
+  <link rel="stylesheet" href="../assets/CSS/chat-widget.css">
+  <link rel="stylesheet" href="../assets/CSS/about.css">
+  <link rel="stylesheet" href="../assets/CSS/checkout.css">
+  <style>
+    .review-wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .checkout-title{font-size:28px;margin-bottom:20px;font-weight:700}
+    .checkout-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+    @media (max-width:860px){.checkout-grid{grid-template-columns:1fr}}
+    .checkout-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .card-title{font-size:18px;font-weight:700;margin-bottom:12px}
+    .review-list{margin:0;padding:0;list-style:none}
+    .review-list li{display:flex;justify-content:space-between;border-bottom:1px dashed #e5e7eb;padding:8px 0}
+    .review-list li:last-child{border:0}
+    .sum-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+    .sum-row.total{font-size:20px;font-weight:700;border-top:2px solid #111827;margin-top:8px;padding-top:12px}
+    .rt-actions{margin-top:16px}
+  </style>
 </head>
 <body>
-  <div class="cz-shell">
-    <div class="cz-header">
-      <a class="cz-back" href="/RADS-TOOLING/customer/checkout.php?pid=<?php echo urlencode($pid) ?>">← Back</a>
-      <h2>Review & Payment</h2>
-      <div class="cz-price">Total: ₱<span id="orderTotal"><?php echo number_format($total, 2) ?></span></div>
+<div class="page-wrapper">
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-brand">
+        <a class="logo-link" href="/RADS-TOOLING/customer/homepage.php">
+          <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+        </a>
+      </div>
+      <div class="navbar-actions">
+        <a class="cart-button" href="/RADS-TOOLING/cart.php">
+          <span class="material-symbols-rounded">shopping_cart</span>
+          <span id="cartCount" class="cart-badge">0</span>
+        </a>
+      </div>
+    </div>
+    <nav class="navbar-menu">
+      <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
+      <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
+      <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+    </nav>
+  </header>
+
+  <main class="checkout-main review-wrap">
+    <h1 class="checkout-title">Review & Payment</h1>
+    <div class="checkout-grid">
+      <!-- LEFT: Order Details -->
+      <section class="checkout-card">
+        <h3 class="card-title">Order Summary</h3>
+        <ul class="review-list">
+          <li><span>Product</span><strong><?= htmlspecialchars($product['name']) ?></strong></li>
+          <li><span>Unit Price</span><strong>₱ <?= number_format($basePrice,2) ?></strong></li>
+          <li><span>Quantity</span><strong><?= $qty ?></strong></li>
+        </ul>
+
+        <h3 class="card-title" style="margin:20px 0 12px">Contact Information</h3>
+        <ul class="review-list">
+          <li><span>Name</span><strong><?= htmlspecialchars("$first $last") ?></strong></li>
+          <li><span>Email</span><strong><?= htmlspecialchars($email) ?></strong></li>
+          <li><span>Phone</span><strong><?= htmlspecialchars($phone) ?></strong></li>
+        </ul>
+
+        <?php if ($mode === 'delivery'): ?>
+        <h3 class="card-title" style="margin:20px 0 12px">Delivery Address</h3>
+        <ul class="review-list">
+          <li><span>Province</span><strong><?= htmlspecialchars($province) ?></strong></li>
+          <li><span>City/Municipality</span><strong><?= htmlspecialchars($city) ?></strong></li>
+          <li><span>Barangay</span><strong><?= htmlspecialchars($barangay) ?></strong></li>
+          <li><span>Postal Code</span><strong><?= htmlspecialchars($postal) ?></strong></li>
+          <li><span>Street</span><strong><?= htmlspecialchars($street) ?></strong></li>
+        </ul>
+        <?php else: ?>
+        <div style="margin-top:20px;padding:12px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd">
+          <p style="margin:0;color:#0369a1;font-weight:600">📍 Pick-up Location:</p>
+          <p style="margin:4px 0 0;color:#075985">Green Breeze, Piela, Dasmariñas, Cavite</p>
+        </div>
+        <?php endif; ?>
+
+        <div class="rt-actions">
+          <button type="button" class="rt-btn main" id="inlineBuyBtn">Pay Now</button>
+        </div>
+      </section>
+
+      <!-- RIGHT: Summary -->
+      <aside class="checkout-card">
+        <h3 class="card-title">Price Summary</h3>
+        <div class="sum-row"><span>Subtotal</span><strong>₱ <?= number_format($subtotal,2) ?></strong></div>
+        <div class="sum-row"><span>VAT (12%)</span><span>₱ <?= number_format($vat,2) ?></span></div>
+        <?php if ($mode === 'delivery'): ?>
+          <div class="sum-row"><span>Shipping</span><span>₱ <?= number_format($shipping,2) ?></span></div>
+        <?php endif; ?>
+        <div class="sum-row total"><strong>Total</strong><strong>₱ <?= number_format($total,2) ?></strong></div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- PAYMENT WIZARD MODALS -->
+  <div class="rt-modal" id="rtModal" hidden>
+    <div class="rt-modal__backdrop"></div>
+
+    <!-- STEP 1: Payment Method -->
+    <div class="rt-card rt-step" id="methodModal" hidden>
+      <h3>Select Payment Method</h3>
+      <div class="rt-list">
+        <button class="rt-list__item pay-chip" data-pay="gcash">GCash <span class="rt-arrow">→</span></button>
+        <button class="rt-list__item pay-chip" data-pay="bpi">BPI <span class="rt-arrow">→</span></button>
+      </div>
+      <div class="rt-actions">
+        <button class="rt-btn ghost" data-close>Close</button>
+        <button class="rt-btn main" id="btnChooseDeposit" disabled>Next</button>
+      </div>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <h3 class="mb8">Order Summary</h3>
-        <div class="summary">
-          <div class="summary-row"><span>Product</span><b><?php echo htmlspecialchars($productName) ?></b></div>
-          <div class="summary-row"><span>Price</span><b>₱<?php echo number_format($price, 2) ?></b></div>
-          <div class="summary-row"><span>Qty</span><b><?php echo $qty ?></b></div>
-          <div class="summary-row"><span>Subtotal</span><b>₱<?php echo number_format($subtotal, 2) ?></b></div>
-          <div class="summary-row"><span>VAT (12%)</span><b>₱<?php echo number_format($vat, 2) ?></b></div>
-          <div class="summary-row total"><span>Total</span><b>₱<?php echo number_format($total, 2) ?></b></div>
-        </div>
+    <!-- STEP 2: Deposit Amount -->
+    <div class="rt-card rt-step" id="depositModal" hidden>
+      <h3>Select Payment Amount</h3>
+      <div class="rt-sub">Total Amount: <b id="totalLabel">₱<?= number_format($total,2) ?></b></div>
+
+      <div class="rt-chips">
+        <button class="rt-chip pay-chip" data-dep="30">30%<small id="amt30">₱<?= number_format($total * 0.30,2) ?></small></button>
+        <button class="rt-chip pay-chip" data-dep="50">50%<small id="amt50">₱<?= number_format($total * 0.50,2) ?></small></button>
+        <button class="rt-chip pay-chip" data-dep="100">100%<small id="amt100">₱<?= number_format($total,2) ?></small></button>
       </div>
 
-      <div class="card">
-  <h3 class="mb8">Fulfillment</h3>
-  <div class="muted mb8">
-    Mode: <b><?php echo htmlspecialchars(strtoupper($mode)) ?></b>
+      <div class="rt-actions">
+        <button class="rt-btn ghost" data-back="#methodModal">Back</button>
+        <button class="rt-btn main" id="btnPayNow" disabled>Proceed to Pay</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: QR Code -->
+    <div class="rt-card rt-step" id="qrModal" hidden>
+      <h3>Scan QR Code to Pay</h3>
+      <div class="rt-qrwrap">
+        <div id="qrBox" class="rt-qr">QR Code</div>
+      </div>
+      <div class="rt-sub">Amount to pay: <b id="amountDueLabel">₱0.00</b></div>
+      <div class="rt-small">Scan with your selected app</div>
+
+      <div class="rt-actions">
+        <button class="rt-btn ghost" data-back="#depositModal">Back</button>
+        <button class="rt-btn main" id="btnIpaid">I've Completed Payment</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: Verify Payment -->
+    <div class="rt-card rt-step" id="verifyModal" hidden>
+      <h3>Verify Your Payment</h3>
+      <div class="rt-form">
+        <label>Account Name
+          <input type="text" id="vpName" placeholder="Enter your account name" required>
+        </label>
+        <label>Account Number
+          <input type="text" id="vpNum" placeholder="Enter your account number" required>
+        </label>
+        <label>Reference Number
+          <input type="text" id="vpRef" placeholder="Enter transaction reference number" required>
+        </label>
+        <label>Amount Paid
+          <input type="number" id="vpAmt" step="0.01" placeholder="0.00" required>
+        </label>
+        <label>Payment Screenshot
+          <input type="file" id="vpShot" accept="image/*" required>
+        </label>
+      </div>
+      <div class="rt-actions">
+        <button class="rt-btn ghost" data-back="#qrModal">Back</button>
+        <button class="rt-btn main" id="btnVerify">Submit Verification</button>
+      </div>
+    </div>
+
+    <!-- STEP 5: Success -->
+    <div class="rt-card rt-step" id="finalNotice" hidden>
+      <h3>Payment Submitted</h3>
+      <p class="rt-sub">
+        Your payment is <b>under verification</b>. Please check your Profile → Orders to see if it's approved.
+      </p>
+      <div class="rt-actions">
+        <button class="rt-btn main" id="btnGoOrders">Go to My Orders</button>
+        <button class="rt-btn ghost" data-close>Close</button>
+      </div>
+    </div>
   </div>
 
-  <?php if ($mode === 'delivery'): ?>
-    <div class="muted">
-      <?php
-        $fn = $_SESSION['checkout']['first_name'] ?? '';
-        $ln = $_SESSION['checkout']['last_name'] ?? '';
-        $ph = $_SESSION['checkout']['phone'] ?? '';
-        $pv = $_SESSION['checkout']['province'] ?? '';
-        $ct = $_SESSION['checkout']['city'] ?? '';
-        $br = $_SESSION['checkout']['barangay'] ?? '';
-        $st = $_SESSION['checkout']['street'] ?? '';
-        $po = $_SESSION['checkout']['postal'] ?? '';
-      ?>
-      <div><b><?php echo htmlspecialchars("$fn $ln") ?></b></div>
-      <div><?php echo htmlspecialchars($ph) ?></div>
-      <div><?php echo htmlspecialchars("$st, $br, $ct, $pv $po") ?></div>
-    </div>
+  <!-- Hidden fields for JS -->
+  <input type="hidden" id="paymentMethod">
+  <input type="hidden" id="depositRate">
 
-  <?php else: ?>
-    <div class="muted">
-      <?php
-        $fn = $_SESSION['checkout']['first_name'] ?? '';
-        $ln = $_SESSION['checkout']['last_name']  ?? '';
-        $ph = $_SESSION['checkout']['phone']      ?? '';
-        $em = $_SESSION['checkout']['email']      ?? '';
-      ?>
-      <div><b><?php echo htmlspecialchars("$ln, $fn") ?></b></div>
-      <div><?php echo htmlspecialchars($ph) ?></div>
-      <div><?php echo htmlspecialchars($em) ?></div>
-    </div>
-  <?php endif; ?>
+  <footer class="footer"><div class="footer-bottom"><p>© 2025 RADS TOOLING INC.</p></div></footer>
 </div>
 
-    <div class="card">
-      <h3 class="mb8">Payment</h3>
-
-      <input type="hidden" id="paymentMethod" name="payment_method">
-      <div class="pay-row mb8">
-        <button type="button" class="pay-chip" data-pay="gcash">GCash</button>
-        <button type="button" class="pay-chip" data-pay="bpi">BPI</button>
-      </div>
-
-      <div class="row gap8">
-        <button type="button" class="rt-btn" id="btnChooseDeposit">Choose deposit (30/50/100%)</button>
-        <button type="button" class="rt-btn rt-btn-dark" id="btnPayNow" disabled>Pay now</button>
-      </div>
-
-      <input type="hidden" id="depositRate" value="">
-      <input type="hidden" id="paidFlag" value="0">
-
-      <div class="right mt12">
-        <button id="buyBtn" class="rt-btn rt-btn-dark" disabled>Place Order</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Deposit modal -->
-  <div id="depositModal" class="rt-modal" hidden>
-    <div class="rt-modal__dialog">
-      <h3>Select deposit</h3>
-      <div class="pay-row">
-        <button type="button" class="pay-chip" data-dep="30">30%</button>
-        <button type="button" class="pay-chip" data-dep="50">50%</button>
-        <button type="button" class="pay-chip" data-dep="100">100%</button>
-      </div>
-      <div class="right mt12">
-        <button class="rt-btn rt-btn-dark" data-close="#depositModal">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- QR modal -->
-  <div id="qrModal" class="rt-modal" hidden>
-    <div class="rt-modal__dialog">
-      <h3>Scan to pay</h3>
-      <p class="muted">Use the QR below for your selected method.</p>
-      <div id="qrBox" class="qr-box">
-        <span class="muted">QR placeholder</span>
-      </div>
-      <div class="right mt12">
-        <button class="rt-btn rt-btn-dark" id="btnIpaid">I’ve paid</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Payment verification modal -->
-  <div id="verifyModal" class="rt-modal" hidden>
-    <div class="rt-modal__dialog">
-      <h3>Payment Verification</h3>
-      <p class="muted">Fill this out so we can verify your payment.</p>
-      <div class="rt-field"><label>Account Name</label><input id="vpName" class="rt-input" type="text" required></div>
-      <div class="rt-field"><label>Account Number</label><input id="vpNum" class="rt-input" type="text" required></div>
-      <div class="rt-field"><label>Reference Number</label><input id="vpRef" class="rt-input" type="text" required></div>
-      <div class="rt-field"><label>Amount Paid</label><input id="vpAmt" class="rt-input" type="number" step="0.01" required></div>
-      <div class="rt-field"><label>Screenshot</label><input id="vpShot" class="rt-input" type="file" accept="image/*" required></div>
-      <div class="right mt12">
-        <button id="btnVerify" type="button" class="rt-btn rt-btn-dark">Done</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Final notice -->
-  <div id="finalNotice" class="rt-modal" hidden>
-    <div class="rt-modal__dialog">
-      <h3>Payment is under verification</h3>
-      <p class="muted">Your payment has been submitted for review. Please check your profile for updates.</p>
-      <div class="right">
-        <a class="rt-btn rt-btn-dark" href="/RADS-TOOLING/customer/orders.php">Go to Orders</a>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Minimal data pass for JS (readonly)
-    window.RT_ORDER_TOTAL = <?php echo json_encode($total) ?>;
-  </script>
-  <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
+<!-- Bootstrap order data for JS -->
+<script>
+  window.RT_ORDER = {
+    pid: <?= json_encode($pid) ?>,
+    qty: <?= json_encode($qty) ?>,
+    subtotal: <?= json_encode($subtotal) ?>,
+    vat: <?= json_encode($vat) ?>,
+    shipping: <?= json_encode($shipping) ?>,
+    total: <?= json_encode($total) ?>,
+    mode: <?= json_encode($mode) ?>,
+    info: <?= json_encode([
+      'first_name' => $first,
+      'last_name' => $last,
+      'email' => $email,
+      'phone' => $phone,
+      'province' => $province,
+      'city' => $city,
+      'barangay' => $barangay,
+      'postal' => $postal,
+      'street' => $street
+    ]) ?>
+  };
+</script>
+<script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
 </body>
 </html>
