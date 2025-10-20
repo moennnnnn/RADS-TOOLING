@@ -1,6 +1,8 @@
 <?php
+
 declare(strict_types=1);
 session_start();
+header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/_bootstrap.php';
 
@@ -8,7 +10,7 @@ require_once __DIR__ . '/_bootstrap.php';
 if (!isset($_SESSION['customer']) || empty($_SESSION['customer'])) {
     http_response_code(401);
     echo json_encode([
-        'success' => false, 
+        'success' => false,
         'message' => 'Please login to place an order',
         'redirect' => '/RADS-TOOLING/customer/login.php'
     ]);
@@ -38,43 +40,68 @@ $pdo = db();
 $pdo->beginTransaction();
 
 try {
-    // Create order
+    // ==========================================
+    // STEP 1: GET ACTUAL PRODUCT NAME FROM DATABASE
+    // ==========================================
+    $prodName = 'Selected Cabinet'; // Default fallback
+
+    if ($pid > 0) {
+        $nameStmt = $pdo->prepare("SELECT name FROM products WHERE id = :pid LIMIT 1");
+        $nameStmt->execute([':pid' => $pid]);
+        $productRow = $nameStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($productRow && !empty($productRow['name'])) {
+            $prodName = $productRow['name']; // ← ACTUAL PRODUCT NAME! 🔥
+        }
+    }
+
+    // ==========================================
+    // STEP 2: CREATE ORDER
+    // ==========================================
     $stmt = $pdo->prepare("INSERT INTO orders
         (order_code, customer_id, mode, status, subtotal, vat, total_amount)
         VALUES (CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
                 :cid, :mode, 'PENDING_PAYMENT', :sub, :vat, :tot)");
-    
+
     $stmt->execute([
-        ':cid' => $uid, 
-        ':mode' => $mode, 
-        ':sub' => $subtotal, 
-        ':vat' => $vat, 
+        ':cid' => $uid,
+        ':mode' => $mode,
+        ':sub' => $subtotal,
+        ':vat' => $vat,
         ':tot' => $total
     ]);
-    
+
     $order_id = (int)$pdo->lastInsertId();
 
-    // Insert order item (you can pull real product info here if needed)
-    $prodName = 'Selected Cabinet';
+    // Fetch the generated order_code
+    $stmt = $pdo->prepare("SELECT order_code FROM orders WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $order_id]);
+    $order_code = (string)($stmt->fetchColumn() ?: '');
+
+    // ==========================================
+    // STEP 3: INSERT ORDER ITEM WITH ACTUAL NAME
+    // ==========================================
     $unitPrice = $subtotal / $qty;
-    
+
     $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, name, unit_price, qty, line_total)
                            VALUES (:oid, :pid, :name, :price, :qty, :lt)");
-    
+
     $stmt->execute([
-        ':oid' => $order_id, 
-        ':pid' => $pid, 
-        ':name' => $prodName,
-        ':price' => $unitPrice, 
-        ':qty' => $qty, 
+        ':oid' => $order_id,
+        ':pid' => $pid,
+        ':name' => $prodName,  // ← USING ACTUAL PRODUCT NAME! 💯
+        ':price' => $unitPrice,
+        ':qty' => $qty,
         ':lt' => $subtotal
     ]);
 
-    // Save address/contact snapshot
+    // ==========================================
+    // STEP 4: SAVE ADDRESS/CONTACT SNAPSHOT
+    // ==========================================
     $stmt = $pdo->prepare("INSERT INTO order_addresses
         (order_id, type, first_name, last_name, phone, email, province, city, barangay, street, postal)
         VALUES (:oid, :type, :fn, :ln, :ph, :em, :pv, :ct, :br, :st, :po)");
-    
+
     $stmt->execute([
         ':oid' => $order_id,
         ':type' => $mode === 'delivery' ? 'shipping' : 'billing',
@@ -92,11 +119,11 @@ try {
     $pdo->commit();
 
     echo json_encode([
-        'success' => true,
-        'message' => 'Order created successfully!',
-        'order_id' => $order_id
+        'success'    => true,
+        'message'    => 'Order created successfully!',
+        'order_id'   => $order_id,
+        'order_code' => $order_code
     ]);
-
 } catch (Throwable $e) {
     $pdo->rollBack();
     error_log('Order creation error: ' . $e->getMessage());

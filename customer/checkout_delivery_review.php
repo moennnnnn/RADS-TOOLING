@@ -252,26 +252,36 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 
 <!-- Bootstrap order data for JS -->
 <script>
-  window.RT_ORDER = {
-    pid: <?= json_encode($pid) ?>,
-    qty: <?= json_encode($qty) ?>,
-    subtotal: <?= json_encode($subtotal) ?>,
-    vat: <?= json_encode($vat) ?>,
-    shipping: <?= json_encode($shipping) ?>,
-    total: <?= json_encode($total) ?>,
-    mode: <?= json_encode($mode) ?>,
-    info: <?= json_encode([
-      'first_name' => $first,
-      'last_name' => $last,
-      'email' => $email,
-      'phone' => $phone,
-      'province' => $province,
-      'city' => $city,
-      'barangay' => $barangay,
-      'postal' => $postal,
-      'street' => $street
-    ]) ?>
-  };
+window.RT_ORDER = <?= json_encode([
+  'pid'      => (int)($product['id'] ?? 0),
+  'qty'      => (int)($qty ?? 1),
+  'subtotal' => (float)($subtotal ?? 0),
+  'vat'      => (float)($vat ?? 0),
+  'total'    => (float)($total ?? 0),
+  'mode'     => $mode ?? 'delivery',
+  'info'     => (($mode ?? 'delivery') === 'delivery')
+    ? [
+        'delivery' => [
+          'first_name' => $first_name ?? '',
+          'last_name'  => $last_name  ?? '',
+          'email'      => $email      ?? '',
+          'phone'      => $phone      ?? '',
+          'province'   => $province   ?? '',
+          'city'       => $city       ?? '',
+          'barangay'   => $barangay   ?? '',
+          'postal'     => $postal     ?? '',
+          'street'     => $street     ?? '',
+        ]
+      ]
+    : [
+        'pickup' => [
+          'first_name' => $first_name ?? '',
+          'last_name'  => $last_name  ?? '',
+          'phone'      => $phone      ?? '',
+        ]
+      ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+console.log('RT_ORDER:', window.RT_ORDER); // quick check
 </script>
 <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
 </body>

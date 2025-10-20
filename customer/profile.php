@@ -58,20 +58,6 @@ $CSRF = $_SESSION['csrf_token'];
                         <a href="#address" class="menu-item" data-tab="address">Address</a>
                         <a href="#password" class="menu-item" data-tab="password">Change Password</a>
                     </div>
-
-                    <div class="menu-section">
-                        <div class="menu-title">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                                <line x1="3" y1="6" x2="21" y2="6"></line>
-                            </svg>
-                            My Orders
-                        </div>
-                        <a href="/RADS-TOOLING/customer/orders.php" class="menu-item">All Orders</a>
-                        <a href="/RADS-TOOLING/customer/orders.php?status=pending" class="menu-item">Pending</a>
-                        <a href="/RADS-TOOLING/customer/orders.php?status=processing" class="menu-item">Processing</a>
-                        <a href="/RADS-TOOLING/customer/orders.php?status=completed" class="menu-item">Completed</a>
-                    </div>
                 </nav>
             </aside>
 
@@ -222,36 +208,6 @@ $CSRF = $_SESSION['csrf_token'];
     <!-- Profile Tab (existing content) -->
     <div id="profileTab" class="tab-content active">
         <!-- Your existing profile form content -->
-    </div>
-
-    <!-- Orders Tab (NEW) -->
-    <div id="ordersTab" class="tab-content" style="display: none;">
-        <div class="orders-section">
-            <h2>My Orders</h2>
-
-            <div class="orders-filter" style="margin-bottom: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                <button class="filter-btn active" data-status="all">All Orders</button>
-                <button class="filter-btn" data-status="pending">Pending</button>
-                <button class="filter-btn" data-status="processing">Processing</button>
-                <button class="filter-btn" data-status="completed">Completed</button>
-                <button class="filter-btn" data-status="cancelled">Cancelled</button>
-            </div>
-
-            <div id="ordersContainer" class="orders-list">
-                <p style="text-align: center; color: #666;">Loading orders...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Order Details Modal -->
-    <div class="modal" id="orderDetailsModal" style="display: none;">
-        <div class="modal-content" style="max-width: 800px;">
-            <button class="modal-close" onclick="closeOrderModal()">×</button>
-            <h2>Order Details</h2>
-            <div id="orderDetailsContent">
-                <!-- Content populated by JavaScript -->
-            </div>
-        </div>
     </div>
 
     <style>
@@ -512,297 +468,6 @@ $CSRF = $_SESSION['csrf_token'];
                 }
             });
         });
-
-        // Order filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-
-                const status = this.dataset.status;
-                loadCustomerOrders(status);
-            });
-        });
-
-        async function loadCustomerOrders(status = 'all') {
-            const container = document.getElementById('ordersContainer');
-            container.innerHTML = '<p style="text-align: center; color: #666;">Loading orders...</p>';
-
-            try {
-                const response = await fetch(`/RADS-TOOLING/backend/api/customer_orders.php?action=list&status=${status}`, {
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.message || 'Failed to load orders');
-                }
-
-                displayOrders(result.data);
-
-            } catch (error) {
-                console.error('Error loading orders:', error);
-                container.innerHTML = '<p style="text-align: center; color: #e14d4d;">Failed to load orders</p>';
-            }
-        }
-
-        function displayOrders(orders) {
-            const container = document.getElementById('ordersContainer');
-
-            if (!orders || orders.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">No orders found</p>';
-                return;
-            }
-
-            container.innerHTML = orders.map(order => {
-                const statusClass = getOrderStatusClass(order.status);
-                const paymentStatusText = getPaymentStatusText(order);
-                const paymentStatusClass = getPaymentStatusClass(order);
-
-                return `
-            <div class="order-card">
-                <div class="order-header">
-                    <div>
-                        <div class="order-code">${escapeHtml(order.order_code)}</div>
-                        <div class="order-date">Ordered on ${formatDate(order.order_date)}</div>
-                    </div>
-                    <span class="status-badge status-${statusClass}">${escapeHtml(order.status)}</span>
-                </div>
-                
-                <div class="order-body">
-                    <div class="order-items">
-                        <strong>Items:</strong> ${escapeHtml(order.items || 'N/A')}
-                    </div>
-                    <div class="order-summary">
-                        <div class="order-total">₱${parseFloat(order.total_amount).toLocaleString()}</div>
-                        <div class="payment-status payment-${paymentStatusClass}">
-                            ${paymentStatusText}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="order-footer">
-                    <div>
-                        ${order.mode === 'delivery' ? '<span>🚚 Delivery</span>' : '<span>📦 Pickup</span>'}
-                    </div>
-                    <button class="btn-view-order" onclick="viewOrderDetails(${order.id})">
-                        View Details
-                    </button>
-                </div>
-            </div>
-        `;
-            }).join('');
-        }
-
-        function getOrderStatusClass(status) {
-            switch (status?.toLowerCase()) {
-                case 'pending':
-                    return 'pending';
-                case 'processing':
-                    return 'processing';
-                case 'completed':
-                    return 'completed';
-                case 'cancelled':
-                    return 'cancelled';
-                default:
-                    return 'pending';
-            }
-        }
-
-        function getPaymentStatusText(order) {
-            if (order.payment_proof_status === 'REJECTED') {
-                return '❌ Payment Rejected';
-            }
-            if (order.payment_proof_status === 'PENDING') {
-                return '⏳ Payment Under Verification';
-            }
-            if (order.payment_verification_status === 'VERIFIED') {
-                if (order.payment_status === 'Fully Paid') {
-                    return '✅ Fully Paid';
-                }
-                return `✅ Deposit Paid (${order.deposit_rate}%)`;
-            }
-            return '⏳ Awaiting Payment';
-        }
-
-        function getPaymentStatusClass(order) {
-            if (order.payment_proof_status === 'REJECTED') return 'rejected';
-            if (order.payment_verification_status === 'VERIFIED') return 'verified';
-            return 'pending';
-        }
-
-        async function viewOrderDetails(orderId) {
-            try {
-                const response = await fetch(`/RADS-TOOLING/backend/api/customer_orders.php?action=details&id=${orderId}`, {
-                    credentials: 'same-origin',
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.message || 'Failed to load order details');
-                }
-
-                const {
-                    order,
-                    items
-                } = result.data;
-
-                const content = document.getElementById('orderDetailsContent');
-                content.innerHTML = `
-            <div style="display: grid; gap: 1.5rem;">
-                <div>
-                    <h3 style="color: #2f5b88; margin-bottom: 0.5rem;">Order Information</h3>
-                    <p><strong>Order Code:</strong> ${escapeHtml(order.order_code)}</p>
-                    <p><strong>Order Date:</strong> ${formatDate(order.order_date)}</p>
-                    <p><strong>Status:</strong> <span class="status-badge status-${getOrderStatusClass(order.status)}">${escapeHtml(order.status)}</span></p>
-                    <p><strong>Delivery Mode:</strong> ${order.mode === 'delivery' ? '🚚 Delivery' : '📦 Pickup'}</p>
-                </div>
-                
-                ${order.mode === 'delivery' ? `
-                    <div>
-                        <h3 style="color: #2f5b88; margin-bottom: 0.5rem;">Delivery Address</h3>
-                        <p>${escapeHtml(order.first_name)} ${escapeHtml(order.last_name)}</p>
-                        <p>${escapeHtml(order.phone || 'N/A')}</p>
-                        <p>${escapeHtml(order.street || '')}, ${escapeHtml(order.barangay || '')}</p>
-                        <p>${escapeHtml(order.city || '')}, ${escapeHtml(order.province || '')} ${escapeHtml(order.postal || '')}</p>
-                    </div>
-                ` : ''}
-                
-                <div>
-                    <h3 style="color: #2f5b88; margin-bottom: 0.5rem;">Order Items</h3>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="border-bottom: 2px solid #e3e3e3;">
-                                <th style="text-align: left; padding: 0.5rem;">Item</th>
-                                <th style="text-align: center; padding: 0.5rem;">Qty</th>
-                                <th style="text-align: right; padding: 0.5rem;">Price</th>
-                                <th style="text-align: right; padding: 0.5rem;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(item => `
-                                <tr style="border-bottom: 1px solid #e3e3e3;">
-                                    <td style="padding: 0.5rem;">${escapeHtml(item.name)}</td>
-                                    <td style="text-align: center; padding: 0.5rem;">${item.qty}</td>
-                                    <td style="text-align: right; padding: 0.5rem;">₱${parseFloat(item.unit_price).toLocaleString()}</td>
-                                    <td style="text-align: right; padding: 0.5rem;">₱${parseFloat(item.line_total).toLocaleString()}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="3" style="text-align: right; padding: 0.5rem; font-weight: 600;">Subtotal:</td>
-                                <td style="text-align: right; padding: 0.5rem; font-weight: 600;">₱${parseFloat(order.subtotal).toLocaleString()}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" style="text-align: right; padding: 0.5rem;">VAT (12%):</td>
-                                <td style="text-align: right; padding: 0.5rem;">₱${parseFloat(order.vat).toLocaleString()}</td>
-                            </tr>
-                            <tr style="border-top: 2px solid #2f5b88;">
-                                <td colspan="3" style="text-align: right; padding: 0.5rem; font-weight: 700; color: #2f5b88;">Total:</td>
-                                <td style="text-align: right; padding: 0.5rem; font-weight: 700; color: #2f5b88; font-size: 1.2rem;">₱${parseFloat(order.total_amount).toLocaleString()}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                
-                <div>
-                    <h3 style="color: #2f5b88; margin-bottom: 0.5rem;">Payment Information</h3>
-                    ${order.payment_verification_status ? `
-                        <p><strong>Payment Method:</strong> ${escapeHtml(order.payment_method || 'N/A')}</p>
-                        <p><strong>Deposit Rate:</strong> ${order.deposit_rate}%</p>
-                        <p><strong>Amount Paid:</strong> ₱${parseFloat(order.amount_paid || 0).toLocaleString()}</p>
-                        <p><strong>Amount Due:</strong> ₱${parseFloat(order.amount_due || 0).toLocaleString()}</p>
-                        <p><strong>Payment Status:</strong> ${getPaymentStatusText(order)}</p>
-                        ${order.payment_proof_status === 'REJECTED' ? `
-                            <p style="color: #e14d4d; margin-top: 0.5rem;">
-                                ⚠️ Your payment was rejected. Please submit a new payment proof or contact support.
-                            </p>
-                        ` : ''}
-                    ` : `
-                        <p style="color: #666;">No payment information available yet.</p>
-                    `}
-                </div>
-                
-                <div class="order-timeline">
-                    <h3 style="color: #2f5b88; margin-bottom: 1rem;">Order Progress</h3>
-                    <div class="timeline-item">
-                        <div class="timeline-icon ${order.status === 'Pending' ? '' : 'inactive'}"></div>
-                        <div class="timeline-text">
-                            <strong>Order Placed</strong><br>
-                            <span style="color: #666; font-size: 0.85rem;">${formatDate(order.order_date)}</span>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon ${order.payment_verification_status === 'VERIFIED' ? '' : 'inactive'}"></div>
-                        <div class="timeline-text">
-                            <strong>Payment Verified</strong><br>
-                            <span style="color: #666; font-size: 0.85rem;">
-                                ${order.payment_verification_status === 'VERIFIED' ? 'Completed' : 'Pending verification'}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon ${order.status === 'Processing' ? '' : 'inactive'}"></div>
-                        <div class="timeline-text">
-                            <strong>Processing</strong><br>
-                            <span style="color: #666; font-size: 0.85rem;">
-                                ${order.status === 'Processing' ? 'Your cabinet is being made' : 'Not yet started'}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon ${order.status === 'Completed' ? '' : 'inactive'}"></div>
-                        <div class="timeline-text">
-                            <strong>Completed</strong><br>
-                            <span style="color: #666; font-size: 0.85rem;">
-                                ${order.status === 'Completed' ? 'Order completed' : 'Not yet completed'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-                document.getElementById('orderDetailsModal').style.display = 'flex';
-
-            } catch (error) {
-                console.error('Error loading order details:', error);
-                alert('Failed to load order details: ' + error.message);
-            }
-        }
-
-        function closeOrderModal() {
-            document.getElementById('orderDetailsModal').style.display = 'none';
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            try {
-                return new Date(dateString).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-            } catch (e) {
-                return dateString;
-            }
-        }
     </script>
     <script>
         const API_BASE = '/RADS-TOOLING/backend/api';
@@ -1394,51 +1059,32 @@ $CSRF = $_SESSION['csrf_token'];
             e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
         });
     </script>
-<script>
-// Tab switching for sidebar menu
-document.querySelectorAll('.menu-item[data-tab]').forEach(link => {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        const tabName = this.dataset.tab;
-        
-        // Update active menu item
-        document.querySelectorAll('.menu-item').forEach(item => {
-            item.classList.remove('active');
-        });
-        this.classList.add('active');
-        
-        // Update active content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        
-        const targetTab = document.getElementById(`${tabName}-tab`);
-        if (targetTab) {
-            targetTab.classList.add('active');
-        }
-    });
-});
+    <script>
+        // Tab switching for sidebar menu
+        document.querySelectorAll('.menu-item[data-tab]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tabName = this.dataset.tab;
 
-// When "All Orders" link in sidebar is clicked
-document.querySelector('a[href="/RADS-TOOLING/customer/orders.php"]')?.addEventListener('click', function(e) {
-    e.preventDefault();
-    
-    // Check if orders tab exists in current page
-    const ordersTab = document.getElementById('orders-tab');
-    if (ordersTab) {
-        // Switch to orders tab
-        document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        ordersTab.classList.add('active');
-        
-        // Load orders
-        loadCustomerOrders('all');
-    } else {
-        // Redirect to orders page
-        window.location.href = this.href;
-    }
-});
-</script>
+                // Update active menu item
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // Update active content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                const targetTab = document.getElementById(`${tabName}-tab`);
+                if (targetTab) {
+                    targetTab.classList.add('active');
+                }
+            });
+        });
+
+    </script>
 </body>
 
 </html>

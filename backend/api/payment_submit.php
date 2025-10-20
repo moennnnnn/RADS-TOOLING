@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/../lib/payments.php';
 $uid = require_customer_id();
 
 $order_id        = (int)($_POST['order_id'] ?? 0);
@@ -16,7 +17,7 @@ $stmt = $pdo->prepare("SELECT o.customer_id, IFNULL(p.method,'gcash') AS method
                        FROM orders o
                        LEFT JOIN payments p ON p.order_id=o.id
                        WHERE o.id=:id");
-$stmt->execute([':id'=>$order_id]);
+$stmt->execute([':id' => $order_id]);
 $row = $stmt->fetch();
 if (!$row || (int)$row['customer_id'] !== $uid) fail('Order not found.', 404);
 
@@ -33,9 +34,9 @@ $shot_path = null;
 if (!empty($_FILES['screenshot']['tmp_name'])) {
   $orig = $_FILES['screenshot']['name'] ?? 'proof.jpg';
   $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION) ?: 'jpg');
-  if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) $ext = 'jpg';
+  if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) $ext = 'jpg';
   $fname = 'proof_' . $order_id . '_' . time() . '.' . $ext;
-  $dest  = rtrim($upload_dir,'/') . '/' . $fname;
+  $dest  = rtrim($upload_dir, '/') . '/' . $fname;
   if (!move_uploaded_file($_FILES['screenshot']['tmp_name'], $dest)) {
     fail('Failed to save screenshot.');
   }
@@ -49,9 +50,13 @@ try {
     (order_id, method, account_name, account_number, reference_number, amount_reported, screenshot_path, status)
     VALUES (:oid, :m, :an, :ac, :ref, :amt, :img, 'PENDING')");
   $stmt->execute([
-    ':oid'=>$order_id, ':m'=>$method, ':an'=>$account_name,
-    ':ac'=>$account_number ?: null, ':ref'=>$reference,
-    ':amt'=>$amount_paid, ':img'=>$shot_path
+    ':oid' => $order_id,
+    ':m' => $method,
+    ':an' => $account_name,
+    ':ac' => $account_number ?: null,
+    ':ref' => $reference,
+    ':amt' => $amount_paid,
+    ':img' => $shot_path
   ]);
 
   // Ensure payments row exists, then update status/amount
@@ -59,10 +64,11 @@ try {
     INSERT INTO payments (order_id, method, deposit_rate, amount_due, amount_paid, status)
     VALUES (:oid, :m, 0, 0, :paid, 'PENDING_VERIFICATION')
     ON DUPLICATE KEY UPDATE amount_paid=VALUES(amount_paid), status='PENDING_VERIFICATION'
-  ")->execute([':oid'=>$order_id, ':m'=>$method, ':paid'=>$amount_paid]);
+  ")->execute([':oid' => $order_id, ':m' => $method, ':paid' => $amount_paid]);
 
   $pdo->commit();
-  ok(['message'=>'Payment submitted for verification.']);
+  recalc_order_payment($pdo, $order_id);
+  ok(['message' => 'Payment submitted for verification.']);
 } catch (Throwable $e) {
   $pdo->rollBack();
   fail('DB error: ' . $e->getMessage(), 500);

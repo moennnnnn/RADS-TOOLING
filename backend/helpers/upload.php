@@ -15,8 +15,8 @@
 function processFileUpload($file, $group = 'general')
 {  // CHANGED: renamed function
     // Configuration
-    $maxFileSize = 10 * 1024 * 1024; // 10 MB
-    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi'];
+    $maxFileSize = 30 * 1024 * 1024; // 30 MB
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi', 'glb'];
     $allowedMimes = [
         'image/jpeg',
         'image/jpg',
@@ -24,7 +24,9 @@ function processFileUpload($file, $group = 'general')
         'image/webp',
         'video/mp4',
         'video/quicktime',
-        'video/x-msvideo'
+        'video/x-msvideo',
+        'model/gltf-binary',
+        'application/octet-stream'
     ];
 
     // Check for upload errors
@@ -39,7 +41,7 @@ function processFileUpload($file, $group = 'general')
     if ($file['size'] > $maxFileSize) {
         return [
             'success' => false,
-            'message' => 'File size exceeds 10MB limit'
+            'message' => 'File size exceeds 30MB limit'
         ];
     }
 
@@ -59,7 +61,7 @@ function processFileUpload($file, $group = 'general')
     if (!in_array($extension, $allowedExtensions)) {
         return [
             'success' => false,
-            'message' => 'Invalid file type. Only JPG, PNG, WebP, MP4, MOV, and AVI are allowed'
+            'message' => 'Invalid file type. Only JPG, PNG, WebP, MP4, MOV, AVI, and GLB are allowed'
         ];
     }
 
@@ -205,4 +207,3 @@ function createWebPVersion($filePath, $extension)
         return false;
     }
 }
-?>

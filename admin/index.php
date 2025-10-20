@@ -775,32 +775,34 @@ if (!$isLoggedIn) {
             </div>
         </section>
 
+        <!-- ===== PAYMENT VERIFICATION ===== -->
+
         <section class="main-section" data-section="payment">
-    <div class="section-header">
-        <h1>Payment Verification</h1>
-    </div>
-    
-    <div class="payments-table-container">
-        <table class="payments-table">
-            <thead>
-                <tr>
-                    <th>Order Code</th>
-                    <th>Customer</th>
-                    <th>Amount Paid</th>
-                    <th>Method</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="paymentsTableBody">
-                <tr>
-                    <td colspan="7" style="text-align:center;">Loading payments...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
+            <div class="section-header">
+                <h1>Payment Verification</h1>
+            </div>
+
+            <div class="payments-table-container">
+                <table class="payments-table">
+                    <thead>
+                        <tr>
+                            <th>Order Code</th>
+                            <th>Customer</th>
+                            <th>Amount Paid</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align:center;">Loading payments...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <!-- Payment Details Modal -->
         <div class="modal" id="paymentDetailsModal">

@@ -193,6 +193,18 @@ const CM = {
                 <div id="quill-hero-subtitle" class="quill-container"></div>
             </div>
 
+            <!-- Hero Media -->
+            <label>Hero Media (image or .glb)</label>
+              <input type="text" id="hero-image" class="form-input"
+                placeholder="/RADS-TOOLING/assets/images/cabinet-hero.jpg">
+                <button type="button" class="btn-upload"
+                onclick="document.getElementById('publicHeroUpload').click()">
+            <span class="material-symbols-rounded">upload</span> Upload Hero
+                </button>
+            <input type="file" id="publicHeroUpload"
+                accept="image/png,image/jpeg,image/webp,.glb,model/gltf-binary"
+                style="display:none;" onchange="CM.handlePublicHeroUpload(event)">
+
             <!-- Carousel -->
             <div class="editor-section">
                 <h3><span class="material-symbols-rounded">collections</span> Carousel Images</h3>
@@ -493,6 +505,12 @@ const CM = {
                 'footer-hours': content.footer_hours
             };
 
+            const publicHero = document.getElementById('hero-image');
+            if (publicHero && content.hero_image) {
+                publicHero.value = content.hero_image;
+                publicHero.addEventListener('input', () => this.updateLivePreview());
+            }
+
             Object.keys(customerInputs).forEach(id => {
                 const input = document.getElementById(id);
                 if (input && customerInputs[id]) {
@@ -785,6 +803,35 @@ const CM = {
         }
     },
 
+    async handlePublicHeroUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'hero');
+        formData.append('action', 'upload_image');
+
+        try {
+            this.showToast('Uploading...', 'info');
+            const response = await fetch(this.apiBaseUrl, { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.success) {
+                const path = '/' + data.file_path.replace(/^\/+/, '');
+                document.getElementById('hero-image').value = path;
+                this.updateLivePreview();
+                this.showToast('Uploaded!', 'success');
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        } catch (err) {
+            console.error(err);
+            this.showToast('Upload failed', 'error');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
     updateLivePreview() {
         // Reload the live preview iframe
         const iframe = document.getElementById('livePreviewIframe');
@@ -822,7 +869,7 @@ const CM = {
         const inputs = ['footer-company', 'footer-email', 'footer-phone', 'footer-address', 'footer-hours', 'video-url',
             'about-headline', 'about-address', 'about-phone', 'about-email',
             'about-hours-weekday', 'about-hours-sunday', 'about-hero-path', 'customer-hero-image', 'cta-primary-text', 'cta-secondary-text',
-            'footer-description'
+            'footer-description', 'hero-image'
         ];
         inputs.forEach(id => {
             const input = document.getElementById(id);

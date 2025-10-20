@@ -150,7 +150,7 @@
 
       // Resolve city code for accurate lookup
       const norm = s => (s || '').toLowerCase().trim();
-      
+
       let cityData = await getJSON('https://psgc.cloud/api/cities');
       if (Array.isArray(cityData)) {
         let hit = cityData.find(x => norm(x.name) === norm(cityName));
@@ -336,49 +336,93 @@
       // 1) Create order if not exists
       if (!ORDER_ID) {
         const payload = {
-          pid: window.RT_ORDER?.pid || '',
-          qty: window.RT_ORDER?.qty || 1,
-          subtotal: window.RT_ORDER?.subtotal || 0,
-          vat: window.RT_ORDER?.vat || 0,
-          total: window.RT_ORDER?.total || 0,
-          mode: window.RT_ORDER?.mode || 'pickup',
+          pid: Number(window.RT_ORDER?.pid || 0),
+          qty: Number(window.RT_ORDER?.qty || 1),
+          subtotal: Number(window.RT_ORDER?.subtotal || 0),
+          vat: Number(window.RT_ORDER?.vat || 0),
+          total: Number(window.RT_ORDER?.total || 0),
+          mode: String(window.RT_ORDER?.mode || 'pickup'),
           info: window.RT_ORDER?.info || {}
         };
 
+        if (!payload.pid || !payload.total) {
+          alert('Missing pid/total in RT_ORDER.');
+          console.warn('RT_ORDER invalid:', payload);
+          return;
+        }
+
         try {
-          const r1 = await fetch('/RADS-TOOLING/backend/api/order_create.php', {
+          // ⚠️ Force absolute URL para walang base-path confusion
+          const url = `${location.origin}/RADS-TOOLING/backend/api/order_create.php`;
+
+          const r1 = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              // helps some guards distinguish ajax
+              'X-Requested-With': 'XMLHttpRequest',
+              'Accept': 'application/json'
+            },
             credentials: 'same-origin',
             body: JSON.stringify(payload)
           });
-          const result = await r1.json();
 
-          if (!result || !result.success) {
+          const raw1 = await r1.text();
+          console.debug('[order_create] status:', r1.status, 'ok:', r1.ok, 'raw:', raw1);
+
+          if (!r1.ok) {
+            alert(`HTTP ${r1.status} from order_create.php:\n` + raw1.slice(0, 400));
+            return;
+          }
+
+          let result;
+          try { result = JSON.parse(raw1); }
+          catch {
+            alert('Non-JSON from order_create.php:\n' + raw1.slice(0, 400));
+            return;
+          }
+
+          if (!result?.success) {
             alert(result?.message || 'Could not create order.');
             return;
           }
-          ORDER_ID = result.data.order_id;
-          ORDER_CODE = result.data.order_code;
+
+          const id = (result?.data?.order_id ?? result?.order_id) || null;
+          const code = (result?.data?.order_code ?? result?.order_code) || null;
+
+          if (!id) {
+            alert('Order create returned no order_id.');
+            console.warn('order_create result:', result);
+            return;
+          }
+          ORDER_ID = id;
+          ORDER_CODE = code; // ok lang kung null
+
         } catch (err) {
-          alert('Network error creating order.');
+          console.error('[order_create] fetch error:', err);
+          alert('Network error creating order (fetch failed).');
           return;
         }
       }
 
       // 2) Save payment decision (method + deposit rate)
       try {
-        const r2 = await fetch('/RADS-TOOLING/backend/api/payment_decision.php', {
+        const url2 = `${location.origin}/RADS-TOOLING/backend/api/payment_decision.php`;
+        const r2 = await fetch(url2, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          },
           credentials: 'same-origin',
-          body: JSON.stringify({
-            order_id: ORDER_ID,
-            method: method,
-            deposit_rate: dep
-          })
+          body: JSON.stringify({ order_id: ORDER_ID, method: method, deposit_rate: dep })
         });
-        const result2 = await r2.json();
+        const raw2 = await r2.text();
+        console.debug('[payment_decision]', r2.status, raw2);
+        if (!r2.ok) { alert(`HTTP ${r2.status}: ${raw2.slice(0, 300)}`); return; }
+        const result2 = JSON.parse(raw2);
+
 
         if (!result2 || !result2.success) {
           alert(result2?.message || 'Could not set payment terms.');
@@ -392,10 +436,18 @@
 
       // 3) Fetch QR code
       try {
-        const r3 = await fetch('/RADS-TOOLING/backend/api/payment_qr.php?method=' + encodeURIComponent(method), {
+        const url3 = `${location.origin}/RADS-TOOLING/backend/api/payment_qr.php?method=${encodeURIComponent(method)}`;
+        const r3 = await fetch(url3, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          },
           credentials: 'same-origin'
         });
-        const result3 = await r3.json();
+        const raw3 = await r3.text();
+        console.debug('[payment_qr]', r3.status, raw3);
+        let result3; try { result3 = JSON.parse(raw3); } catch { result3 = null; }
+
 
         const qrBox = $('#qrBox');
         if (qrBox) {

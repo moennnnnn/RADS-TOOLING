@@ -304,6 +304,10 @@ body {
     background: var(--green);
 }
 
+.badge-cancelled {
+    background: var(--red);
+}
+
 .badge-active {
     background: var(--green);
 }

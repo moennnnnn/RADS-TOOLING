@@ -1,14 +1,23 @@
 <?php
+
 declare(strict_types=1);
 session_start();
 $orderId = $_GET['order'] ?? '';
-if(!$orderId){ http_response_code(400); exit('No order'); }
+if (!$orderId) {
+  http_response_code(400);
+  exit('No order');
+}
 ?>
 <!doctype html>
-<html lang="en"><head>
-  <meta charset="utf-8"><title>Payment</title>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Payment</title>
   <link rel="stylesheet" href="/assets/css/checkout.css">
-</head><body>
+</head>
+
+<body>
   <div style="max-width:900px;margin:24px auto;padding:0 16px" class="rt-grid">
     <div class="rt-card">
       <h3>Payment</h3>
@@ -45,16 +54,22 @@ if(!$orderId){ http_response_code(400); exit('No order'); }
 
   <script>
     const pay = document.getElementById('payMethod');
-    const qr  = document.getElementById('qrWrap');
-    const cash= document.getElementById('cashWrap');
-    const chEl= document.getElementById('channel');
-    const title=document.getElementById('qrTitle');
+    const qr = document.getElementById('qrWrap');
+    const cash = document.getElementById('cashWrap');
+    const chEl = document.getElementById('channel');
+    const title = document.getElementById('qrTitle');
     const img = document.getElementById('qrImg');
 
-    function setQR(which){
+    function setQR(which) {
       const map = {
-        gcash: {title:'GCash', img:'/assets/img/qr/gcash.png'},
-        instapay: {title:'InstaPay', img:'/assets/img/qr/instapay.png'}
+        gcash: {
+          title: 'GCash',
+          img: '/assets/img/qr/gcash.png'
+        },
+        instapay: {
+          title: 'InstaPay',
+          img: '/assets/img/qr/instapay.png'
+        }
       };
       title.textContent = map[which].title;
       img.src = map[which].img;
@@ -63,21 +78,31 @@ if(!$orderId){ http_response_code(400); exit('No order'); }
 
     pay.addEventListener('change', () => {
       if (pay.value === 'cash') {
-        cash.style.display='block'; qr.style.display='none';
+        cash.style.display = 'block';
+        qr.style.display = 'none';
       } else {
         setQR(pay.value);
-        cash.style.display='none'; qr.style.display='block';
+        cash.style.display = 'none';
+        qr.style.display = 'block';
       }
     });
 
     document.getElementById('verifyForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      const r  = await fetch('/backend/api/payment_submit.php',{method:'POST',body:fd});
-      const j  = await r.json();
-      if(!j.success){ alert(j.message||'Submit failed'); return; }
+      const r = await fetch('/backend/api/payment_submit.php', {
+        method: 'POST',
+        body: fd
+      });
+      const j = await r.json();
+      if (!j.success) {
+        alert(j.message || 'Submit failed');
+        return;
+      }
       alert('Payment submitted. Under review pa, boss.');
       window.location.href = `/customer/payment_status.php?order=${encodeURIComponent(fd.get('order_id'))}`;
     });
   </script>
-</body></html>
+</body>
+
+</html>

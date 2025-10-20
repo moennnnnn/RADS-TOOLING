@@ -116,7 +116,101 @@ if ($isCustomer) {
             </div>
           </div>
           <div class="hero-image-content">
-            <img src="<?php echo $cmsContent['hero_image'] ?? '/RADS-TOOLING/assets/images/cabinet-hero.jpg'; ?>" alt="Custom Cabinets">
+            <?php
+            $heroMedia = $cmsContent['hero_image'] ?? '/RADS-TOOLING/assets/images/cabinet-hero.jpg';
+            $heroPath  = parse_url($heroMedia, PHP_URL_PATH) ?: $heroMedia;
+            $ext       = strtolower(pathinfo($heroPath, PATHINFO_EXTENSION));
+            $isGLB     = ($ext === 'glb');
+            ?>
+            <div class="hero-image-content">
+              <?php if ($isGLB): ?>
+                <div id="hero3d" style="width:100%;max-width:580px;height:460px;border-radius:16px;overflow:hidden;background:#f8fafc"></div>
+                <script type="importmap">
+                  {
+                  "imports": {
+                      "three": "/RADS-TOOLING/assets/vendor_js/three/three.module.js",
+                      "three/addons/": "/RADS-TOOLING/assets/vendor_js/three/"
+                  }
+                }
+                </script>
+                <script type="module">
+                  import * as THREE from 'three';
+                  import {
+                    OrbitControls
+                  } from 'three/addons/controls/OrbitControls.js';
+                  import {
+                    GLTFLoader
+                  } from 'three/addons/loaders/GLTFLoader.js';
+
+                  const MODEL_URL = <?= json_encode($heroMedia) ?>;
+                  const wrap = document.getElementById('hero3d');
+
+                  const scene = new THREE.Scene();
+                  scene.background = new THREE.Color(0xffffff);
+
+                  const renderer = new THREE.WebGLRenderer({
+                    antialias: true
+                  });
+                  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+                  renderer.outputColorSpace = THREE.SRGBColorSpace;
+                  wrap.appendChild(renderer.domElement);
+
+                  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+                  camera.position.set(3, 2, 3);
+
+                  const controls = new OrbitControls(camera, renderer.domElement);
+                  controls.enableZoom = false;
+                  controls.enablePan = false;
+                  controls.autoRotate = true;
+                  controls.autoRotateSpeed = 0.6;
+
+                  scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.9));
+                  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+                  dir.position.set(5, 5, 5);
+                  scene.add(dir);
+
+                  const loader = new GLTFLoader();
+                  console.log('[HERO3D] Loading:', MODEL_URL);
+
+                  loader.load(
+                    MODEL_URL,
+                    (gltf) => {
+                      const model = gltf.scene;
+                      const box = new THREE.Box3().setFromObject(model);
+                      const size = box.getSize(new THREE.Vector3()).length();
+                      const center = box.getCenter(new THREE.Vector3());
+                      model.position.sub(center);
+                      model.scale.multiplyScalar(2.2 / size);
+                      scene.add(model);
+                      console.log('[HERO3D] Loaded OK');
+                    },
+                    undefined,
+                    (err) => {
+                      console.error('[HERO3D] Load failed:', err);
+                      wrap.innerHTML = '<div style="padding:16px;color:#ef4444;background:#fff1f2;border-radius:12px">Failed to load 3D model. Check path/MIME.</div>';
+                    }
+                  );
+
+                  function resize() {
+                    const w = wrap.clientWidth,
+                      h = wrap.clientHeight || 460; // guard
+                    renderer.setSize(w, h, false);
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                  }
+                  resize();
+                  window.addEventListener('resize', resize);
+
+                  (function animate() {
+                    requestAnimationFrame(animate);
+                    controls.update();
+                    renderer.render(scene, camera);
+                  })();
+                </script>
+              <?php else: ?>
+                <img src="<?= htmlspecialchars($heroMedia) ?>" alt="Custom Cabinets">
+              <?php endif; ?>
+            </div>
           </div>
         </div>
   </div>
@@ -195,31 +289,31 @@ if ($isCustomer) {
     <div class="carousel-dots"></div>
   </section>
 
- <!-- VIDEO SECTION -->
-<section class="craft">
-  <div class="craft-grid">
-    <div class="craft-text">
-      <h2>Crafted with Passion &amp; Precision</h2>
-      <p>Every cabinet is handcrafted by skilled artisans using premium materials. Watch our craftsmen bring your vision to life.</p>
-      <ul class="craft-list">
-        <li>Premium hardwood materials</li>
-        <li>Expert craftsmanship</li>
-        <li>Quality assurance tested</li>
-        <li>Custom finishing options</li>
-      </ul>
-    </div>
+  <!-- VIDEO SECTION -->
+  <section class="craft">
+    <div class="craft-grid">
+      <div class="craft-text">
+        <h2>Crafted with Passion &amp; Precision</h2>
+        <p>Every cabinet is handcrafted by skilled artisans using premium materials. Watch our craftsmen bring your vision to life.</p>
+        <ul class="craft-list">
+          <li>Premium hardwood materials</li>
+          <li>Expert craftsmanship</li>
+          <li>Quality assurance tested</li>
+          <li>Custom finishing options</li>
+        </ul>
+      </div>
 
-    <div class="craft-media">
-      <div class="craft-media-box">
-        <video class="craft-video"
-               src="/RADS-TOOLING/assets/videos/crafting.mp4"
-               muted autoplay loop playsinline controls
-               preload="metadata"
-               poster="/RADS-TOOLING/assets/images/cab1.jpg"></video>
+      <div class="craft-media">
+        <div class="craft-media-box">
+          <video class="craft-video"
+            src="/RADS-TOOLING/assets/videos/crafting.mp4"
+            muted autoplay loop playsinline controls
+            preload="metadata"
+            poster="/RADS-TOOLING/assets/images/cab1.jpg"></video>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
 
   <!-- CTA BANNER -->
