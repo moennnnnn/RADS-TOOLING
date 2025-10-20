@@ -186,14 +186,20 @@ $CSRF = $_SESSION['csrf_token'];
                     ?>
                         <article class="rt-card" data-id="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>">
                             <div class="rt-imgwrap">
-                                <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($name) ?>"
+                                <img
+                                    src="<?= htmlspecialchars($img) ?>"
+                                    alt="<?= htmlspecialchars($name) ?>"
                                     onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
 
-                                <!-- KEEP ONLY THIS LEFT ICON -->
-                                <button class="rt-ico rt-left-ico" title="Customize" data-act="customize">
-                                    <span class="material-symbols-rounded">edit_square</span>
-                                </button>
+                                <?php if (!empty($p['is_customizable']) && (int)$p['is_customizable'] === 1): ?>
+                                    <a class="rt-ico rt-left-ico"
+                                        href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
+                                        onclick="event.stopPropagation()" title="Customize">
+                                        <span class="material-symbols-rounded">edit_square</span>
+                                    </a>
+                                <?php endif; ?>
                             </div>
+
 
                             <div class="rt-content">
                                 <div class="rt-name"><?= htmlspecialchars($name) ?></div>
@@ -213,23 +219,23 @@ $CSRF = $_SESSION['csrf_token'];
             <?php endif; ?>
         </main>
 
-<!-- ===== Login Required (Public) ===== -->
-<div id="rtLoginModal" class="rt-modal" aria-hidden="true">
-  <div class="rt-modal__box">
-    <button id="rtLoginX" class="rt-modal__x" aria-label="Close">
-      <span class="material-symbols-rounded">close</span>
-    </button>
+        <!-- ===== Login Required (Public) ===== -->
+        <div id="rtLoginModal" class="rt-modal" aria-hidden="true">
+            <div class="rt-modal__box">
+                <button id="rtLoginX" class="rt-modal__x" aria-label="Close">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
 
-    <div class="material-symbols-rounded rt-modal__icon">lock</div>
-    <h3>Please log in</h3>
-    <p>Login or create an account to customize, add to cart, or buy.</p>
+                <div class="material-symbols-rounded rt-modal__icon">lock</div>
+                <h3>Please log in</h3>
+                <p>Login or create an account to customize, add to cart, or buy.</p>
 
-    <div class="rt-modal__actions">
-      <a class="rt-btn main"  href="/RADS-TOOLING/customer/cust_login.php">Login</a>
-      <a class="rt-btn ghost" href="/RADS-TOOLING/customer/register.php">Sign up</a>
-    </div>
-  </div>
-</div>
+                <div class="rt-modal__actions">
+                    <a class="rt-btn main" href="/RADS-TOOLING/customer/cust_login.php">Login</a>
+                    <a class="rt-btn ghost" href="/RADS-TOOLING/customer/register.php">Sign up</a>
+                </div>
+            </div>
+        </div>
         <!-- ====================== FOOTER (PUBLIC) ====================== -->
         <footer class="footer">
             <div class="footer-content">
@@ -357,81 +363,113 @@ $CSRF = $_SESSION['csrf_token'];
     <!-- NOTE: removed the "Saved" toast para wala na sa footer -->
 
     <script>
-(() => {
-  // Elements
-  const modal    = document.getElementById('rtLoginModal');
+        (() => {
+            // Elements
+            const modal = document.getElementById('rtLoginModal');
 
-  const openLogin  = () => { modal.classList.add('open'); document.body.style.overflow='hidden'; };
-  const closeLogin = () => { modal.classList.remove('open'); document.body.style.overflow=''; };
+            const openLogin = () => {
+                modal.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            };
+            const closeLogin = () => {
+                modal.classList.remove('open');
+                document.body.style.overflow = '';
+            };
 
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeLogin(); // click outside box to close
-    });
-  }
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeLogin(); // click outside box to close
+                });
+            }
 
-  // PUBLIC PAGE GATE:
-  // I-block lahat ng actions (customize/cart/buynow) at ipakita ang login modal.
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-act]');
-    if (!btn) return;
+            // PUBLIC PAGE GATE:
+            // I-block lahat ng actions (customize/cart/buynow) at ipakita ang login modal.
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-act]');
+                if (!btn) return;
 
-    e.preventDefault();          // huwag ituloy ang tunay na action
-    e.stopPropagation();
-    openLogin();                 // show "Login required" modal
-  });
-})();
-</script>
+                e.preventDefault(); // huwag ituloy ang tunay na action
+                e.stopPropagation();
+                openLogin(); // show "Login required" modal
+            });
+        })();
+    </script>
 
-<script>
-(() => {
-  const CAN_ORDER = false; // or PHP check mo dito...
-  const modal = document.getElementById('rtLoginModal');
+    <script>
+        (() => {
+            const CAN_ORDER = false; // or PHP check mo dito...
+            const modal = document.getElementById('rtLoginModal');
 
-  const openLogin  = () => { modal.classList.add('open'); document.body.style.overflow = 'hidden'; };
-  const closeLogin = () => { modal.classList.remove('open'); document.body.style.overflow = ''; };
+            const openLogin = () => {
+                modal.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            };
+            const closeLogin = () => {
+                modal.classList.remove('open');
+                document.body.style.overflow = '';
+            };
 
-  // ⬇️ DITO MO IDIDIKIT (kapalit ng dating closeBtn lines)
-  document.getElementById('rtLoginX')?.addEventListener('click', closeLogin);
-  modal?.addEventListener('click', (e) => { if (e.target === modal) closeLogin(); });
+            // ⬇️ DITO MO IDIDIKIT (kapalit ng dating closeBtn lines)
+            document.getElementById('rtLoginX')?.addEventListener('click', closeLogin);
+            modal?.addEventListener('click', (e) => {
+                if (e.target === modal) closeLogin();
+            });
 
-  // Gating ng buttons
-  document.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-act]');
-    if (!btn) return;
+            // Gating ng buttons
+            document.addEventListener('click', async (e) => {
+                const btn = e.target.closest('[data-act]');
+                if (!btn) return;
 
-    if (!CAN_ORDER) { e.preventDefault(); openLogin(); return; }
+                if (!CAN_ORDER) {
+                    e.preventDefault();
+                    openLogin();
+                    return;
+                }
 
-    const card = btn.closest('.rt-card');
-    const id   = Number(card?.dataset?.id);
-    const act  = btn.dataset.act;
-    if (!id) return;
+                const card = btn.closest('.rt-card');
+                const id = Number(card?.dataset?.id);
+                const act = btn.dataset.act;
+                if (!id) return;
 
-    if (act === 'customize') {
-      location.href = `/RADS-TOOLING/customer/customize.php?id=${id}`; return;
-    }
-    if (act === 'cart') {
-      try {
-        await fetch('/RADS-TOOLING/customer/api/cart_add.php', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ _csrf:'<?= $CSRF ?>', product_id:id, qty:1 })
-        });
-      } catch(_) {}
-      return;
-    }
-    if (act === 'buynow') {
-      try {
-        await fetch('/RADS-TOOLING/customer/api/checkout_seed.php', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ _csrf:'<?= $CSRF ?>', product_id:id })
-        });
-      } finally {
-        location.href = '/RADS-TOOLING/customer/checkout.php';
-      }
-    }
-  });
-})();
-</script>
+                if (act === 'customize') {
+                    location.href = `/RADS-TOOLING/customer/customize.php?id=${id}`;
+                    return;
+                }
+                if (act === 'cart') {
+                    try {
+                        await fetch('/RADS-TOOLING/customer/api/cart_add.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                _csrf: '<?= $CSRF ?>',
+                                product_id: id,
+                                qty: 1
+                            })
+                        });
+                    } catch (_) {}
+                    return;
+                }
+                if (act === 'buynow') {
+                    try {
+                        await fetch('/RADS-TOOLING/customer/api/checkout_seed.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                _csrf: '<?= $CSRF ?>',
+                                product_id: id
+                            })
+                        });
+                    } finally {
+                        location.href = '/RADS-TOOLING/customer/checkout.php';
+                    }
+                }
+            });
+        })();
+    </script>
 
 
     <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>

@@ -230,21 +230,20 @@ function rt_img_url($raw)
                             data-price="<?= number_format($price, 2, '.', '') ?>">
 
                             <div class="rt-imgwrap">
-                                <!-- product image -->
                                 <img
                                     src="<?= htmlspecialchars($img) ?>"
                                     alt="<?= htmlspecialchars($name) ?>"
                                     onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
 
-                                <!-- CUSTOMIZE (pencil) — now a real link -->
-                                <a
-                                    class="rt-ico rt-left-ico"
-                                    href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
-                                    onclick="event.stopPropagation()"
-                                    title="Customize">
-                                    <span class="material-symbols-rounded">edit_square</span>
-                                </a>
+                                <?php if (!empty($p['is_customizable']) && (int)$p['is_customizable'] === 1): ?>
+                                    <a class="rt-ico rt-left-ico"
+                                        href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
+                                        onclick="event.stopPropagation()" title="Customize">
+                                        <span class="material-symbols-rounded">edit_square</span>
+                                    </a>
+                                <?php endif; ?>
                             </div>
+
 
                             <div class="rt-content">
                                 <div class="rt-name"><?= htmlspecialchars($name) ?></div>
@@ -279,351 +278,355 @@ function rt_img_url($raw)
         </main>
         </main>
 
-<!-- Buy Choice Modal -->
-<div id="buyChoiceModal" class="rt-modal" hidden>
-  <div class="rt-modal__dialog">
-    <h3>How do you want to get your order?</h3>
-    <p class="muted">Choose your preferred fulfillment method.</p>
-    <div style="display:flex; gap:8px; margin-top:8px;">
-      <button id="chooseDeliver" class="rt-btn rt-btn-dark">Delivery</button>
-      <button id="choosePickup"  class="rt-btn">Pick-up</button>
-      <button id="closeChoice"   class="rt-btn rt-btn-outline" style="margin-left:auto">Close</button>
-    </div>
-  </div>
-</div>
-
-<script>
-(() => {
-  let currentPID = 0;
-  const modal = document.getElementById('buyChoiceModal');
-  const open  = () => modal.hidden = false;
-  const close = () => modal.hidden = true;
-
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.js-buynow');
-    if (!btn) return;
-    e.preventDefault();
-    currentPID = btn.getAttribute('data-pid') || 0;
-    open();
-  });
-
-  document.getElementById('closeChoice')?.addEventListener('click', close);
-
-  function go(mode){
-    if (!currentPID) return close();
-    const qs = new URLSearchParams({ pid: currentPID, mode });
-    location.href = '/RADS-TOOLING/customer/checkout.php?' + qs.toString();
-  }
-  document.getElementById('chooseDeliver')?.addEventListener('click', () => go('delivery'));
-  document.getElementById('choosePickup') ?.addEventListener('click', () => go('pickup'));
-})();
-</script>
-
-</body>
-</html>
-
-        <!-- NOTE: removed the "Saved" toast para wala na sa footer -->
-        <!-- ===== Login Required (Public) ===== -->
-        <style>
-            .rt-modal {
-                position: fixed;
-                inset: 0;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                background: rgba(15, 23, 42, .5);
-                z-index: 2000
-            }
-
-            .rt-modal.open {
-                display: flex
-            }
-
-            .rt-modal__box {
-                width: min(420px, 92vw);
-                background: #fff;
-                border-radius: 16px;
-                padding: 24px;
-                box-shadow: 0 10px 30px rgba(2, 6, 23, .15);
-                text-align: center
-            }
-
-            .rt-modal__actions {
-                display: flex;
-                gap: 10px;
-                justify-content: center;
-                margin-top: 16px
-            }
-        </style>
-
-        <div id="rtLoginModal" class="rt-modal" aria-hidden="true">
-            <div class="rt-modal__box">
-                <div class="material-symbols-rounded" style="font-size:48px;color:#2f5b88;margin-bottom:8px">lock</div>
-                <h3 style="margin:0 0 8px">Please log in</h3>
-                <p style="color:#64748b;margin:0 0 16px">
-                    Login or create an account to customize, add to cart, or buy.
-                </p>
-                <div class="rt-modal__actions">
-                    <a class="rt-btn main" href="/RADS-TOOLING/customer/cust_login.php">Login</a>
-                    <a class="rt-btn ghost" href="/RADS-TOOLING/customer/register.php">Sign up</a>
-                    <button id="rtLoginClose" class="rt-btn">Close</button>
+        <!-- Buy Choice Modal -->
+        <div id="buyChoiceModal" class="rt-modal" hidden>
+            <div class="rt-modal__dialog">
+                <h3>How do you want to get your order?</h3>
+                <p class="muted">Choose your preferred fulfillment method.</p>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button id="chooseDeliver" class="rt-btn rt-btn-dark">Delivery</button>
+                    <button id="choosePickup" class="rt-btn">Pick-up</button>
+                    <button id="closeChoice" class="rt-btn rt-btn-outline" style="margin-left:auto">Close</button>
                 </div>
             </div>
         </div>
 
         <script>
             (() => {
-                // Public page: i-gate lahat ng order actions
-                // (Kung gusto mong i-allow kapag may session kahit nasa public page,
-                //  palitan mo ito ng PHP flag na naka-comment sa ibaba.)
-                const CAN_ORDER = false;
-                // const CAN_ORDER = <?= (isset($_SESSION['user']) && (($_SESSION['user']['aud'] ?? '') === 'customer')) ? 'true' : 'false' ?>;
+                let currentPID = 0;
+                const modal = document.getElementById('buyChoiceModal');
+                const open = () => modal.hidden = false;
+                const close = () => modal.hidden = true;
 
-                const modal = document.getElementById('rtLoginModal');
-                const openLogin = () => {
-                    modal.classList.add('open');
-                    document.body.style.overflow = 'hidden';
-                };
-                const closeLogin = () => {
-                    modal.classList.remove('open');
-                    document.body.style.overflow = '';
-                };
-
-                modal?.addEventListener('click', (e) => {
-                    if (e.target === modal) closeLogin();
-                });
-
-                document.addEventListener('click', async (e) => {
-                    const btn = e.target.closest('[data-act]');
+                document.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.js-buynow');
                     if (!btn) return;
-
-                    // Gate: ipakita muna ang login modal
-                    if (!CAN_ORDER) {
-                        e.preventDefault();
-                        openLogin();
-                        return;
-                    }
-
-                    // — Below: actual actions kung papayagan mo itong page na ’to kapag logged-in —
-                    const card = btn.closest('.rt-card');
-                    const id = Number(card?.dataset?.id);
-                    const act = btn.dataset.act;
-                    if (!id) return;
-
-                    if (act === 'customize') {
-                        location.href = `/RADS-TOOLING/customer/customize.php?id=${id}`;
-                        return;
-                    }
-                    if (act === 'cart') {
-                        try {
-                            await fetch('/RADS-TOOLING/customer/api/cart_add.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    _csrf: '<?= $CSRF ?>',
-                                    product_id: id,
-                                    qty: 1
-                                })
-                            });
-                        } catch (_) {}
-                        return;
-                    }
-                    if (act === 'buynow') {
-                        try {
-                            await fetch('/RADS-TOOLING/customer/api/checkout_seed.php', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    _csrf: '<?= $CSRF ?>',
-                                    product_id: id
-                                })
-                            });
-                        } finally {
-                            location.href = '/RADS-TOOLING/customer/checkout.php';
-                        }
-                    }
+                    e.preventDefault();
+                    currentPID = btn.getAttribute('data-pid') || 0;
+                    open();
                 });
+
+                document.getElementById('closeChoice')?.addEventListener('click', close);
+
+                function go(mode) {
+                    if (!currentPID) return close();
+                    const qs = new URLSearchParams({
+                        pid: currentPID,
+                        mode
+                    });
+                    location.href = '/RADS-TOOLING/customer/checkout.php?' + qs.toString();
+                }
+                document.getElementById('chooseDeliver')?.addEventListener('click', () => go('delivery'));
+                document.getElementById('choosePickup')?.addEventListener('click', () => go('pickup'));
             })();
         </script>
 
+</body>
 
+</html>
 
-        <!-- RADS-TOOLING Chat Support Widget -->
-        <button id="rtChatBtn" class="rt-chat-btn">
-            <span class="material-symbols-rounded">chat</span>
-            Need Help?
-        </button>
+<!-- NOTE: removed the "Saved" toast para wala na sa footer -->
+<!-- ===== Login Required (Public) ===== -->
+<style>
+    .rt-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, .5);
+        z-index: 2000
+    }
 
-        <div id="rtChatPopup" class="rt-chat-popup">
-            <div class="rt-chat-header">
-                <span>Rads Tooling - Chat Support</span>
-                <button id="rtClearChat" class="rt-clear-btn" type="button" title="Clear chat">
-                    <span class="material-symbols-rounded">delete</span>
-                </button>
-            </div>
+    .rt-modal.open {
+        display: flex
+    }
 
-            <!-- FAQ Container (Sticky at top) -->
-            <div class="rt-faq-container" id="rtFaqContainer">
-                <div class="rt-faq-toggle" id="rtFaqToggle">
-                    <span>Quick FAQs</span>
-                    <span class="rt-faq-icon">▼</span>
-                </div>
-                <div class="rt-faq-dropdown" id="rtFaqDropdown">
-                    <!-- FAQ chips will be injected here by chat_widget.js -->
-                    <div style="padding: 12px; color: #999; font-size: 13px;">Loading FAQs...</div>
-                </div>
-            </div>
+    .rt-modal__box {
+        width: min(420px, 92vw);
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(2, 6, 23, .15);
+        text-align: center
+    }
 
-            <!-- Messages Area -->
-            <div id="rtChatMessages" class="rt-chat-messages"></div>
+    .rt-modal__actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 16px
+    }
+</style>
 
-            <!-- Input Area -->
-            <div class="rt-chat-input">
-                <input id="rtChatInput" type="text" placeholder="Type your message…" />
-                <button id="rtChatSend" class="rt-chat-send">
-                    <span class="material-symbols-rounded">send</span>
-                </button>
-            </div>
+<div id="rtLoginModal" class="rt-modal" aria-hidden="true">
+    <div class="rt-modal__box">
+        <div class="material-symbols-rounded" style="font-size:48px;color:#2f5b88;margin-bottom:8px">lock</div>
+        <h3 style="margin:0 0 8px">Please log in</h3>
+        <p style="color:#64748b;margin:0 0 16px">
+            Login or create an account to customize, add to cart, or buy.
+        </p>
+        <div class="rt-modal__actions">
+            <a class="rt-btn main" href="/RADS-TOOLING/customer/cust_login.php">Login</a>
+            <a class="rt-btn ghost" href="/RADS-TOOLING/customer/register.php">Sign up</a>
+            <button id="rtLoginClose" class="rt-btn">Close</button>
         </div>
-
-        <!-- LOGOUT MODAL (Admin Style) -->
-        <div class="modal" id="logoutModal" style="display:none;">
-            <div class="modal-content modal-small">
-                <button class="modal-close" onclick="closeLogoutModal()" type="button">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="modal-icon-wrapper">
-                    <div class="modal-icon warning">
-                        <span class="material-symbols-rounded">logout</span>
-                    </div>
-                </div>
-                <h2 class="modal-title">Confirm Logout</h2>
-                <p class="modal-message">Are you sure you want to logout?</p>
-                <div class="modal-actions">
-                    <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
-                    <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
-                </div>
-            </div>
-        </div>
-        </main>
-
-        <!-- FOOTER -->
-        <footer class="footer">
-            <div class="footer-content">
-                <!-- About Section -->
-                <div class="footer-section">
-                    <h3>About RADS TOOLING</h3>
-                    <p class="footer-description">
-                        Premium custom cabinet manufacturer serving clients since 2007.
-                        Quality craftsmanship, affordable prices, and exceptional service.
-                    </p>
-                    <div class="footer-social">
-                        <a href="#" class="social-icon" aria-label="Facebook">
-                            <span class="material-symbols-rounded">facebook</span>
-                        </a>
-                        <a href="#" class="social-icon" aria-label="Instagram">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                        </a>
-                        <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
-                            <span class="material-symbols-rounded">mail</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Quick Links -->
-                <div class="footer-section">
-                    <h3>Quick Links</h3>
-                    <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
-                        <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
-                    </ul>
-                </div>
-
-                <!-- Categories -->
-                <div class="footer-section">
-                    <h3>Categories</h3>
-                    <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
-                    </ul>
-                </div>
-
-                <!-- Contact Info -->
-                <div class="footer-section">
-                    <h3>Contact Info</h3>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">location_on</span>
-                        <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
-                    </div>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">mail</span>
-                        <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
-                    </div>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">schedule</span>
-                        <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                <p class="footer-copyright">
-                    © 2025 RADS TOOLING INC. All rights reserved.
-                </p>
-                <div class="footer-legal">
-                    <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
-                    <a href="/RADS-TOOLING/customer/terms.php">Terms & Conditions</a>
-                </div>
-            </div>
-        </footer>
     </div>
-    <button
-        id="btnBuyNow"
-        class="rt-btn rt-btn-primary"
-        data-pid="<?= (int)$product['id'] ?>"
-        data-name="<?= htmlspecialchars($product['name']) ?>"
-        data-price="<?= number_format((float)$product['price'], 2, '.', '') ?>"
-        data-qty="1">
-        BUY NOW
-    </button>
-    <script>
-        (() => {
-            let currentPID = 0;
-            const modal = document.getElementById('buyChoiceModal');
-            const open = () => modal.hidden = false;
-            const close = () => modal.hidden = true;
+</div>
 
-            // open modal pag-click ng Buy Now sa kahit anong card
-            document.addEventListener('click', (e) => {
-                const btn = e.target.closest('.js-buynow');
-                if (!btn) return;
+<script>
+    (() => {
+        // Public page: i-gate lahat ng order actions
+        // (Kung gusto mong i-allow kapag may session kahit nasa public page,
+        //  palitan mo ito ng PHP flag na naka-comment sa ibaba.)
+        const CAN_ORDER = false;
+        // const CAN_ORDER = <?= (isset($_SESSION['user']) && (($_SESSION['user']['aud'] ?? '') === 'customer')) ? 'true' : 'false' ?>;
+
+        const modal = document.getElementById('rtLoginModal');
+        const openLogin = () => {
+            modal.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        };
+        const closeLogin = () => {
+            modal.classList.remove('open');
+            document.body.style.overflow = '';
+        };
+
+        modal?.addEventListener('click', (e) => {
+            if (e.target === modal) closeLogin();
+        });
+
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-act]');
+            if (!btn) return;
+
+            // Gate: ipakita muna ang login modal
+            if (!CAN_ORDER) {
                 e.preventDefault();
-                currentPID = btn.getAttribute('data-pid') || 0;
-                open();
-            });
-
-            document.getElementById('closeChoice')?.addEventListener('click', close);
-
-            function go(mode) {
-                if (!currentPID) return close();
-                const qs = new URLSearchParams({
-                    pid: currentPID,
-                    mode
-                });
-                location.href = '/RADS-TOOLING/customer/checkout.php?' + qs.toString();
+                openLogin();
+                return;
             }
-            document.getElementById('chooseDeliver')?.addEventListener('click', () => go('delivery'));
-            document.getElementById('choosePickup')?.addEventListener('click', () => go('pickup'));
-        })();
-    </script>
+
+            // — Below: actual actions kung papayagan mo itong page na ’to kapag logged-in —
+            const card = btn.closest('.rt-card');
+            const id = Number(card?.dataset?.id);
+            const act = btn.dataset.act;
+            if (!id) return;
+
+            if (act === 'customize') {
+                location.href = `/RADS-TOOLING/customer/customize.php?id=${id}`;
+                return;
+            }
+            if (act === 'cart') {
+                try {
+                    await fetch('/RADS-TOOLING/customer/api/cart_add.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            _csrf: '<?= $CSRF ?>',
+                            product_id: id,
+                            qty: 1
+                        })
+                    });
+                } catch (_) {}
+                return;
+            }
+            if (act === 'buynow') {
+                try {
+                    await fetch('/RADS-TOOLING/customer/api/checkout_seed.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            _csrf: '<?= $CSRF ?>',
+                            product_id: id
+                        })
+                    });
+                } finally {
+                    location.href = '/RADS-TOOLING/customer/checkout.php';
+                }
+            }
+        });
+    })();
+</script>
+
+
+
+<!-- RADS-TOOLING Chat Support Widget -->
+<button id="rtChatBtn" class="rt-chat-btn">
+    <span class="material-symbols-rounded">chat</span>
+    Need Help?
+</button>
+
+<div id="rtChatPopup" class="rt-chat-popup">
+    <div class="rt-chat-header">
+        <span>Rads Tooling - Chat Support</span>
+        <button id="rtClearChat" class="rt-clear-btn" type="button" title="Clear chat">
+            <span class="material-symbols-rounded">delete</span>
+        </button>
+    </div>
+
+    <!-- FAQ Container (Sticky at top) -->
+    <div class="rt-faq-container" id="rtFaqContainer">
+        <div class="rt-faq-toggle" id="rtFaqToggle">
+            <span>Quick FAQs</span>
+            <span class="rt-faq-icon">▼</span>
+        </div>
+        <div class="rt-faq-dropdown" id="rtFaqDropdown">
+            <!-- FAQ chips will be injected here by chat_widget.js -->
+            <div style="padding: 12px; color: #999; font-size: 13px;">Loading FAQs...</div>
+        </div>
+    </div>
+
+    <!-- Messages Area -->
+    <div id="rtChatMessages" class="rt-chat-messages"></div>
+
+    <!-- Input Area -->
+    <div class="rt-chat-input">
+        <input id="rtChatInput" type="text" placeholder="Type your message…" />
+        <button id="rtChatSend" class="rt-chat-send">
+            <span class="material-symbols-rounded">send</span>
+        </button>
+    </div>
+</div>
+
+<!-- LOGOUT MODAL (Admin Style) -->
+<div class="modal" id="logoutModal" style="display:none;">
+    <div class="modal-content modal-small">
+        <button class="modal-close" onclick="closeLogoutModal()" type="button">
+            <span class="material-symbols-rounded">close</span>
+        </button>
+        <div class="modal-icon-wrapper">
+            <div class="modal-icon warning">
+                <span class="material-symbols-rounded">logout</span>
+            </div>
+        </div>
+        <h2 class="modal-title">Confirm Logout</h2>
+        <p class="modal-message">Are you sure you want to logout?</p>
+        <div class="modal-actions">
+            <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
+            <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
+        </div>
+    </div>
+</div>
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="footer-content">
+        <!-- About Section -->
+        <div class="footer-section">
+            <h3>About RADS TOOLING</h3>
+            <p class="footer-description">
+                Premium custom cabinet manufacturer serving clients since 2007.
+                Quality craftsmanship, affordable prices, and exceptional service.
+            </p>
+            <div class="footer-social">
+                <a href="#" class="social-icon" aria-label="Facebook">
+                    <span class="material-symbols-rounded">facebook</span>
+                </a>
+                <a href="#" class="social-icon" aria-label="Instagram">
+                    <span class="material-symbols-rounded">photo_camera</span>
+                </a>
+                <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+                    <span class="material-symbols-rounded">mail</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="footer-section">
+            <h3>Quick Links</h3>
+            <ul class="footer-links">
+                <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
+                <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
+                <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
+            </ul>
+        </div>
+
+        <!-- Categories -->
+        <div class="footer-section">
+            <h3>Categories</h3>
+            <ul class="footer-links">
+                <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
+                <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
+                <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
+                <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+                <li><a href="/RADS-TOOLING/customer/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
+            </ul>
+        </div>
+
+        <!-- Contact Info -->
+        <div class="footer-section">
+            <h3>Contact Info</h3>
+            <div class="contact-info-item">
+                <span class="material-symbols-rounded">location_on</span>
+                <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+            </div>
+            <div class="contact-info-item">
+                <span class="material-symbols-rounded">mail</span>
+                <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+            </div>
+            <div class="contact-info-item">
+                <span class="material-symbols-rounded">schedule</span>
+                <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p class="footer-copyright">
+            © 2025 RADS TOOLING INC. All rights reserved.
+        </p>
+        <div class="footer-legal">
+            <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
+            <a href="/RADS-TOOLING/customer/terms.php">Terms & Conditions</a>
+        </div>
+    </div>
+</footer>
+</div>
+<button
+    id="btnBuyNow"
+    class="rt-btn rt-btn-primary"
+    data-pid="<?= (int)$product['id'] ?>"
+    data-name="<?= htmlspecialchars($product['name']) ?>"
+    data-price="<?= number_format((float)$product['price'], 2, '.', '') ?>"
+    data-qty="1">
+    BUY NOW
+</button>
+<script>
+    (() => {
+        let currentPID = 0;
+        const modal = document.getElementById('buyChoiceModal');
+        const open = () => modal.hidden = false;
+        const close = () => modal.hidden = true;
+
+        // open modal pag-click ng Buy Now sa kahit anong card
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.js-buynow');
+            if (!btn) return;
+            e.preventDefault();
+            currentPID = btn.getAttribute('data-pid') || 0;
+            open();
+        });
+
+        document.getElementById('closeChoice')?.addEventListener('click', close);
+
+        function go(mode) {
+            if (!currentPID) return close();
+            const qs = new URLSearchParams({
+                pid: currentPID,
+                mode
+            });
+            location.href = '/RADS-TOOLING/customer/checkout.php?' + qs.toString();
+        }
+        document.getElementById('chooseDeliver')?.addEventListener('click', () => go('delivery'));
+        document.getElementById('choosePickup')?.addEventListener('click', () => go('pickup'));
+    })();
+</script>
 
 </body>
 

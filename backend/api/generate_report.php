@@ -3,8 +3,9 @@
 declare(strict_types=1);
 session_start();
 
-require_once dirname(__DIR__, 2) . '/RADS-TOLLING/includes/guard.php';
-require_once dirname(__DIR__) . '/RADS-TOOLING/backend/config/database.php';
+require_once dirname(__DIR__, 2) . '/includes/guard.php';
+require_once dirname(__DIR__) . '/config/database.php';
+
 $autoloadPath = dirname(__DIR__, 2) . '/vendor/autoload.php';
 if (!file_exists($autoloadPath)) {
     http_response_code(500);
