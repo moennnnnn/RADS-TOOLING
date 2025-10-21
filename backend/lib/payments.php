@@ -1,33 +1,44 @@
 <?php
 function recalc_order_payment(PDO $pdo, int $orderId): void
 {
-    // 1) kunin total ng order
+    // 1) Kunin total ng order
+    // NOTE: Palitan mo 'total_amount' -> 'total' kung ganoon ang column mo.
     $st = $pdo->prepare("SELECT total_amount AS total FROM orders WHERE id=:id");
     $st->execute([':id' => $orderId]);
-    $row = $st->fetch();
+    $row = $st->fetch(PDO::FETCH_ASSOC);
     if (!$row) return;
 
-    $total = (float)$row['total'];
+    $total = (float)($row['total'] ?? 0);
 
-    // 2) sum ng lahat ng VERIFIED payments
+    // 2) Sum ng lahat ng VERIFIED payments (single source of truth)
+    $st = $pdo->prepare("
+            SELECT COALESCE(SUM(amount_paid),0) AS paid 
+            FROM payments 
+            WHERE order_id=:id AND UPPER(status)='VERIFIED'
+        ");
 
-    $st = $pdo->prepare("SELECT COALESCE(SUM(amount_paid),0) AS paid FROM payment_installments WHERE order_id=:id AND UPPER(status)='PAID'");
     $st->execute([':id' => $orderId]);
-    $paid = (float)$st->fetch()['paid'];
+    $paid = (float)($st->fetch(PDO::FETCH_ASSOC)['paid'] ?? 0);
 
-    $remain = max(0.0, round($total - $paid, 2));
-
-    // 3) decide label
-    $label = 'Pending';
-    if ($paid <= 0) {
-        $label = 'Unpaid';
-    } elseif ($remain > 0) {
-        $label = 'Partially Paid';
-    } else {
-        $label = 'Paid';
+    // (Optional fallback) – kung sakaling wala sa payments pero may naka-PAID na installments:
+    if ($paid <= 0.0) {
+        $st = $pdo->prepare("
+            SELECT COALESCE(SUM(amount_paid),0) AS paid
+            FROM payment_installments
+            WHERE order_id = :id AND UPPER(status) = 'PAID'
+        ");
+        $st->execute([':id' => $orderId]);
+        $paid = max($paid, (float)($st->fetch(PDO::FETCH_ASSOC)['paid'] ?? 0));
     }
 
-    // 4) update sa orders
-    $u = $pdo->prepare("UPDATE orders SET payment_status=:ps WHERE id=:id");
+    // 3) Compute remaining (with a tiny epsilon for rounding)
+    $remain = max(0.0, round($total - $paid, 2));
+    if ($remain > 0 && $remain < 0.01) $remain = 0.0; // guard sa floating errors
+
+    // 4) Decide label
+    $label = ($paid <= 0.0) ? 'Unpaid' : (($remain > 0.0) ? 'Partially Paid' : 'Paid');
+
+    // 5) Update sa orders
+    $u = $pdo->prepare("UPDATE orders SET payment_status = :ps WHERE id = :id");
     $u->execute([':ps' => $label, ':id' => $orderId]);
 }

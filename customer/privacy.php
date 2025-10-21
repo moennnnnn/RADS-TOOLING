@@ -107,10 +107,6 @@ if ($img) {
                                 <span class="material-symbols-rounded">receipt_long</span>
                                 <span>My Orders</span>
                             </a>
-                            <a href="/RADS-TOOLING/customer/customizations.php" class="dropdown-item">
-                                <span class="material-symbols-rounded">palette</span>
-                                <span>My Designs</span>
-                            </a>
                             <div class="dropdown-divider"></div>
                             <button onclick="showLogoutModal()" class="dropdown-item dropdown-logout" type="button">
                                 <span class="material-symbols-rounded">logout</span>

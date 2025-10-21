@@ -152,7 +152,7 @@ try {
 }
 
 // Create PDF
-$pdf = new PDF('P', 'mm', 'A4', true, 'UTF-8', false);
+//$pdf = new PDF('P', 'mm', 'A4', true, 'UTF-8', false);
 
 // Set document information
 $pdf->SetCreator('RADS TOOLING');

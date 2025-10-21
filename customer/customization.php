@@ -2,43 +2,38 @@
 
 declare(strict_types=1);
 
-// ✅ Session (safe)
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-// ✅ Need a pid (accept ?pid= or ?id=)
+// Accept ?pid= or ?id=
 $pid = (int)($_GET['pid'] ?? ($_GET['id'] ?? 0));
 if ($pid <= 0) {
     header('Location: /RADS-TOOLING/backend/customer/products.php');
     exit;
 }
 
-// ✅ Correct app + helpers (wag yung ../config/app.php)
+// App + helpers (correct paths)
 require_once __DIR__ . '/../backend/config/app.php';
 require_once __DIR__ . '/../backend/lib/cms_helper.php';
 
-// ✅ Preview vs Auth
+// Preview vs Auth
 $isPreview = isset($GLOBALS['cms_preview_content']) && !empty($GLOBALS['cms_preview_content']);
-
 if (!$isPreview) {
     require_once __DIR__ . '/../includes/guard.php';
     guard_require_customer();
-
     $user = $_SESSION['user'] ?? null;
-    $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
-    if (!$isCustomer) {
+    if (!($user && (($user['aud'] ?? '') === 'customer'))) {
         header('Location: /RADS-TOOLING/customer/cust_login.php');
         exit;
     }
 } else {
-    $user = $_SESSION['user'] ?? null; // fallback for name/avatar
+    $user = $_SESSION['user'] ?? null;
 }
 
-// (Optional) CMS content, not used here pero ok lang
 $content = $isPreview ? $GLOBALS['cms_preview_content'] : getCMSContent('about');
 
-// ✅ Safe vars for UI
+// Safe vars
 $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer', ENT_QUOTES, 'UTF-8');
 $customerId   = (int)($user['id'] ?? 0);
 $img          = $_SESSION['user']['profile_image'] ?? '';
@@ -53,12 +48,16 @@ $avatarHtml   = $img
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rads Tooling - <?= $customerName ?></title>
+
+    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- App CSS -->
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/customize.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
@@ -146,14 +145,15 @@ $avatarHtml   = $img
                 <!-- LEFT -->
                 <section class="cz-left">
                     <div class="cz-stage">
-                        <button id="stepPrev" class="cz-step-btn" aria-label="Previous step">‹</button>
+                        <!-- Step arrows beside the viewer -->
+                        <button id="stepPrev" class="cz-step-btn" aria-label="Previous">‹</button>
                         <div id="mediaBox" class="cz-media"><!-- model-viewer injected --></div>
-                        <button id="stepNext" class="cz-step-btn" aria-label="Next step">›</button>
+                        <button id="stepNext" class="cz-step-btn" aria-label="Next">›</button>
                     </div>
 
                     <div class="cz-sizebar">
                         <span class="cz-size-label">SIZE:</span>
-                        <div class="cz-size-legend">Use the sliders to adjust (cm). You can change later.</div>
+                        <div class="cz-size-legend">Use the controls to adjust (<span class="cz-unit-label">cm</span>).</div>
                     </div>
 
                     <div id="breakdown" class="cz-breakdown"></div>
@@ -163,19 +163,45 @@ $avatarHtml   = $img
                 <aside class="cz-right">
                     <div class="cz-step-title">
                         <span id="stepLabel">Step 1 · Size</span>
+                        <div class="cz-step-nav"><!-- kept for future top-nav dots, if needed --></div>
                     </div>
 
-                    <section id="sec-size" class="cz-sec" hidden>
-                        <h3>Size</h3>
+                    <!-- SIZE -->
+                    <section id="sec-size" class="cz-sec">
+                        <h3>
+                            Size
+                            <select id="unitSel" class="cz-unit">
+                                <option value="cm">cm</option>
+                                <option value="mm">mm</option>
+                                <option value="inch">inch</option>
+                                <option value="ft">ft</option>
+                                <option value="meter">meter</option>
+                            </select>
+                            <button id="btnSizeGuide" type="button" class="btn ghost" style="margin-left:8px;padding:6px 10px">Size guide</button>
+                        </h3>
+
                         <div class="cz-grid">
-                            <label>Width (cm) <input type="range" id="w" min="0" max="0" value="0"></label>
-                            <label>Height (cm) <input type="range" id="h" min="0" max="0" value="0"></label>
-                            <label>Depth (cm) <input type="range" id="d" min="0" max="0" value="0"></label>
-                            <label>Doors <input type="range" id="doors" min="0" max="10" value="0"></label>
-                            <label>Layers <input type="range" id="layers" min="0" max="10" value="0"></label>
+                            <label class="cz-field">
+                                <div class="cz-label">Width (<span class="cz-unit-label">cm</span>)</div>
+                                <input type="range" id="wSlider" min="0" max="0" step="1" value="0">
+                                <input type="number" id="wInput" inputmode="decimal" style="margin-top:6px">
+                            </label>
+
+                            <label class="cz-field">
+                                <div class="cz-label">Height (<span class="cz-unit-label">cm</span>)</div>
+                                <input type="range" id="hSlider" min="0" max="0" step="1" value="0">
+                                <input type="number" id="hInput" inputmode="decimal" style="margin-top:6px">
+                            </label>
+
+                            <label class="cz-field">
+                                <div class="cz-label">Depth (<span class="cz-unit-label">cm</span>)</div>
+                                <input type="range" id="dSlider" min="0" max="0" step="1" value="0">
+                                <input type="number" id="dInput" inputmode="decimal" style="margin-top:6px">
+                            </label>
                         </div>
                     </section>
 
+                    <!-- TEXTURES -->
                     <section id="sec-textures" class="cz-sec" hidden>
                         <h3>Textures</h3>
                         <div class="cz-partbar">
@@ -188,6 +214,7 @@ $avatarHtml   = $img
                         <div id="textures" class="cz-list"></div>
                     </section>
 
+                    <!-- COLORS -->
                     <section id="sec-colors" class="cz-sec" hidden>
                         <h3>Colors</h3>
                         <div class="cz-partbar">
@@ -200,6 +227,7 @@ $avatarHtml   = $img
                         <div id="colors" class="cz-list"></div>
                     </section>
 
+                    <!-- HANDLES -->
                     <section id="sec-handles" class="cz-sec" hidden>
                         <h3>Handles</h3>
                         <div id="handles" class="cz-list"></div>

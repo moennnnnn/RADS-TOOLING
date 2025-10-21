@@ -81,9 +81,6 @@ $avatarHtml = $img
               <a href="/RADS-TOOLING/customer/orders.php" class="dropdown-item">
                 <span class="material-symbols-rounded">receipt_long</span><span>My Orders</span>
               </a>
-              <a href="/RADS-TOOLING/customer/customizations.php" class="dropdown-item">
-                <span class="material-symbols-rounded">palette</span><span>My Designs</span>
-              </a>
               <div class="dropdown-divider"></div>
               <button onclick="showLogoutModal()" class="dropdown-item dropdown-logout" type="button">
                 <span class="material-symbols-rounded">logout</span><span>Logout</span>
@@ -107,7 +104,7 @@ $avatarHtml = $img
 
     <div class="cz-shell">
       <div class="cz-header">
-        <a class="cz-back" href="/RADS-TOOLING/customer/checkout.php?pid=<?php echo urlencode($pid) ?>">← Back</a>
+        <a class="cz-back" href="/RADS-TOOLING/customer/products.php">← Back</a>
         <h2>Pick-up Details</h2>
       </div>
 

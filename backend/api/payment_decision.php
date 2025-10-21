@@ -20,7 +20,9 @@ if (!$order || (int)$order['customer_id'] !== $uid) fail('Order not found.', 404
 $amount_due = round(((float)$order['total_amount']) * ($deposit / 100), 2);
 
 try {
-  // 1) Upsert payments row (optional lang sa flow mo)
+  $pdo->beginTransaction();
+
+  // 1) Upsert payments row (set to PENDING – handang bayaran)
   $stmt = $pdo->prepare("
     INSERT INTO payments (order_id, method, deposit_rate, amount_due, amount_paid, status)
     VALUES (:oid, :m, :d, :due, 0, 'PENDING')
@@ -32,49 +34,62 @@ try {
   ");
   $stmt->execute([':oid' => $order_id, ':m' => $method, ':d' => $deposit, ':due' => $amount_due]);
 
-  // 2) Ensure installment plan exists: #1 (deposit, PENDING), #2 (remaining, UNPAID)
-  $pdo->beginTransaction();
+  // 2) Flag order as installment if <100% deposit
+  if ($deposit < 100) {
+    $pdo->prepare("UPDATE orders SET is_installment=1 WHERE id=:oid")
+      ->execute([':oid' => $order_id]);
+  } else {
+    $pdo->prepare("UPDATE orders SET is_installment=0 WHERE id=:oid")
+      ->execute([':oid' => $order_id]);
+  }
 
-  // check if already created
+  // 3) Ensure 2 rows in payment_installments (if none)
   $chk = $pdo->prepare("SELECT COUNT(*) FROM payment_installments WHERE order_id=:oid");
   $chk->execute([':oid' => $order_id]);
   $count = (int)$chk->fetchColumn();
 
-  $total = (float)$order['total_amount'];           // NOTE: kung column mo ay `total`, palitan mo sa SELECT sa itaas
-  $depositAmount = round($total * ($deposit / 100), 2);
-  $remaining     = max(0.0, round($total - $depositAmount, 2));
+  $total = (float)$order['total_amount'];              // NOTE: kung 'total' ang tunay mong column, palitan mo dito at sa SELECT sa taas
+  $depAmt = round($total * ($deposit / 100), 2);
+  $remain = max(0.0, round($total - $depAmt, 2));
 
   if ($count === 0) {
-    // create #1 (PENDING)
-    $ins1 = $pdo->prepare("
+    // #1 deposit -> PENDING (para agad mabayaran)
+    $pdo->prepare("
       INSERT INTO payment_installments (order_id, installment_number, amount_due, amount_paid, status, due_date)
       VALUES (:oid, 1, :due, 0, 'PENDING', NULL)
-    ");
-    $ins1->execute([':oid' => $order_id, ':due' => $depositAmount]);
+    ")->execute([':oid' => $order_id, ':due' => $depAmt]);
 
-    // create #2 (UNPAID)
-    if ($remaining > 0) {
-      $ins2 = $pdo->prepare("
+    // #2 remaining -> UNPAID (naka-line up)
+    if ($remain > 0) {
+      $pdo->prepare("
         INSERT INTO payment_installments (order_id, installment_number, amount_due, amount_paid, status, due_date)
         VALUES (:oid, 2, :due, 0, 'UNPAID', NULL)
-      ");
-      $ins2->execute([':oid' => $order_id, ':due' => $remaining]);
+      ")->execute([':oid' => $order_id, ':due' => $remain]);
     }
-
-    // flag order as installment
-    $pdo->prepare("UPDATE orders SET is_installment=1 WHERE id=:oid")->execute([':oid' => $order_id]);
   } else {
-    // if plan exists: make sure #1 is PENDING kung hindi pa nababayaran
-    $pdo->prepare("
+    // Promote earliest UNPAID/PENDING installment → PENDING (safe 2-step)
+    $sel = $pdo->prepare("
+    SELECT id
+    FROM payment_installments
+    WHERE order_id=:oid AND UPPER(status) IN ('UNPAID','PENDING')
+    ORDER BY installment_number ASC
+    LIMIT 1
+  ");
+    $sel->execute([':oid' => $order_id]);
+    $promoteId = $sel->fetchColumn();
+
+    if ($promoteId) {
+      $pdo->prepare("
       UPDATE payment_installments
       SET status='PENDING'
-      WHERE order_id=:oid AND installment_number=1 AND UPPER(status) NOT IN ('PAID','PENDING')
-    ")->execute([':oid' => $order_id]);
+      WHERE id=:id
+    ")->execute([':id' => $promoteId]);
+    }
   }
 
   $pdo->commit();
-
-  ok(['amount_due' => $depositAmount]);
+  ok(['amount_due' => $depAmt]);
 } catch (Throwable $e) {
+  $pdo->rollBack();
   fail('DB error: ' . $e->getMessage(), 500);
 }

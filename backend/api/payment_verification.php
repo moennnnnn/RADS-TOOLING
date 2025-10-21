@@ -155,92 +155,82 @@ function approvePayment($conn)
     try {
         $conn->beginTransaction();
 
-        // Get verification details (+ amount_reported)
+        // 1) Verification details (+ amount_reported)
         $stmt = $conn->prepare("SELECT order_id, amount_reported FROM payment_verifications WHERE id = ?");
         $stmt->execute([$verification_id]);
         $verification = $stmt->fetch(PDO::FETCH_ASSOC);
-
         if (!$verification) {
             throw new Exception('Verification not found');
         }
+        $orderId = (int)$verification['order_id'];
+        $amountReported = (float)($verification['amount_reported'] ?? 0);
 
-        // Update verification status
+        // 2) Mark verification APPROVED (+audit)
+        $approverId = $_SESSION['staff']['id'] ?? $_SESSION['user']['id'];
         $stmt = $conn->prepare("
-            UPDATE payment_verifications 
-            SET status = 'APPROVED' 
-            WHERE id = ?
+            UPDATE payment_verifications
+            SET status='APPROVED',
+            approved_by=:uid,
+            approved_at=NOW()
+            WHERE id=:id
         ");
-        $stmt->execute([$verification_id]);
+        $stmt->execute([':uid' => $approverId, ':id' => $verification_id]);
 
-        // Update payment row: add to amount_paid, mark VERIFIED
+
+        // 3) Add to payments.amount_paid and mark VERIFIED
         $stmt = $conn->prepare("
             UPDATE payments
             SET amount_paid = COALESCE(amount_paid,0) + :amt,
-            status      = 'VERIFIED',
-            verified_by = :uid,
-            verified_at = NOW()
+                status      = 'VERIFIED',
+                verified_by = :uid,
+                verified_at = NOW()
             WHERE order_id = :oid
         ");
         $stmt->execute([
-            ':amt' => (float)($verification['amount_reported'] ?? 0),
+            ':amt' => $amountReported,
             ':uid' => $_SESSION['staff']['id'] ?? $_SESSION['user']['id'],
-            ':oid' => $verification['order_id']
+            ':oid' => $orderId
         ]);
 
-        // Decide if fully paid or partial based on payments vs order total
-        $stmt = $conn->prepare("
-    SELECT 
-        o.total_amount,
-        IFNULL(p.amount_paid, 0)    AS amount_paid,
-        IFNULL(p.deposit_rate, 0)   AS deposit_rate
-    FROM orders o
-    LEFT JOIN payments p ON p.order_id = o.id
-    WHERE o.id = ?
-    LIMIT 1
-");
-        $stmt->execute([$verification['order_id']]);
-        $payrow = $stmt->fetch(PDO::FETCH_ASSOC);
+        // 4) Mark next open installment as PAID (2-step para safe sa MySQL)
+        $nextId = null;
+        $q = $conn->prepare("
+            SELECT id
+            FROM payment_installments
+            WHERE order_id = :oid AND UPPER(status) IN ('PENDING','UNPAID')
+            ORDER BY installment_number ASC
+            LIMIT 1
+        ");
+        $q->execute([':oid' => $orderId]);
+        $nextId = $q->fetchColumn();
 
-        $fullyPaid = false;
-        if ($payrow) {
-            $total  = (float)$payrow['total_amount'];
-            $paid   = (float)$payrow['amount_paid'];
-            $rate   = (int)$payrow['deposit_rate'];
-
-            // Fully paid if 100% deposit OR paid >= total (allow tiny rounding room)
-            $fullyPaid = ($rate >= 100) || ($paid + 0.01 >= $total);
+        if ($nextId) {
+            $u = $conn->prepare("
+                UPDATE payment_installments
+                SET status='PAID', amount_paid=amount_due, verified_at=NOW()
+                WHERE id=:id
+            ");
+            $u->execute([':id' => $nextId]);
         }
 
-        $newPaymentStatus = $fullyPaid ? 'Fully Paid' : 'Partially Paid';
-        $newOrderStatus   = $fullyPaid ? 'Processing' : 'Processing'; // keep as-is; tweak if may ibang gusto ka
+        //    Keep as 'Processing' after approve. Payment status itself ire-recalc sa step 6.
+        $conn->prepare("UPDATE orders SET status='Processing' WHERE id=:oid")
+            ->execute([':oid' => $orderId]);
 
+        // 6) 🔁 Recalculate order.payment_status (Unpaid/Partially Paid/Paid)
+        recalc_order_payment($conn, $orderId);
 
-        // Update order payment status
-        // Update order payment status
-        $stmt = $conn->prepare("
-        UPDATE orders 
-        SET payment_status = :pstat,
-            status = :ostat
-        WHERE id = :oid
-        ");
-        $stmt->execute([
-            ':pstat' => $newPaymentStatus,
-            ':ostat' => $newOrderStatus,
-            ':oid'   => $verification['order_id']
-        ]);
-
-        recalc_order_payment($conn, (int)$verification['order_id']);
-
+        // 7) Commit
         $conn->commit();
 
         echo json_encode([
             'success' => true,
             'data' => [
-                'order_id'       => (int)$verification['order_id'],
-                'payment_status' => $newPaymentStatus
+                'order_id'       => $orderId,
+                // UI can re-pull if it needs exact label; recalc already saved it.
+                'message'        => 'Payment approved'
             ]
         ]);
-        return;
     } catch (Exception $e) {
         $conn->rollBack();
         error_log("Approve payment error: " . $e->getMessage());
@@ -248,7 +238,6 @@ function approvePayment($conn)
         echo json_encode(['success' => false, 'message' => 'Failed to approve payment']);
     }
 }
-
 
 function rejectPayment($conn)
 {
@@ -266,7 +255,7 @@ function rejectPayment($conn)
         $conn->beginTransaction();
 
         // Get verification details
-        $stmt = $conn->prepare("SELECT order_id FROM payment_verifications WHERE id = ?");
+        $stmt = $conn->prepare("SELECT order_id, amount_reported FROM payment_verifications WHERE id = ?");
         $stmt->execute([$verification_id]);
         $verification = $stmt->fetch(PDO::FETCH_ASSOC);
 

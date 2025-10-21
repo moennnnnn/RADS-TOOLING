@@ -467,41 +467,66 @@ async function openCustomizationModal(productId) {
 }
 
 function populateCustomizationModal(product) {
+  const el = (...ids) => ids.map(id => document.getElementById(id)).find(x => x);
+
   document.getElementById('customProductName').textContent = product.name;
   document.getElementById('customProductId').value = product.id;
 
-  // size_config may be array or object; normalize muna
+  // normalize size_config -> map by dimension
   const asMap = {};
   if (Array.isArray(product.size_config)) {
-    product.size_config.forEach(c => { asMap[c.dimension_type] = c; });
+    product.size_config.forEach(c => { asMap[(c.dimension_type || c.dimension || '').toLowerCase()] = c; });
   } else if (product.size_config && typeof product.size_config === 'object') {
     Object.assign(asMap, product.size_config);
   }
 
-  // HEIGHT
-  if (asMap.height) {
-    document.getElementById('heightMinCustom').value = asMap.height.min_value ?? 0;
-    document.getElementById('heightMaxCustom').value = asMap.height.max_value ?? 0;
-    document.getElementById('heightPriceCustom').value = asMap.height.price_per_unit ?? 0;
-  }
-  // WIDTH
-  if (asMap.width) {
-    document.getElementById('widthMinCustom').value = asMap.width.min_value ?? 0;
-    document.getElementById('widthMaxCustom').value = asMap.width.max_value ?? 0;
-    document.getElementById('widthPriceCustom').value = asMap.width.price_per_unit ?? 0;
-  }
-  // DEPTH
-  if (asMap.depth) {
-    document.getElementById('depthMinCustom').value = asMap.depth.min_value ?? 0;
-    document.getElementById('depthMaxCustom').value = asMap.depth.max_value ?? 0;
-    document.getElementById('depthPriceCustom').value = asMap.depth.price_per_unit ?? 0;
-  }
+  const fillDim = (dim, cfg) => {
+    if (!cfg) return;
+    // inputs (support new + old ids)
+    const min = el(`${dim}MinCustom`);
+    const max = el(`${dim}MaxCustom`);
+    const def = el(`${dim}DefaultCustom`, `${dim}DefCustom`);  // new, old
+    const step = el(`${dim}StepCustom`);
+    const unit = el(`${dim}Unit`);
 
-  // Lists
+    const ppu = el(`${dim}PPU`, `${dim}PriceCustom`);          // new, old
+    const bSize = el(`${dim}BlockCM`, `${dim}BlockSize`);
+    const bCost = el(`${dim}PerBlock`, `${dim}BlockPrice`);
+
+    const modeRadios = document.getElementsByName(`${dim}PricingMode`);
+
+    // write values if fields exist
+    if (min) min.value = cfg.min_value ?? cfg.min ?? 0;
+    if (max) max.value = cfg.max_value ?? cfg.max ?? 0;
+    if (def) def.value = cfg.default_value ?? cfg.default ?? '';
+    if (step) step.value = cfg.step_value ?? cfg.step ?? 1;
+    if (unit) unit.value = (cfg.measurement_unit || 'cm');
+
+    if (ppu) ppu.value = cfg.price_per_unit ?? 0;
+    if (bSize) bSize.value = cfg.price_block_cm ?? 10;
+    if (bCost) bCost.value = cfg.price_per_block ?? 0;
+
+    // pricing mode (default: percm)
+    const mode = (cfg.pricing_mode === 'block') ? 'block' : 'percm';
+    if (modeRadios && modeRadios.length) {
+      [...modeRadios].forEach(r => r.checked = (r.value === mode));
+      // trigger toggle (if meron kang binder)
+      const evt = new Event('change');
+      modeRadios[0].dispatchEvent(evt);
+    }
+  };
+
+  fillDim('width', asMap.width);
+  fillDim('height', asMap.height);
+  fillDim('depth', asMap.depth);
+
+  // lists (walang binago)
   populateTexturesList(product.textures || []);
   populateColorsList(product.colors || []);
   populateHandlesList(product.handles || []);
 }
+
+
 
 
 
@@ -546,29 +571,83 @@ function populateHandlesList(assigned) {
     </div>`).join('');
 }
 
-async function saveCustomizationOptions() {
-  const product_id = document.getElementById('customProductId').value;
+// === Size Config helpers (ADMIN) ===
+// Gumagamit lang tayo ng unit na pinili sa modal; walang conversion dito.
+// Frontend (customer side) ang bahalang mag-convert sa runtime.
 
-  // keep only min, max, price_per_unit (+ measurement_unit for context)
-  const sizeConfig = {
-    width: {
-      min_value: +document.getElementById('widthMinCustom').value,
-      max_value: +document.getElementById('widthMaxCustom').value,
-      price_per_unit: +document.getElementById('widthPriceCustom').value,
-      measurement_unit: currentProduct?.measurement_unit || 'cm'
-    },
-    height: {
-      min_value: +document.getElementById('heightMinCustom').value,
-      max_value: +document.getElementById('heightMaxCustom').value,
-      price_per_unit: +document.getElementById('heightPriceCustom').value,
-      measurement_unit: currentProduct?.measurement_unit || 'cm'
-    },
-    depth: {
-      min_value: +document.getElementById('depthMinCustom').value,
-      max_value: +document.getElementById('depthMaxCustom').value,
-      price_per_unit: +document.getElementById('depthPriceCustom').value,
-      measurement_unit: currentProduct?.measurement_unit || 'cm'
-    }
+function packDimFromModal(prefix) {
+  // prefix: 'width' | 'height' | 'depth'
+  const unit = (document.getElementById(prefix + 'Unit')?.value || 'cm').trim();
+
+  // base fields
+  const min = Number(document.getElementById(prefix + 'MinCustom')?.value || 0);
+  const max = Number(document.getElementById(prefix + 'MaxCustom')?.value || 0);
+  const def = Number(document.getElementById(prefix + 'DefaultCustom')?.value || min);
+  const step = Number(document.getElementById(prefix + 'StepCustom')?.value || 1);
+
+  // pricing mode radios: name="widthPricingMode"/"heightPricingMode"/"depthPricingMode"
+  const modeEl = document.querySelector(`input[name="${prefix}PricingMode"]:checked`);
+  const pricing_mode = modeEl ? modeEl.value : 'percm'; // 'percm' | 'block'
+
+  const price_per_unit = Number(document.getElementById(prefix + 'PPU')?.value || 0);        // ₱ per chosen unit
+  const price_block_cm = Number(document.getElementById(prefix + 'BlockCM')?.value || 0);    // block size in CM
+  const price_per_block = Number(document.getElementById(prefix + 'PerBlock')?.value || 0);   // ₱ per block
+
+  return {
+    min_value: min,
+    max_value: max,
+    default_value: def,
+    step_value: step,
+    measurement_unit: unit,
+
+    pricing_mode,       // NEW: 'percm' or 'block'
+    price_per_unit,     // used kapag percm
+    price_block_cm,     // used kapag block
+    price_per_block
+  };
+}
+
+async function saveCustomizationOptions() {
+  const el = id => document.getElementById(id);
+  const valNum = id => Number(el(id)?.value || 0);
+  const valStr = id => (el(id)?.value || '');
+
+  const getDim = (dim) => {
+    // support new + old ids
+    const min = valNum(`${dim}MinCustom`);
+    const max = valNum(`${dim}MaxCustom`);
+    const def = (el(`${dim}DefaultCustom`) || el(`${dim}DefCustom`)) ? Number((el(`${dim}DefaultCustom`) || el(`${dim}DefCustom`)).value || 0) : undefined;
+    const step = el(`${dim}StepCustom`) ? Number(el(`${dim}StepCustom`).value || 1) : undefined;
+    const unit = (el(`${dim}Unit`)?.value) || (currentProduct?.measurement_unit || 'cm');
+
+    const ppu = el(`${dim}PPU`) ? Number(el(`${dim}PPU`).value || 0)
+      : el(`${dim}PriceCustom`) ? Number(el(`${dim}PriceCustom`).value || 0) : 0;
+    const bSize = el(`${dim}BlockCM`) ? Number(el(`${dim}BlockCM`).value || 0)
+      : el(`${dim}BlockSize`) ? Number(el(`${dim}BlockSize`).value || 0) : 0;
+    const bCost = el(`${dim}PerBlock`) ? Number(el(`${dim}PerBlock`).value || 0)
+      : el(`${dim}BlockPrice`) ? Number(el(`${dim}BlockPrice`).value || 0) : 0;
+
+    const radios = document.getElementsByName(`${dim}PricingMode`);
+    const mode = [...radios].find(r => r.checked)?.value || 'percm';
+
+    return {
+      min_value: min,
+      max_value: max,
+      ...(def !== undefined ? { default_value: def } : {}),
+      ...(step !== undefined ? { step_value: step } : {}),
+      measurement_unit: unit,
+      pricing_mode: mode,          // 'percm' | 'block'
+      price_per_unit: ppu,         // used when mode==='percm'
+      price_block_cm: bSize,       // used when mode==='block'
+      price_per_block: bCost       // used when mode==='block'
+    };
+  };
+
+  const product_id = el('customProductId').value;
+  const size_config = {
+    width: getDim('width'),
+    height: getDim('height'),
+    depth: getDim('depth')
   };
 
   const texture_ids = Array.from(document.querySelectorAll('#texturesListContainer input:checked')).map(cb => +cb.value);
@@ -577,9 +656,8 @@ async function saveCustomizationOptions() {
 
   try {
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=update_size_config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id, size_config: sizeConfig })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id, size_config })
     });
     await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_textures', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -602,7 +680,6 @@ async function saveCustomizationOptions() {
     showNotification('error', 'Failed to save customization options');
   }
 }
-
 
 
 // ===== Small utilities / UI glue =====

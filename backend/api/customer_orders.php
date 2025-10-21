@@ -42,50 +42,56 @@ try {
 // ==========================================
 // LIST CUSTOMER ORDERS
 // ==========================================
-function listCustomerOrders($conn, $customerId) {
+function listCustomerOrders($conn, $customerId)
+{
     $status = $_GET['status'] ?? 'all';
-    
+
     // Base query
     $sql = "
-        SELECT 
-            o.id,
-            o.order_code,
-            o.order_date,
-            o.total_amount,
-            o.subtotal,
-            o.vat,
-            o.payment_status,
-            o.status,
-            o.mode,
-            o.is_installment,
-            p.deposit_rate,
-            p.method as payment_method,
-            p.status as payment_verification_status,
-            GROUP_CONCAT(DISTINCT oi.name SEPARATOR ', ') as items
+       SELECT 
+        o.id,
+        o.order_code,
+        o.order_date,
+        o.total_amount,
+        o.subtotal,
+        o.vat,
+        o.payment_status,
+        o.status,
+        o.mode,
+        o.is_installment,
+        p.deposit_rate,
+        p.method as payment_method,
+        p.status as payment_verification_status,
+        /* sum of verified payments for quick badges/buttons */
+        (SELECT COALESCE(SUM(pp.amount_paid),0)
+            FROM payments pp
+            WHERE pp.order_id = o.id AND UPPER(pp.status)='VERIFIED'
+            ) AS paid_amount,
+        GROUP_CONCAT(DISTINCT oi.name SEPARATOR ', ') as items
         FROM orders o
         LEFT JOIN payments p ON p.order_id = o.id
         LEFT JOIN order_items oi ON oi.order_id = o.id
         WHERE o.customer_id = :customer_id
-    ";
-    
+        ";
+
     // Add status filter
     if ($status !== 'all') {
         $sql .= " AND LOWER(o.status) = :status";
     }
-    
+
     $sql .= " GROUP BY o.id ORDER BY o.order_date DESC";
-    
+
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':customer_id', $customerId, PDO::PARAM_INT);
-    
+
     if ($status !== 'all') {
         $statusLower = strtolower($status);
         $stmt->bindParam(':status', $statusLower, PDO::PARAM_STR);
     }
-    
+
     $stmt->execute();
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Enhance each order with installment data
     foreach ($orders as &$order) {
         if ($order['is_installment'] == 1) {
@@ -105,15 +111,16 @@ function listCustomerOrders($conn, $customerId) {
             ");
             $installmentStmt->execute([':order_id' => $order['id']]);
             $installments = $installmentStmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             $order['installments'] = $installments;
-            $order['has_unpaid_installment'] = in_array('PENDING', array_column($installments, 'status'));
+            $st = array_map(fn($s) => strtoupper((string)$s), array_column($installments, 'status'));
+            $order['has_unpaid_installment'] = in_array('PENDING', $st, true) || in_array('UNPAID', $st, true);
         } else {
             $order['installments'] = [];
             $order['has_unpaid_installment'] = false;
         }
     }
-    
+
     echo json_encode([
         'success' => true,
         'data' => $orders
@@ -123,15 +130,16 @@ function listCustomerOrders($conn, $customerId) {
 // ==========================================
 // GET ORDER DETAILS
 // ==========================================
-function getOrderDetails($conn, $customerId) {
+function getOrderDetails($conn, $customerId)
+{
     $orderId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-    
+
     if (!$orderId) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Invalid order ID']);
         return;
     }
-    
+
     // Get order info
     $orderStmt = $conn->prepare("
         SELECT 
@@ -157,15 +165,30 @@ function getOrderDetails($conn, $customerId) {
         ':order_id' => $orderId,
         ':customer_id' => $customerId
     ]);
-    
+
     $order = $orderStmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$order) {
         http_response_code(404);
         echo json_encode(['success' => false, 'message' => 'Order not found']);
         return;
     }
-    
+
+    // Compute paid_amount from VERIFIED payments + remaining (helps the UI)
+    $paidQ = $conn->prepare("
+    SELECT COALESCE(SUM(amount_paid),0) AS paid
+    FROM payments
+    WHERE order_id = :oid AND UPPER(status) = 'VERIFIED'
+    ");
+    $paidQ->execute([':oid' => $orderId]);
+    $paidRow = $paidQ->fetch(PDO::FETCH_ASSOC);
+    $order['paid_amount'] = (float)($paidRow['paid'] ?? 0);
+
+    // Normalize total field name (your schema uses total_amount)
+    $total = (float)($order['total_amount'] ?? 0);
+    $order['remaining_amount'] = max(0.0, round($total - $order['paid_amount'], 2));
+
+
     // Get order items
     $itemsStmt = $conn->prepare("
         SELECT 
@@ -178,7 +201,7 @@ function getOrderDetails($conn, $customerId) {
     ");
     $itemsStmt->execute([':order_id' => $orderId]);
     $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Get installments if applicable
     $installments = [];
     if ($order['is_installment'] == 1) {
@@ -201,7 +224,7 @@ function getOrderDetails($conn, $customerId) {
         $installmentStmt->execute([':order_id' => $orderId]);
         $installments = $installmentStmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
+
     echo json_encode([
         'success' => true,
         'data' => [
@@ -211,4 +234,3 @@ function getOrderDetails($conn, $customerId) {
         ]
     ]);
 }
-?>

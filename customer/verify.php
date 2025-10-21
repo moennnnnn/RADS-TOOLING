@@ -113,12 +113,13 @@ require_once __DIR__ . '/../backend/config/database.php';
 
     <script>
         // Modal fallback: use showModal() if present, else alert()
-        const modal = (window.showModal) ?
-            window.showModal :
-            ({
-                title = 'Notice',
-                html = ''
-            } = {}) => alert((title ? title + ': ' : '') + html.replace(/<[^>]*>/g, ''));
+        // Modal proxy: tawagin ang showModal kapag ready na
+        function modal(opts = {}) {
+            if (window.showModal) return window.showModal(opts);
+            // hintayin next tick (defined later sa page)
+            setTimeout(() => window.showModal && window.showModal(opts), 0);
+        }
+
         // Auto-focus next input
         const inputs = document.querySelectorAll('.code-input');
         inputs.forEach((input, index) => {
@@ -221,11 +222,16 @@ require_once __DIR__ . '/../backend/config/database.php';
                 if (window.showModal) {
                     modal({
                         title: 'Verified!',
-                        html: 'Email verified successfully. Redirecting to sign in…'
+                        html: 'Email verified successfully. Redirecting to sign in…',
+                        type: 'success',
+                        actions: [{
+                            label: 'OK',
+                            cls: 'rt-btn rt-btn--primary',
+                            onClick: () => location.href = loginUrl
+                        }]
                     });
-                    setTimeout(() => {
-                        location.href = loginUrl;
-                    }, 800);
+                    setTimeout(() => location.href = loginUrl, 1200);
+
                 } else {
                     location.href = loginUrl;
                 }
@@ -306,16 +312,6 @@ require_once __DIR__ . '/../backend/config/database.php';
     </div>
 
     <style>
-        .app-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999
-        }
-
         .app-modal__dialog {
             width: min(520px, 92vw);
             background: #fff;
@@ -369,47 +365,62 @@ require_once __DIR__ . '/../backend/config/database.php';
     <script>
         (function() {
             const el = document.getElementById('appModal');
+            const box = document.getElementById('appModalDialog');
             const ttl = document.getElementById('appModalTitle');
             const body = document.getElementById('appModalBody');
             const ftr = document.getElementById('appModalFooter');
 
+            function clearVariant() {
+                box.classList.remove('rt-modal--success', 'rt-modal--error', 'rt-modal--warn', 'rt-modal--info');
+            }
+
             function close() {
-                el.style.display = 'none';
-                ftr.innerHTML = '<button type="button" class="btn" data-appmodal-close>OK</button>';
+                el.classList.remove('open');
+                ftr.innerHTML = '<button type="button" class="rt-btn rt-btn--primary" data-appmodal-close>OK</button>';
+                clearVariant();
             }
 
             function open() {
-                el.style.display = 'flex';
+                el.classList.add('open');
             }
 
+            // close on [x], OK, or backdrop click
             document.addEventListener('click', (e) => {
-                if (e.target.matches('[data-appmodal-close]') || e.target === el) close();
+                if (e.target.matches('[data-appmodal-close]')) return close();
+                if (e.target.classList?.contains('rt-modal') && !e.target.closest('.rt-modal__box')) return close();
             });
 
-            // Global API for all pages
+            // Global API (type supports: success | error | warn | info)
             window.showModal = function({
                 title = 'Notice',
                 html = '',
-                actions
+                actions,
+                type = 'info'
             } = {}) {
+                clearVariant();
+                box.classList.add(`rt-modal--${['success','error','warn','info'].includes(type) ? type : 'info'}`);
                 ttl.textContent = title;
                 body.innerHTML = html;
                 ftr.innerHTML = '';
+
                 (actions && actions.length ? actions : [{
                     label: 'OK',
-                    cls: 'btn',
+                    cls: 'rt-btn rt-btn--primary',
                     onClick: close
-                }]).forEach(a => {
+                }])
+                .forEach(a => {
                     const b = document.createElement('button');
-                    b.className = a.cls || 'btn';
+                    b.className = a.cls || 'rt-btn';
                     b.textContent = a.label || 'OK';
                     b.addEventListener('click', () => (a.onClick ? a.onClick() : close()));
                     ftr.appendChild(b);
                 });
+
                 open();
             };
         })();
     </script>
+
 
 </body>
 

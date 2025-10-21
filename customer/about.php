@@ -52,10 +52,8 @@ if ($img) {
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
     <div class="page-wrapper">
-
         <!-- HEADER -->
         <header class="navbar">
             <div class="navbar-container">
@@ -107,10 +105,6 @@ if ($img) {
                                 <span class="material-symbols-rounded">receipt_long</span>
                                 <span>My Orders</span>
                             </a>
-                            <a href="/RADS-TOOLING/customer/customizations.php" class="dropdown-item">
-                                <span class="material-symbols-rounded">palette</span>
-                                <span>My Designs</span>
-                            </a>
                             <div class="dropdown-divider"></div>
                             <button onclick="showLogoutModal()" class="dropdown-item dropdown-logout" type="button">
                                 <span class="material-symbols-rounded">logout</span>
@@ -120,7 +114,7 @@ if ($img) {
                     </div>
 
                     <!-- Cart -->
-                    <a href="/RADS-TOOLING/cart.php" class="cart-button">
+                    <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>
                     </a>

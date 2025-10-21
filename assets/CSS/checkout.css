@@ -29,9 +29,9 @@ a{color:inherit;text-decoration:none}
 }
 .rt-btn:hover{border-color:#cbd5e1;transform:translateY(-1px)}
 .rt-btn:active{transform:translateY(0)}
-.rt-btn-dark,.rt-btn.main{background:var(--dark);color:#fff;border-color:var(--dark)}
+.rt-btn-dark,.rt-btn.main{background:#2f5b88;color:#fff;border-color:var(--dark)}
 .rt-btn-dark:hover,.rt-btn.main:hover{background:#1f2937}
-.rt-btn-outline,.rt-btn.ghost{background:#fff;color:var(--dark)}
+.rt-btn-outline,.rt-btn.ghost{background:#fff;color:#1e3a8a}
 
 .rt-input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px}
 .rt-input:focus,select:focus{outline:none;border-color:#cbd5e1;box-shadow:0 0 0 3px rgba(59,130,246,.1)}

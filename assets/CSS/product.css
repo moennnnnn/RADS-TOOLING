@@ -66,7 +66,6 @@
 
 /* ================== CARD ================== */
 .rt-card{
-  border:1px solid var(--line);
   border-radius:14px; overflow:hidden; background:var(--card);
   box-shadow:var(--shadow);
   display:flex; flex-direction:column;
@@ -349,4 +348,38 @@
   height:38px;
   padding:0 16px;
   border-radius:999px;
+}
+
+/* Add to Cart Button */
+.btn-add-cart {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f3f4f6;
+    color: #2f5b88;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.btn-add-cart:hover {
+    background: #e5e7eb;
+    transform: translateY(-2px);
+}
+
+.btn-add-cart .material-symbols-rounded {
+    font-size: 20px;
+}
+
+/* Make sure rt-cta has flex layout */
+.rt-cta {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
 }

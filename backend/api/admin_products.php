@@ -250,6 +250,94 @@ function viewProduct(PDO $conn): void
         $product['colors'] = $colors;
         $product['handles'] = $handles;
 
+        $sizeConfs = [];
+        foreach ($sizeConfig as $rowSC) {
+            $sizeConfs[] = [
+                'dimension'       => $rowSC['dimension_type'],               // 'width' | 'height' | 'depth'
+                'min'             => (float)($rowSC['min_value'] ?? 0),
+                'max'             => (float)($rowSC['max_value'] ?? 0),
+                'default'         => (float)($rowSC['default_value'] ?? 0),
+                'step'            => (float)($rowSC['step_value'] ?? 1),
+                'price_per_unit'  => (float)($rowSC['price_per_unit'] ?? 0), // ₱ per cm (internal base unit)
+                'unit'            => $rowSC['measurement_unit'] ?? 'cm'
+            ];
+        }
+
+        // 2) allowed options – naka-assign lang sa product na ’to (already joined/filtered sa queries mo)
+        //    Map to clean, front-end friendly fields
+        $allowed = [
+            'door'   => ['textures' => [], 'colors' => []],
+            'body'   => ['textures' => [], 'colors' => []],
+            'inside' => ['textures' => [], 'colors' => []],
+            'handle' => ['handles'  => []],
+        ];
+
+        // NOTE: Walang part column sa textures/colors/handles join mo,
+        // so ilalagay muna natin sila sa generic buckets (puwede mong hatiin per part kung may mapping ka).
+        $TEXTURE_DIR = '/RADS-TOOLING/uploads/textures/';
+        foreach ($textures as $t) {
+            $allowed['door']['textures'][]   = ['id' => (int)$t['texture_id'], 'name' => $t['texture_name'], 'file' => $t['texture_image']];
+            $allowed['body']['textures'][]   = ['id' => (int)$t['texture_id'], 'name' => $t['texture_name'], 'file' => $t['texture_image']];
+            $allowed['inside']['textures'][] = ['id' => (int)$t['texture_id'], 'name' => $t['texture_name'], 'file' => $t['texture_image']];
+        }
+
+        foreach ($colors as $c) {
+            $allowed['door']['colors'][]   = ['id' => (int)$c['color_id'], 'name' => $c['color_name'], 'hex' => $c['hex_value']];
+            $allowed['body']['colors'][]   = ['id' => (int)$c['color_id'], 'name' => $c['color_name'], 'hex' => $c['hex_value']];
+            $allowed['inside']['colors'][] = ['id' => (int)$c['color_id'], 'name' => $c['color_name'], 'hex' => $c['hex_value']];
+        }
+
+        $HANDLE_DIR = '/RADS-TOOLING/uploads/handles/';
+        foreach ($handles as $h) {
+            $allowed['handle']['handles'][] = [
+                'id'      => (int)$h['handle_id'],
+                'name'    => $h['handle_name'],
+                'preview' => $h['handle_image'] // front-end will prefix with HANDLE_DIR
+            ];
+        }
+
+        // 3) pricing maps
+        //    - base_price: direktang galing sa products.price (string ok; ipa-parse ng frontend)
+        //    - per_cm: bubuuin natin from size_confs price_per_unit per dimension
+        //    - surcharges: puwedeng gamitin yung base_price columns ng textures/colors/handles as add-ons
+        $basePrice = $product['price'] ?? 0;
+
+        // Derive per_cm (₱ per cm) mula sa size_config
+        $perCm = ['w' => 0, 'h' => 0, 'd' => 0];
+        foreach ($sizeConfs as $sc) {
+            $rate = (float)$sc['price_per_unit'];
+            if ($sc['dimension'] === 'width')  $perCm['w'] = $rate;
+            if ($sc['dimension'] === 'height') $perCm['h'] = $rate;
+            if ($sc['dimension'] === 'depth')  $perCm['d'] = $rate;
+        }
+
+        // Build surcharge maps (by ID). If gusto mo 0 muna, ok din.
+        $textureMap = [];
+        foreach ($textures as $t) {
+            $textureMap[(string)$t['texture_id']] = (float)($t['texture_base_price'] ?? 0);
+        }
+        $colorMap = [];
+        foreach ($colors as $c) {
+            $colorMap[(string)$c['color_id']] = (float)($c['color_base_price'] ?? 0);
+        }
+        $handleMap = [];
+        foreach ($handles as $h) {
+            $handleMap[(string)$h['handle_id']] = (float)($h['handle_base_price'] ?? 0);
+        }
+
+        $pricing = [
+            'base_price' => $basePrice,
+            'per_cm'     => $perCm,
+            'textures'   => $textureMap,
+            'colors'     => $colorMap,
+            'handles'    => $handleMap,
+        ];
+
+        // Attach normalized fields para ready si frontend
+        $product['size_confs'] = $sizeConfs;
+        $product['allowed']    = $allowed;
+        $product['pricing']    = $pricing;
+
         sendJSON(true, 'Product details retrieved successfully', $product);
     } catch (Throwable $e) {
         error_log("View product error: " . $e->getMessage());

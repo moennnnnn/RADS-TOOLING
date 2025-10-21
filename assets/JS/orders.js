@@ -187,7 +187,7 @@ function generateOrderCard(order) {
             </button>
         ` : ''}
         ${hasUnpaid ? `
-            <button class="btn-pay-balance" onclick="openSplitPayment(${order.id})">
+            <button class="btn-pay-balance" onclick="openFlexiblePayment(${order.id}, 'partial')">
                 <span class="material-symbols-rounded">payments</span>
                 Pay Balance
             </button>
@@ -199,7 +199,7 @@ function generateOrderCard(order) {
             </button>
         ` : ''}
         ${(order.payment_status === 'Partially Paid') ? `
-            <button class="btn-pay-balance" onclick="openSplitPayment(${order.id})">
+           <button class="btn-pay-balance" onclick="openFlexiblePayment(${order.id}, 'remaining')">
                 <span class="material-symbols-rounded">payments</span>
                 Pay Remaining
             </button>
@@ -885,6 +885,121 @@ async function openSplitPayment(orderId) {
         `;
     }
 }
+
+async function openFlexiblePayment(orderId, mode = 'partial') {
+    const modal = document.getElementById('splitPaymentModal');
+    const content = document.getElementById('splitPaymentContent');
+
+    modal.classList.add('active');
+    content.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading payment information...</p>
+    </div>
+  `;
+
+    try {
+        const resp = await fetch(`/RADS-TOOLING/backend/api/customer_orders.php?action=details&id=${orderId}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!resp.ok) throw new Error('Failed to fetch order details');
+        const json = await resp.json();
+        if (!json.success) throw new Error(json.message || 'Failed to load');
+
+        const { order } = json.data;
+        const remaining = parseFloat(order.remaining_amount ?? order.total_amount ?? 0);
+        if (!(remaining > 0)) throw new Error('No remaining balance.');
+
+        const minPartial = Math.round(remaining * 0.30 * 100) / 100;
+        content.innerHTML = generateFlexiblePaymentForm(order, { mode, remaining, minPartial });
+
+    } catch (err) {
+        console.error(err);
+        content.innerHTML = `
+      <div class="empty-state">
+        <span class="material-symbols-rounded" style="color:#dc3545;">error</span>
+        <h3>Error</h3>
+        <p>${escapeHtml(err.message)}</p>
+        <button class="btn-view-details" onclick="closeSplitPaymentModal()" style="margin-top:1rem;">Close</button>
+      </div>
+    `;
+    }
+}
+
+function generateFlexiblePaymentForm(order, cfg) {
+    const { mode, remaining, minPartial } = cfg;
+    const isRemaining = (mode === 'remaining');
+    const min = isRemaining ? remaining : minPartial;
+    const defaultVal = isRemaining ? remaining : min;
+
+    return `
+  <div style="display:grid;gap:2rem;">
+    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:2rem;border-radius:12px;">
+      <h3 style="margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;">
+        <span class="material-symbols-rounded">receipt</span>
+        ${isRemaining ? 'Pay Remaining Balance' : 'Make a Payment'}
+      </h3>
+      <p><strong>Order Code:</strong> ${escapeHtml(order.order_code)}</p>
+      <p><strong>Remaining Balance:</strong> ₱${remaining.toLocaleString()}</p>
+      ${!isRemaining ? `<p><strong>Minimum (30%):</strong> ₱${minPartial.toLocaleString()}</p>` : ''}
+    </div>
+
+    <form id="flexPayForm" onsubmit="submitFlexiblePayment(event, ${order.id})">
+      <input type="hidden" id="flexMode" value="${isRemaining ? 'remaining' : 'partial'}">
+      <div style="display:grid;gap:1.5rem;">
+        <div><label>Account Name *</label><input type="text" id="fpAccountName" required style="width:100%;padding:.75rem;border:2px solid #dee2e6;border-radius:8px;"></div>
+        <div><label>Account/Mobile Number (Optional)</label><input type="text" id="fpAccountNumber" style="width:100%;padding:.75rem;border:2px solid #dee2e6;border-radius:8px;"></div>
+        <div><label>Reference/Transaction Number *</label><input type="text" id="fpReference" required style="width:100%;padding:.75rem;border:2px solid #dee2e6;border-radius:8px;"></div>
+        <div><label>Amount to Pay *</label><input type="number" id="fpAmount" required step="0.01" min="${min}" max="${remaining}" value="${defaultVal}" style="width:100%;padding:.75rem;border:2px solid #dee2e6;border-radius:8px;font-weight:600;"></div>
+        <div><label>Payment Screenshot *</label><input type="file" id="fpScreenshot" required accept="image/*" style="width:100%;padding:.75rem;border:2px dashed #dee2e6;border-radius:8px;"></div>
+        <button type="submit" class="btn-pay-balance" style="width:100%;justify-content:center;padding:1rem;font-size:1.1rem;"><span class="material-symbols-rounded">send</span> Submit Payment</button>
+      </div>
+    </form>
+  </div>`;
+}
+
+async function submitFlexiblePayment(event, orderId) {
+    event.preventDefault();
+    const form = event.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Processing...`;
+
+    try {
+        const fd = new FormData();
+        fd.append('order_id', orderId);
+        fd.append('account_name', document.getElementById('fpAccountName').value);
+        fd.append('account_number', document.getElementById('fpAccountNumber').value || '');
+        fd.append('reference_number', document.getElementById('fpReference').value);
+        fd.append('amount_paid', document.getElementById('fpAmount').value);
+        const shot = document.getElementById('fpScreenshot').files[0];
+        if (shot) fd.append('screenshot', shot);
+
+        const res = await fetch('/RADS-TOOLING/backend/api/payment_submit.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: fd
+        });
+
+        const raw = await res.text();
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
+        const json = JSON.parse(raw);
+        if (!json.success) throw new Error(json.message || 'Failed to submit payment');
+
+        showNotification('Payment submitted! Please wait for admin verification.', 'success');
+        closeSplitPaymentModal();
+        setTimeout(() => loadCustomerOrders(currentFilter), 1000);
+
+    } catch (err) {
+        console.error(err);
+        showNotification('Failed to submit payment: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+}
+
 
 // ==========================================
 // GENERATE SPLIT PAYMENT FORM
