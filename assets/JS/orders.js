@@ -190,19 +190,6 @@ function generateOrderCard(order) {
             </button>
         ` : ''}
         ${hasUnpaid ? `
-<<<<<<< HEAD
-            <button class="btn-pay-balance" onclick="openFlexiblePayment(${order.id}, 'partial')">
-                <span class="material-symbols-rounded">payments</span>
-                Pay Balance
-            </button>
-        ` : ''}
-        ${canCompleteOrder(order) ? `
-            <button class="btn-pay-balance" onclick="openCompleteOrderModal(${order.id})" style="background: var(--success);">
-                <span class="material-symbols-rounded">check_circle</span>
-                Complete Order
-            </button>
-        ` : ''}
-=======
     <button class="btn-pay-balance" onclick="openSplitPayment(${order.id})">
         <span class="material-symbols-rounded">payments</span>
         Pay Balance
@@ -214,7 +201,6 @@ ${showReceivedBtn ? `
         Mark as Received
     </button>
 ` : ''}
->>>>>>> b0c1594 (24/10/2025 9:21AM)
         ${(order.payment_status === 'Partially Paid') ? `
            <button class="btn-pay-balance" onclick="openFlexiblePayment(${order.id}, 'remaining')">
                 <span class="material-symbols-rounded">payments</span>

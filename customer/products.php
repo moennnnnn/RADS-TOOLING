@@ -96,12 +96,6 @@ function rt_img_url($raw)
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
-<<<<<<< HEAD
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Boxicons for cart icon -->
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-=======
->>>>>>> b0c1594 (24/10/2025 9:21AM)
 </head>
 
 <body>
@@ -165,11 +159,7 @@ function rt_img_url($raw)
                         </div>
                     </div>
 
-<<<<<<< HEAD
-                    <!-- Cart - FIXED URL -->
-=======
                     <!-- Cart -->
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                     <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>
@@ -184,10 +174,6 @@ function rt_img_url($raw)
             </nav>
 
             <!-- Category Tabs -->
-<<<<<<< HEAD
-            <div class="nav-container"></div>
-=======
->>>>>>> b0c1594 (24/10/2025 9:21AM)
             <div class="navbar-cats-bar">
                 <div class="navbar-container navbar-container--cats">
                     <nav class="navbar-cats">
@@ -225,20 +211,12 @@ function rt_img_url($raw)
                         $img = rt_img_url($p['image'] ?? ($p['image_url'] ?? ''));
                         $type = $p['type'] ?? 'Cabinet';
                     ?>
-<<<<<<< HEAD
-                        <article class="rt-card" data-id="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>" data-price="<?= number_format($price, 2, '.', '') ?>">
-=======
                         <article class="rt-card">
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                             <div class="rt-imgwrap">
                                 <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($name) ?>" onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
 
                                 <?php if (!empty($p['is_customizable']) && (int)$p['is_customizable'] === 1): ?>
-<<<<<<< HEAD
-                                    <a class="rt-ico rt-left-ico" href="/RADS-TOOLING/customer/customization.php?pid=<?= $id ?>" onclick="event.stopPropagation()" title="Customize">
-=======
                                     <a class="rt-ico rt-left-ico" href="/RADS-TOOLING/customer/customization.php?pid=<?= $id ?>" title="Customize">
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                                         <span class="material-symbols-rounded">edit_square</span>
                                     </a>
                                 <?php endif; ?>
@@ -250,21 +228,11 @@ function rt_img_url($raw)
                                 <div class="rt-price">₱ <?= number_format($price, 2) ?></div>
 
                                 <div class="rt-cta">
-<<<<<<< HEAD
-                                    <!-- Add to Cart Button with ALL required data attributes -->
-                                    <button type="button" class="rt-btn ghost add-to-cart-btn" data-action="add-to-cart" data-pid="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>" data-type="<?= htmlspecialchars($type) ?>" data-price="<?= $price ?>" data-image="<?= htmlspecialchars($img) ?>">
-                                        <i class="bx bx-cart-add" style="margin-right:6px"></i>
-                                        <span>Add to Cart</span>
-                                    </button>
-
-                                    <!-- Buy Now Button -->
-=======
                                     <button class="btn-add-cart" data-action="add-to-cart" data-pid="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>" data-type="<?= htmlspecialchars($type) ?>" data-price="<?= $price ?>" data-image="<?= htmlspecialchars($img) ?>">
                                         <span class="material-symbols-rounded">shopping_cart</span>
                                         Add to Cart
                                     </button>
 
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                                     <button type="button" class="rt-btn main js-buynow" data-pid="<?= $id ?>">
                                         Buy Now
                                     </button>
@@ -281,22 +249,7 @@ function rt_img_url($raw)
             <div class="footer-content">
                 <div class="footer-section">
                     <h3>About RADS TOOLING</h3>
-<<<<<<< HEAD
-                    <p class="footer-description">Premium custom cabinet manufacturer serving clients since 2007. Quality craftsmanship, affordable prices, and exceptional service.</p>
-                    <div class="footer-social">
-                        <a href="#" class="social-icon" aria-label="Facebook">
-                            <span class="material-symbols-rounded">facebook</span>
-                        </a>
-                        <a href="#" class="social-icon" aria-label="Instagram">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                        </a>
-                        <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
-                            <span class="material-symbols-rounded">mail</span>
-                        </a>
-                    </div>
-=======
                     <p class="footer-description">Premium custom cabinet manufacturer serving clients since 2007.</p>
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                 </div>
 
                 <div class="footer-section">
@@ -309,50 +262,16 @@ function rt_img_url($raw)
                 </div>
 
                 <div class="footer-section">
-<<<<<<< HEAD
-                    <h3>Categories</h3>
-                    <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
-                    </ul>
-                </div>
-
-                <div class="footer-section">
-                    <h3>Contact Info</h3>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">location_on</span>
-                        <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
-                    </div>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">mail</span>
-                        <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
-                    </div>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">schedule</span>
-                        <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
-                    </div>
-=======
                     <h3>Contact Info</h3>
                     <div class="contact-info-item">
                         <span class="material-symbols-rounded">mail</span>
                         <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
                     </div>
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                 </div>
             </div>
 
             <div class="footer-bottom">
                 <p class="footer-copyright">© 2025 RADS TOOLING INC. All rights reserved.</p>
-<<<<<<< HEAD
-                <div class="footer-legal">
-                    <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
-                    <a href="/RADS-TOOLING/customer/terms.php">Terms & Conditions</a>
-                </div>
-=======
->>>>>>> b0c1594 (24/10/2025 9:21AM)
             </div>
         </footer>
     </div>
@@ -362,11 +281,7 @@ function rt_img_url($raw)
         <div class="rt-modal__dialog rt-card">
             <div class="rt-header">
                 <h3>How do you want to get your order?</h3>
-<<<<<<< HEAD
-                <button type="button" class="rt-close" id="closeChoiceModal" aria-label="Close">×</button>
-=======
                 <button type="button" class="rt-close" id="closeChoiceModal">×</button>
->>>>>>> b0c1594 (24/10/2025 9:21AM)
             </div>
 
             <div class="rt-body">
@@ -419,11 +334,7 @@ function rt_img_url($raw)
     <div id="rtChatPopup" class="rt-chat-popup">
         <div class="rt-chat-header">
             <span>Rads Tooling - Chat Support</span>
-<<<<<<< HEAD
-            <button id="rtClearChat" class="rt-clear-btn" type="button" title="Clear chat">
-=======
             <button id="rtClearChat" class="rt-clear-btn" type="button">
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                 <span class="material-symbols-rounded">delete</span>
             </button>
         </div>
@@ -453,15 +364,9 @@ function rt_img_url($raw)
             let selectedPID = null;
             let selectedMode = null;
 
-<<<<<<< HEAD
-            // Initialize on page load
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('Products page loaded');
-=======
             // Initialize everything on page load
             document.addEventListener('DOMContentLoaded', function() {
                 console.log('Page loaded');
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                 initBuyNowModal();
                 initAddToCart();
                 initProfileDropdown();
@@ -481,11 +386,7 @@ function rt_img_url($raw)
                     return;
                 }
 
-<<<<<<< HEAD
-                console.log('Buy Now modal initialized');
-=======
                 console.log('Modal initialized');
->>>>>>> b0c1594 (24/10/2025 9:21AM)
 
                 // Buy Now button clicks
                 document.addEventListener('click', function(e) {
@@ -515,11 +416,7 @@ function rt_img_url($raw)
                     selectedMode = null;
                 });
 
-<<<<<<< HEAD
-                // Delivery choice
-=======
                 // Delivery
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                 deliveryBtn.addEventListener('click', function() {
                     selectedMode = 'delivery';
                     deliveryBtn.classList.add('is-active');
@@ -527,11 +424,7 @@ function rt_img_url($raw)
                     okBtn.disabled = false;
                 });
 
-<<<<<<< HEAD
-                // Pickup choice
-=======
                 // Pickup
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                 pickupBtn.addEventListener('click', function() {
                     selectedMode = 'pickup';
                     pickupBtn.classList.add('is-active');
