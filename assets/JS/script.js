@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initializeAccountManagement();
             initializeOrderManagement();
             initializeCustomerManagement();
+            initializeFeedbackManagement(); // ADD THIS LINE
             setupFloatingPwToggle();
             setupLogout();
         })
@@ -1014,8 +1015,10 @@ function displayOrders(orders) {
             <td>${escapeHtml(order.customer_name || 'Unknown')}</td>
             <td>${formatDate(order.order_date)}</td>
             <td>₱${parseFloat(order.total_amount || 0).toLocaleString()}</td>
-            <td><span class="badge badge-${getPaymentBadgeClass(order.payment_status)}">${order.payment_status || 'Unknown'}</span></td>
-            <td><span class="badge badge-${getStatusBadgeClass(order.status)}">${order.status || 'Unknown'}</span></td>
+            <td><span class="badge badge-${getPaymentBadgeClass(order.payment_status)}">${order.payment_status || 'With Balance'}</span></td>
+<td><span class="badge badge-${getStatusBadgeClass(order.status)}">${order.status || 'Pending'}</span></td>
+<td>${formatDate(order.order_date)}</td>
+
             <td>
                 <button class="btn-action btn-view" onclick="viewAdminOrderDetails(${order.id})" title="View Details">
                     <span class="material-symbols-rounded">visibility</span>
@@ -1031,14 +1034,16 @@ function displayOrders(orders) {
 }
 
 function getStatusBadgeClass(status) {
-    switch (status?.toLowerCase()) {
-        case 'pending': return 'pending';
-        case 'processing': return 'processing';
-        case 'completed': return 'completed';
-        case 'cancelled': return 'cancelled';
-        default: return 'pending';
-    }
+  const s = (status || '').toLowerCase();
+  switch (s) {
+    case 'pending': return 'pending';
+    case 'processing': return 'processing';
+    case 'completed': return 'completed';
+    case 'cancelled': return 'cancelled';
+    default: return 'pending'; // unknown/null -> pending
+  }
 }
+
 
 function getPaymentBadgeClass(paymentStatus) {
     switch (paymentStatus?.toLowerCase()) {
@@ -1051,11 +1056,17 @@ function getPaymentBadgeClass(paymentStatus) {
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     try {
-        return new Date(dateString).toLocaleDateString();
+        const d = new Date(dateString);
+        const date = d.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+        // 12-hr with AM/PM
+        const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+        return `${date} ${time}`;
     } catch (e) {
-        return dateString;
+        return dateString || 'N/A';
     }
 }
+
+
 // /assets/JS/checkout.js
 document.addEventListener('DOMContentLoaded', function () {
     const proceedBtn = document.getElementById('proceedToPayBtn') || document.querySelector('.btn-proceed');
@@ -1233,7 +1244,7 @@ async function loadRecentOrders() {
                         <td>${escapeHtml(order.order_code)}</td>
                         <td>${escapeHtml(order.customer_name)}</td>
                         <td>${formatDate(order.order_date)}</td>
-                        <td><span class="badge badge-${getStatusBadgeClass(order.status)}">${order.status}</span></td>
+                        <td><span class="badge badge-${getStatusBadgeClass(order.status)}">${order.status || 'Pending'}</span></td>
                         <td>₱${parseFloat(order.total_amount || 0).toLocaleString()}</td>
                     </tr>
                 `).join('') : '<tr><td colspan="5" style="text-align:center;">No recent orders</td></tr>';
@@ -1502,7 +1513,8 @@ function initializeNavigation() {
             if (targetSection === 'account') loadUsers();
             else if (targetSection === 'customer') loadCustomers();
             else if (targetSection === 'orders') loadOrders();
-            else if (targetSection === 'payment') loadPaymentVerifications(); // ✅ Add this
+            else if (targetSection === 'payment') loadPaymentVerifications();
+            else if (targetSection === 'feedback') loadFeedback(); // ✅ ADD THIS LINE
             else if (targetSection === 'dashboard') {
                 updateDashboardStats();
                 loadRecentOrders();
@@ -1917,7 +1929,155 @@ if (document.querySelector('.nav-item[data-section="chat"]')) {
     setInterval(checkUnreadMessages, 10000);
     checkUnreadMessages(); // Initial check
 }
+// ============================================================================
+// FEEDBACK MANAGEMENT
+// ============================================================================
 
+function initializeFeedbackManagement() {
+    const feedbackNavItem = document.querySelector('[data-section="feedback"]');
+    if (feedbackNavItem) {
+        feedbackNavItem.addEventListener('click', function () {
+            setTimeout(() => loadFeedback(), 100);
+        });
+    }
+
+    const currentSection = document.querySelector('.nav-item.active');
+    if (currentSection && currentSection.dataset.section === 'feedback') {
+        loadFeedback();
+    }
+}
+
+async function loadFeedback() {
+    const tbody = document.getElementById('feedbackTableBody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch('/RADS-TOOLING/backend/api/feedback/admin_list.php', {
+  credentials: 'same-origin',
+  headers: { 'Accept': 'application/json' }
+});
+
+        if (!response.ok) {
+            throw new Error('Failed to load feedback');
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to load feedback');
+        }
+
+        displayFeedback(result.data || []);
+
+    } catch (error) {
+        console.error('Error loading feedback:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">Error loading feedback</td></tr>';
+    }
+}
+
+function displayFeedback(feedbackList) {
+    const tbody = document.getElementById('feedbackTableBody');
+    if (!tbody) return;
+
+    if (!feedbackList || feedbackList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666;">No feedback found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = feedbackList.map(feedback => {
+        const stars = '★'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating);
+        const statusBadge = feedback.is_released
+            ? '<span class="badge badge-completed">Released</span>'
+            : '<span class="badge badge-pending">Pending</span>';
+
+        return `
+            <tr data-feedback-id="${feedback.id}">
+                <td>${feedback.id}</td>
+                <td>${escapeHtml(feedback.customer_name)}</td>
+                <td style="color: #fbbf24; font-size: 1.2rem;">${stars}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(feedback.comment || 'No comment')}">${escapeHtml(feedback.comment || 'No comment')}</td>
+                <td>${escapeHtml(feedback.order_code)}</td>
+                <td>${formatDate(feedback.created_at)}</td>
+                <td>
+                    ${feedback.is_released ? `
+                        <button class="btn-action btn-delete" onclick="hideFeedback(${feedback.id})" title="Hide from Public">
+                            <span class="material-symbols-rounded">visibility_off</span>
+                        </button>
+                    ` : `
+                        <button class="btn-action btn-view" onclick="releaseFeedback(${feedback.id})" title="Release to Public">
+                            <span class="material-symbols-rounded">publish</span>
+                        </button>
+                    `}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function releaseFeedback(feedbackId) {
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/release_feedback.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'release',
+                feedback_id: feedbackId
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('Feedback released to public testimonials!', 'success');
+            loadFeedback();
+        } else {
+            showNotification(result.message || 'Failed to release feedback', 'error');
+        }
+    } catch (error) {
+        console.error('Error releasing feedback:', error);
+        showNotification('Failed to release feedback', 'error');
+    }
+}
+
+async function hideFeedback(feedbackId) {
+    showConfirm({
+        title: 'Hide Feedback',
+        message: 'Remove this feedback from public testimonials?',
+        okText: 'Hide',
+        onConfirm: async () => {
+            try {
+                const response = await fetch('/RADS-TOOLING/backend/api/release_feedback.php', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'hide',
+                        feedback_id: feedbackId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Feedback hidden from public', 'success');
+                    loadFeedback();
+                } else {
+                    showNotification(result.message || 'Failed to hide feedback', 'error');
+                }
+            } catch (error) {
+                console.error('Error hiding feedback:', error);
+                showNotification('Failed to hide feedback', 'error');
+            }
+        }
+    });
+}
 console.log('Enhanced Admin Dashboard Script Loaded Successfully!');
 
 // ============================================================================
@@ -1940,13 +2100,13 @@ function initializePaymentVerification() {
 
 async function loadPaymentVerifications() {
     const tbody = document.getElementById('paymentsTableBody');
-    
+
     // If element doesn't exist, don't try to load
     if (!tbody) {
         console.log('Payment table not found - skipping payment verification load');
         return;
     }
-    
+
     try {
         const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=list', {
             credentials: 'same-origin',

@@ -231,6 +231,141 @@ $customerId = $_SESSION['user']['id'] ?? 0;
         </div>
     </div>
 
+    <!-- ==========================================
+         FEEDBACK MODAL (NEW)
+         ========================================== -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-overlay" data-close></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>
+                    <span class="material-symbols-rounded">rate_review</span>
+                    Rate your order
+                </h2>
+                <button class="modal-close" data-close>
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div id="fbStars" style="display:flex;gap:6px;margin-bottom:10px;">
+                    <button type="button" data-star="1" class="fb-star">★</button>
+                    <button type="button" data-star="2" class="fb-star">★</button>
+                    <button type="button" data-star="3" class="fb-star">★</button>
+                    <button type="button" data-star="4" class="fb-star">★</button>
+                    <button type="button" data-star="5" class="fb-star">★</button>
+                </div>
+                <textarea id="fbComment" rows="4" placeholder="Tell us about the cabinet (optional)" style="width:100%;"></textarea>
+            </div>
+
+            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-secondary" data-close>Cancel</button>
+                <button id="fbSubmit" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
+    </div>
+    <style>
+        /* Minimal star styling (scoped to this modal) */
+        #feedbackModal .fb-star{font-size:24px;background:transparent;border:0;opacity:.5;cursor:pointer;line-height:1}
+        #feedbackModal .fb-star.is-on{opacity:1}
+    </style>
+
+    <!-- FEEDBACK JS HANDLERS (NEW; minimal + compatible) -->
+    <script>
+    (function(){
+        let currentOrderId = null;
+        let currentRating = 0;
+
+        const modal = document.getElementById('feedbackModal');
+        const stars = Array.from(document.querySelectorAll('#fbStars [data-star]'));
+        const commentEl = document.getElementById('fbComment');
+        const submitBtn = document.getElementById('fbSubmit');
+
+        function openFeedbackModal(orderId){
+            currentOrderId = Number(orderId);
+            currentRating = 0;
+            if (commentEl) commentEl.value = '';
+            stars.forEach(s => s.classList.remove('is-on'));
+            modal?.classList.add('active'); // align with your existing modal behavior
+            document.body.style.overflow = 'hidden';
+        }
+        function closeFeedbackModal(){
+            modal?.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Expose for orders.js if it calls openFeedbackModal(...)
+        window.openFeedbackModal = openFeedbackModal;
+
+        // Close via overlay / close buttons
+        modal?.addEventListener('click', (e) => {
+            if (e.target.hasAttribute('data-close') || e.target.closest('[data-close]')) {
+                closeFeedbackModal();
+            }
+        });
+
+        // Star clicks
+        stars.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentRating = Number(btn.dataset.star);
+                stars.forEach(s => s.classList.toggle('is-on', Number(s.dataset.star) <= currentRating));
+            });
+        });
+
+        // Delegate buttons rendered by orders.js (optional if you render data-act)
+        document.addEventListener('click', async (e) => {
+            const el = e.target.closest('[data-act]');
+            if (!el) return;
+            const act = el.dataset.act;
+            const oid = el.dataset.orderId;
+
+            if (act === 'open-feedback') {
+                openFeedbackModal(oid);
+            }
+            if (act === 'received') {
+                // If you want to mark as received first, uncomment:
+                // await fetch('/RADS-TOOLING/backend/api/mark_received.php', {
+                //   method:'POST', headers:{'Content-Type':'application/json'},
+                //   body: JSON.stringify({order_id: Number(oid)})
+                // });
+                openFeedbackModal(oid);
+            }
+        });
+
+        // Submit feedback
+        submitBtn?.addEventListener('click', async () => {
+            if (!currentOrderId || currentRating < 1) {
+                alert('Please select a star rating (1-5).');
+                return;
+            }
+            try{
+                const res = await fetch('/RADS-TOOLING/backend/api/feedback/create.php', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        order_id: currentOrderId,
+                        rating: currentRating,
+                        comment: commentEl?.value?.trim() || ''
+                    })
+                });
+                const data = await res.json().catch(()=>({}));
+                if (!res.ok || !data.success) {
+                    alert(data.message || 'Failed to submit feedback.');
+                    return;
+                }
+                closeFeedbackModal();
+                alert('Thanks! Your feedback is pending approval.');
+                // refresh list to reflect changes if needed
+                if (typeof loadCustomerOrders === 'function') {
+                    loadCustomerOrders(window.__ordersCurrentFilter || 'all');
+                }
+            }catch(err){
+                alert('Network error submitting feedback.');
+            }
+        });
+    })();
+    </script>
+
 </body>
 
 </html>

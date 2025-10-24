@@ -134,6 +134,7 @@ function generateOrderCard(order) {
                 </div>
             </div>
         `;
+        
     }
 
     // Show "Pay Balance" button if has unpaid installments
@@ -141,6 +142,8 @@ function generateOrderCard(order) {
         order.installments &&
         order.installments.some(i => i.status === 'PENDING' || i.status === 'UNPAID');
 
+    // === ADDED: compute once then use in template
+    const showReceivedBtn = canMarkAsReceived(order);
 
     return `
         <div class="order-card" data-order-id="${order.id}">
@@ -187,6 +190,7 @@ function generateOrderCard(order) {
             </button>
         ` : ''}
         ${hasUnpaid ? `
+<<<<<<< HEAD
             <button class="btn-pay-balance" onclick="openFlexiblePayment(${order.id}, 'partial')">
                 <span class="material-symbols-rounded">payments</span>
                 Pay Balance
@@ -198,6 +202,19 @@ function generateOrderCard(order) {
                 Complete Order
             </button>
         ` : ''}
+=======
+    <button class="btn-pay-balance" onclick="openSplitPayment(${order.id})">
+        <span class="material-symbols-rounded">payments</span>
+        Pay Balance
+    </button>
+` : ''}
+${showReceivedBtn ? `
+    <button class="btn-pay-balance" onclick="markOrderAsReceived(${order.id})" style="background: #28a745;">
+        <span class="material-symbols-rounded">done_all</span>
+        Mark as Received
+    </button>
+` : ''}
+>>>>>>> b0c1594 (24/10/2025 9:21AM)
         ${(order.payment_status === 'Partially Paid') ? `
            <button class="btn-pay-balance" onclick="openFlexiblePayment(${order.id}, 'remaining')">
                 <span class="material-symbols-rounded">payments</span>
@@ -217,16 +234,15 @@ function canCompleteOrder(order) {
     // Can complete if:
     // 1. Status is "Delivered" or "Ready for Pickup"
     // 2. Payment is fully paid
-    // 3. Not already completed
+    // 3. Not already received by customer
 
     const completableStatuses = ['delivered', 'ready for pickup'];
     const isCompletableStatus = completableStatuses.includes(order.status.toLowerCase());
     const isFullyPaid = order.payment_status === 'Fully Paid';
-    const notCompleted = order.status.toLowerCase() !== 'completed';
+    const notReceived = !order.received_by_customer; // Changed from notCompleted
 
-    return isCompletableStatus && isFullyPaid && notCompleted;
+    return isCompletableStatus && isFullyPaid && notReceived;
 }
-
 // ==========================================
 // OPEN COMPLETE ORDER MODAL
 // ==========================================
@@ -301,7 +317,73 @@ function openCompleteOrderModal(orderId) {
 
     modal.classList.add('active');
 }
+// ==========================================
+// CHECK IF ORDER CAN BE MARKED AS RECEIVED
+// ==========================================
+function canMarkAsReceived(order) {
+  const status = (order.status || '').toLowerCase();
 
+  const receivableStatuses = new Set([
+    'delivered',
+    'ready for pickup',
+    'ready_for_pickup',
+    'for pickup',
+    'for_pickup',
+    'completed'
+  ]);
+
+  const isReceivableStatus = receivableStatuses.has(status);
+
+  // HUWAG na nating irequire ang fully paid para lumabas ang button
+  const notYetReceived =
+    !order.received_by_customer &&
+    !order.customer_received_at &&
+    !order.is_received;
+
+  return isReceivableStatus && notYetReceived;
+}
+
+
+// ==========================================
+// MARK ORDER AS RECEIVED (SINGLE BUTTON CLICK)
+// ==========================================
+async function markOrderAsReceived(orderId) {
+    const order = allOrders.find(o => o.id === orderId);
+    if (!order) return;
+
+    try {
+        // Show confirmation
+        if (!confirm('Mark this order as received? You will then be asked to provide feedback.')) {
+            return;
+        }
+
+        // Mark as received  (UPDATED ENDPOINT)
+        const response = await fetch('/RADS-TOOLING/backend/api/mark_received.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to mark order as received');
+        }
+
+        // Show feedback modal (trigger PHP listener via ghost-click)
+        showNotification('Order marked as received!', 'success');
+        openFeedbackModal(orderId);
+
+    } catch (error) {
+        console.error('Mark as received error:', error);
+        showNotification('Failed to mark order as received: ' + error.message, 'error');
+    }
+}
 // ==========================================
 // SUBMIT ORDER COMPLETION
 // ==========================================
@@ -319,47 +401,31 @@ async function submitOrderCompletion(event, orderId, completionType) {
     `;
 
     try {
-        const formData = new FormData();
-        formData.append('order_id', orderId);
-        formData.append('completion_type', completionType);
-
-        const photo = document.getElementById('completionPhoto').files[0];
-        if (photo) {
-            formData.append('photo', photo);
-        }
-
-        const notes = document.getElementById('completionNotes').value.trim();
-        if (notes) {
-            formData.append('notes', notes);
-        }
-
-        const response = await fetch('/RADS-TOOLING/backend/api/complete_order.php', {
+        // Step 1: Mark order as received  (UPDATED ENDPOINT)
+        const markResponse = await fetch('/RADS-TOOLING/backend/api/mark_received.php', {
             method: 'POST',
             credentials: 'same-origin',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId })
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        if (!markResponse.ok) {
+            throw new Error(`HTTP ${markResponse.status}`);
         }
 
-        const result = await response.json();
+        const markResult = await markResponse.json();
 
-        if (!result.success) {
-            throw new Error(result.message || 'Failed to complete order');
+        if (!markResult.success) {
+            throw new Error(markResult.message || 'Failed to mark order as received');
         }
 
-        showNotification('Order completed successfully! Thank you for your purchase.', 'success');
+        // Step 2: Show feedback modal
         closeCompleteOrderModal();
-
-        // Reload orders
-        setTimeout(() => {
-            loadCustomerOrders(currentFilter);
-        }, 1000);
+        openFeedbackModal(orderId);
 
     } catch (error) {
         console.error('Complete order error:', error);
-        showNotification('Failed to complete order: ' + error.message, 'error');
+        showNotification('Failed to mark order as received: ' + error.message, 'error');
 
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalHTML;
@@ -388,7 +454,138 @@ function filterOrders(status) {
     // Load orders
     loadCustomerOrders(status);
 }
+// ==========================================
+// FEEDBACK MODAL FUNCTIONS
+// ==========================================
 
+function openFeedbackModal(orderId) {
+    // NOTE:
+    // We now use the PHP page's global click delegation (added in orders.php)
+    // by ghost-clicking a temporary button with data-act="open-feedback".
+    // This guarantees we open the unified modal and set the internal orderId.
+    const ghost = document.createElement('button');
+    ghost.type = 'button';
+    ghost.style.display = 'none';
+    ghost.setAttribute('data-act', 'open-feedback');
+    ghost.setAttribute('data-order-id', String(orderId));
+    document.body.appendChild(ghost);
+    ghost.click();
+    ghost.remove();
+}
+
+// LEGACY: kept for now (no longer used because we rely on the PHP modal)
+function createFeedbackModal() {
+    const modalHTML = `
+        <div id="feedbackModal" class="modal">
+            <div class="modal-overlay" onclick="closeFeedbackModal()"></div>
+            <div class="modal-content modal-medium">
+                <div class="modal-header">
+                    <h2>
+                        <span class="material-symbols-rounded">feedback</span>
+                        Feedback
+                    </h2>
+                    <button class="modal-close" onclick="closeFeedbackModal">
+                        <span class="material-symbols-rounded">close</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="feedbackModalContent"></div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    return document.getElementById('feedbackModal');
+}
+
+function closeFeedbackModal() {
+    const modal = document.getElementById('feedbackModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.classList.remove('open'); // handle both classes
+    }
+}
+
+// LEGACY: star UI used by the old dynamic modal (kept just in case)
+function selectRating(rating) {
+    const input = document.getElementById('selectedRating');
+    if (input) input.value = rating;
+
+    document.querySelectorAll('.star-btn').forEach((star, index) => {
+        if (index < rating) {
+            star.classList.add('selected');
+        } else {
+            star.classList.remove('selected');
+        }
+    });
+}
+
+// LEGACY: old submit handler. We now submit via the PHP modal's JS.
+// Kept but pointed to new endpoint for compatibility if ever called.
+async function submitFeedback(event, orderId) {
+    event.preventDefault();
+
+    const ratingEl = document.getElementById('selectedRating');
+    const commentEl = document.getElementById('feedbackComment');
+    const rating = parseInt(ratingEl?.value || '0', 10);
+    const comment = (commentEl?.value || '').trim();
+
+    if (!rating) {
+        showNotification('Please select a rating', 'error');
+        return;
+    }
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalHTML = submitBtn?.innerHTML;
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `
+            <span class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></span>
+            Submitting...
+        `;
+    }
+
+    try {
+        // UPDATED ENDPOINT
+        const response = await fetch('/RADS-TOOLING/backend/api/feedback/create.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                order_id: orderId,
+                rating: rating,
+                comment: comment
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to submit feedback');
+        }
+
+        showNotification('Thank you for your feedback!', 'success');
+        closeFeedbackModal();
+
+        // Reload orders
+        setTimeout(() => {
+            loadCustomerOrders(currentFilter);
+        }, 1000);
+
+    } catch (error) {
+        console.error('Submit feedback error:', error);
+        showNotification('Failed to submit feedback: ' + error.message, 'error');
+
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHTML;
+        }
+    }
+}
 // ==========================================
 // SEARCH ORDERS
 // ==========================================
@@ -1334,3 +1531,32 @@ notificationStyles.textContent = `
     }
 `;
 document.head.appendChild(notificationStyles);
+
+// Add star rating styles dynamically
+const starStyles = document.createElement('style');
+starStyles.textContent = `
+    .star-rating {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 3rem;
+        margin: 1rem 0;
+    }
+    
+    .star-btn {
+        cursor: pointer;
+        color: #d1d5db;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    
+    .star-btn:hover,
+    .star-btn.selected {
+        color: #fbbf24;
+        transform: scale(1.1);
+    }
+    
+    .star-btn:active {
+        transform: scale(0.95);
+    }
+`;
+document.head.appendChild(starStyles);

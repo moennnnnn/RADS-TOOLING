@@ -1,11 +1,32 @@
 <?php
+if (!defined('DEBUG')) { define('DEBUG', false); }
+
 class Database
 {
+    // 🔹 NEW: singleton holder
+    private static $instance = null;
+
     private $host = "localhost";
     private $database_name = "rads_tooling";
     private $username = "root";
     private $password = "";
     private $conn = null;
+
+    // 🔹 NEW: global accessor (works alongside "new Database()")
+    public static function getInstance()
+    {
+        if (self::$instance === null) {
+            self::$instance = new self(); // uses current class
+        }
+        return self::$instance;
+    }
+
+    // (optional) prevent cloning/unserialize of the singleton
+    private function __clone() {}
+    public function __wakeup()
+    {
+        throw new \Exception("Cannot unserialize singleton");
+    }
 
     public function getConnection()
     {
@@ -16,23 +37,20 @@ class Database
         try {
             $dsn = "mysql:host={$this->host};dbname={$this->database_name};charset=utf8mb4";
             $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                \PDO::ATTR_EMULATE_PREPARES => false,
             ];
 
-            $this->conn = new PDO($dsn, $this->username, $this->password, $options);
-
+            $this->conn = new \PDO($dsn, $this->username, $this->password, $options);
             return $this->conn;
-        } catch (PDOException $e) {
-            // Log the error (in production, log to file instead of displaying)
+        } catch (\PDOException $e) {
             error_log("Database connection error: " . $e->getMessage());
 
-            // Don't expose sensitive database info in production
-            if (defined('DEBUG')) {
-                throw new Exception("Database connection failed: " . $e->getMessage());
+            if (defined('DEBUG') && DEBUG) {
+                throw new \Exception("Database connection failed: " . $e->getMessage());
             } else {
-                throw new Exception("Database connection failed. Please try again later.");
+                throw new \Exception("Database connection failed. Please try again later.");
             }
         }
     }
@@ -41,9 +59,9 @@ class Database
     {
         try {
             $conn = $this->getConnection();
-            $stmt = $conn->query("SELECT 1");
+            $conn->query("SELECT 1");
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return false;
         }
     }

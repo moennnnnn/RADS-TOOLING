@@ -6,16 +6,16 @@ guard_require_staff();
 // Initialize user session data
 $isLoggedIn = false;
 $adminName = 'Admin';
-$userRole = 'Secretary'; // Default role
+$userRole  = 'Secretary'; // Default role
 
 if (isset($_SESSION['staff'])) {
     $isLoggedIn = true;
-    $adminName = $_SESSION['staff']['full_name'] ?? 'Admin';
-    $userRole = $_SESSION['staff']['role'] ?? 'Secretary';
+    $adminName  = $_SESSION['staff']['full_name'] ?? 'Admin';
+    $userRole   = $_SESSION['staff']['role'] ?? 'Secretary';
 } elseif (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
     $isLoggedIn = true;
-    $adminName = $_SESSION['admin_name'] ?? 'Admin';
-    $userRole = 'Owner'; // Legacy session defaults to Owner
+    $adminName  = $_SESSION['admin_name'] ?? 'Admin';
+    $userRole   = 'Owner'; // Legacy session defaults to Owner
 }
 
 // If not logged in, redirect to login

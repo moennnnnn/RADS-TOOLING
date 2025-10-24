@@ -116,7 +116,8 @@ if ($img) {
                     </div>
 
                     <!-- Cart -->
-                    <a href="/RADS-TOOLING/cart.php" class="cart-button">
+                    <!-- Dapat ganito -->
+                    <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>
                     </a>

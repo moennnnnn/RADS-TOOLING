@@ -284,29 +284,11 @@ body {
     font-size: 15px;
 }
 
-.badge {
-    display: inline-block;
-    border-radius: 8px;
-    padding: 2px 12px;
-    font-size: .9em;
-    color: #fff;
-}
-
-.badge-pending {
-    background: var(--yellow);
-}
-
-.badge-processing {
-    background: #2980b9;
-}
-
-.badge-completed {
-    background: var(--green);
-}
-
-.badge-cancelled {
-    background: var(--red);
-}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:600;font-size:.85rem;line-height:1;color:#fff}
+.badge-pending{background:#f7b731}
+.badge-processing{background:#3da0ff}
+.badge-completed{background:#3db36b}
+.badge-cancelled{background:#e14d4d}
 
 .badge-active {
     background: var(--green);

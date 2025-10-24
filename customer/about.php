@@ -114,6 +114,10 @@ if ($img) {
                     </div>
 
                     <!-- Cart -->
+<<<<<<< HEAD
+=======
+                    <!-- Dapat ganito -->
+>>>>>>> b0c1594 (24/10/2025 9:21AM)
                     <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>
@@ -253,28 +257,6 @@ if ($img) {
                 </button>
             </div>
         </div>
-
-        <!-- LOGOUT MODAL (Admin Style) -->
-        <div class="modal" id="logoutModal" style="display:none;">
-            <div class="modal-content modal-small">
-                <button class="modal-close" onclick="closeLogoutModal()" type="button">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="modal-icon-wrapper">
-                    <div class="modal-icon warning">
-                        <span class="material-symbols-rounded">logout</span>
-                    </div>
-                </div>
-                <h2 class="modal-title">Confirm Logout</h2>
-                <p class="modal-message">Are you sure you want to logout?</p>
-                <div class="modal-actions">
-                    <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
-                    <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
-                </div>
-            </div>
-        </div>
-        </main>
-
 
         <!-- FOOTER -->
         <footer class="footer">
@@ -543,6 +525,144 @@ if ($img) {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'
+            });
+        }
+    </script>
+    <script>
+        // Reusable confirm modal (blue header, ghost/cancel + main/ok)
+        function showConfirm(opts = {}) {
+            const {
+                title = 'Confirm',
+                    message = 'Are you sure?',
+                    okText = 'OK',
+                    cancelText = 'Cancel',
+                    onConfirm = null,
+                    onCancel = null,
+                    id = 'confirmModal'
+            } = opts;
+
+            // Create modal if not exists
+            let modal = document.getElementById(id);
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = id;
+                modal.className = 'rt-modal';
+                modal.innerHTML = `
+      <div class="rt-modal__dialog rt-card">
+        <div class="rt-header">
+          <h3 id="${id}-title"></h3>
+          <button type="button" class="rt-close" aria-label="Close" data-close="#${id}">×</button>
+        </div>
+        <div class="rt-body">
+          <p class="rt-sub" id="${id}-msg"></p>
+          <div class="rt-actions">
+            <button class="rt-btn ghost" data-cancel>Cancel</button>
+            <button class="rt-btn main" data-ok>OK</button>
+          </div>
+        </div>
+      </div>`;
+                modal.setAttribute('hidden', '');
+                document.body.appendChild(modal);
+            }
+
+            // Fill content
+            modal.querySelector(`#${id}-title`).textContent = title;
+            modal.querySelector(`#${id}-msg`).textContent = message;
+            modal.querySelector('[data-ok]').textContent = okText;
+            modal.querySelector('[data-cancel]').textContent = cancelText;
+
+            // Helpers
+            const open = () => {
+                modal.removeAttribute('hidden');
+                document.body.style.overflow = 'hidden';
+            };
+            const close = () => {
+                modal.setAttribute('hidden', '');
+                // unlock scroll if no other open modals
+                if (!document.querySelector('.rt-modal:not([hidden])')) document.body.style.overflow = '';
+                cleanup();
+            };
+
+            const onKey = (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancel();
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleOK();
+                }
+            };
+
+            const handleOK = async () => {
+                try {
+                    if (typeof onConfirm === 'function') await onConfirm();
+                } finally {
+                    close();
+                }
+            };
+            const handleCancel = () => {
+                try {
+                    if (typeof onCancel === 'function') onCancel();
+                } finally {
+                    close();
+                }
+            };
+
+            // Bind events
+            const btnOk = modal.querySelector('[data-ok]');
+            const btnCancel = modal.querySelector('[data-cancel]');
+            const btnClose = modal.querySelector('[data-close]');
+            const overlayClick = (e) => {
+                if (e.target === modal) handleCancel();
+            };
+
+            btnOk.addEventListener('click', handleOK);
+            btnCancel.addEventListener('click', handleCancel);
+            btnClose.addEventListener('click', handleCancel);
+            modal.addEventListener('click', overlayClick);
+            document.addEventListener('keydown', onKey);
+
+            function cleanup() {
+                btnOk.removeEventListener('click', handleOK);
+                btnCancel.removeEventListener('click', handleCancel);
+                btnClose.removeEventListener('click', handleCancel);
+                modal.removeEventListener('click', overlayClick);
+                document.removeEventListener('keydown', onKey);
+            }
+
+            // Open it
+            open();
+        }
+
+        // Your customer-side logout hook
+        function setupLogout() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (!logoutBtn) return;
+
+            const newLogoutBtn = logoutBtn.cloneNode(true);
+            logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+
+            newLogoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                showConfirm({
+                    title: 'Logout',
+                    message: 'Do you really want to log out?',
+                    okText: 'Logout',
+                    cancelText: 'Cancel',
+                    onConfirm: async () => {
+                        try {
+                            // wipe any local/session flags you use for customer
+                            sessionStorage.removeItem('rads_admin_session'); // ok lang iwan kung shared
+                            await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
+                                method: 'POST',
+                                credentials: 'same-origin'
+                            });
+                        } catch (_) {
+                            /* ignore network errors */ }
+                        location.href = '/RADS-TOOLING/public/index.php';
+                    }
+                });
             });
         }
     </script>
