@@ -1,113 +1,182 @@
 <?php
 // backend/api/mark_received.php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+session_start();
 
-require_once __DIR__ . '/../config/app.php';
+// Prevent HTML output before JSON
+ob_start();
 
 try {
-    // Require POST + JSON
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-        exit;
+    // Try to include config
+    $configPaths = [
+        __DIR__ . '/../config/app.php',
+        __DIR__ . '/../config/database.php',
+        __DIR__ . '/../../backend/config/app.php'
+    ];
+
+    $configLoaded = false;
+    foreach ($configPaths as $path) {
+        if (file_exists($path)) {
+            require_once $path;
+            $configLoaded = true;
+            break;
+        }
     }
 
-    $raw = file_get_contents('php://input');
-    $data = json_decode($raw, true);
-    $orderId = isset($data['order_id']) ? (int)$data['order_id'] : 0;
-
-    if ($orderId <= 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid order_id']);
-        exit;
+    if (!$configLoaded) {
+        throw new Exception('Configuration file not found');
     }
 
-    // ---- Identify logged-in customer (use whichever your app sets) ----
-    // Try common session shapes:
-    $customerId = 0;
-    if (isset($_SESSION['customer']['id'])) {
-        $customerId = (int) $_SESSION['customer']['id'];
-    } elseif (isset($_SESSION['customer_id'])) {
-        $customerId = (int) $_SESSION['customer_id'];
-    } elseif (isset($_SESSION['user']['id'])) { // fallback
-        $customerId = (int) $_SESSION['user']['id'];
+    // Get database connection
+    $db = null;
+    
+    if (isset($pdo) && $pdo instanceof PDO) {
+        $db = $pdo;
+    } elseif (class_exists('Database')) {
+        $db = Database::getInstance()->getConnection();
+    } else {
+        // Fallback connection
+        $db = new PDO("mysql:host=localhost;dbname=rads_tooling;charset=utf8mb4", "root", "");
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    if ($customerId <= 0) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-        exit;
+    // Read input
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$input || !isset($input['order_id'])) {
+        throw new Exception('Missing order_id');
     }
 
-    // ---- Load order (must belong to this customer) ----
-    $stmt = $pdo->prepare("
-        SELECT id, customer_id, status, payment_status,
-               COALESCE(received_by_customer, 0) AS received_by_customer,
-               customer_received_at, COALESCE(is_received, 0) AS is_received
-        FROM orders
-        WHERE id = :oid AND customer_id = :cid
+    $orderId = (int)$input['order_id'];
+    $rating = isset($input['rating']) ? (int)$input['rating'] : 0;
+    $comment = isset($input['comment']) ? trim($input['comment']) : '';
+
+    // Validate rating
+    if ($rating < 0) $rating = 0;
+    if ($rating > 5) $rating = 5;
+
+    // Find customer ID from session
+    $customerId = null;
+    $sessionKeys = ['customer_id', 'user_id', 'id', 'cust_id'];
+    
+    foreach ($sessionKeys as $key) {
+        if (isset($_SESSION['user'][$key]) && intval($_SESSION['user'][$key]) > 0) {
+            $customerId = intval($_SESSION['user'][$key]);
+            break;
+        } elseif (isset($_SESSION[$key]) && intval($_SESSION[$key]) > 0) {
+            $customerId = intval($_SESSION[$key]);
+            break;
+        }
+    }
+
+    if (!$customerId) {
+        throw new Exception('Not authenticated');
+    }
+
+    // Start transaction
+    $db->beginTransaction();
+
+    // Verify order exists and belongs to customer
+    $stmt = $db->prepare("
+        SELECT id, customer_id, is_received, received_by_customer 
+        FROM orders 
+        WHERE id = ? 
         LIMIT 1
     ");
-    $stmt->execute([':oid' => $orderId, ':cid' => $customerId]);
+    $stmt->execute([$orderId]);
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$order) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Order not found']);
+        $db->rollBack();
+        throw new Exception('Order not found');
+    }
+
+    if ((int)$order['customer_id'] !== $customerId) {
+        $db->rollBack();
+        throw new Exception('Unauthorized - Order does not belong to you');
+    }
+
+    // Check if already received
+    if ((int)$order['is_received'] === 1 || (int)$order['received_by_customer'] === 1) {
+        $db->commit();
+        ob_end_clean();
+        echo json_encode([
+            'status' => 'ok',
+            'success' => true,
+            'message' => 'Order already marked as received'
+        ]);
         exit;
     }
 
-    // ---- Business rules (match the front-end canMarkAsReceived) ----
-    $status = strtolower((string)$order['status']);
-    $pay    = strtolower((string)$order['payment_status']);
-    $allowedStatuses = ['delivered','ready for pickup','ready_for_pickup','for pickup','for_pickup','completed'];
+    // Update order
+    $updateSql = "
+        UPDATE orders 
+        SET 
+            is_received = 1,
+            received_by_customer = 1,
+            received_at = NOW(),
+            customer_received_at = NOW(),
+            status = 'Completed'
+        WHERE id = ?
+    ";
+    $stmt = $db->prepare($updateSql);
+    $stmt->execute([$orderId]);
 
-    if (!in_array($status, $allowedStatuses, true)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Order is not in a receivable status']);
-        exit;
-    }
-    if (!in_array($pay, ['fully paid','fully_paid'], true)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Order must be fully paid']);
-        exit;
-    }
-    if ((int)$order['received_by_customer'] === 1 || (int)$order['is_received'] === 1 || !empty($order['customer_received_at'])) {
-        echo json_encode(['success' => true, 'message' => 'Order already marked as received']);
-        exit;
-    }
+    // Insert or update feedback if rating or comment provided
+    if ($rating > 0 || !empty($comment)) {
+        // Check if feedback already exists for this order
+        $checkStmt = $db->prepare("SELECT id FROM feedback WHERE order_id = ? LIMIT 1");
+        $checkStmt->execute([$orderId]);
+        $existingFeedback = $checkStmt->fetch();
 
-    // ---- Update flags (columns are optional; update only those that exist) ----
-    // We'll try to update common columns; ignore missing columns gracefully.
-    // Build dynamic SQL depending on existing columns
-    $cols = [];
-    $params = [':oid' => $orderId, ':cid' => $customerId];
-
-    // Check columns quickly
-    $columns = [];
-    $q = $pdo->query("SHOW COLUMNS FROM orders");
-    foreach ($q as $row) $columns[strtolower($row['Field'])] = true;
-
-    if (isset($columns['received_by_customer'])) $cols[] = "received_by_customer = 1";
-    if (isset($columns['is_received']))          $cols[] = "is_received = 1";
-    if (isset($columns['customer_received_at'])) $cols[] = "customer_received_at = NOW()";
-
-    if (empty($cols)) {
-        // Nothing to update — but we consider it success to avoid blocking UX
-        echo json_encode(['success' => true, 'message' => 'No receivable columns to update (skipped)']);
-        exit;
+        if ($existingFeedback) {
+            // Update existing feedback
+            $updateFeedback = $db->prepare("
+                UPDATE feedback 
+                SET rating = ?, comment = ?, status = 'pending', created_at = NOW()
+                WHERE order_id = ?
+            ");
+            $updateFeedback->execute([$rating, $comment, $orderId]);
+        } else {
+            // Insert new feedback
+            $insertFeedback = $db->prepare("
+                INSERT INTO feedback (order_id, customer_id, rating, comment, status, is_released, created_at)
+                VALUES (?, ?, ?, ?, 'pending', 0, NOW())
+            ");
+            $insertFeedback->execute([$orderId, $customerId, $rating, $comment]);
+        }
     }
 
-    $sql = "UPDATE orders SET " . implode(', ', $cols) . " WHERE id = :oid AND customer_id = :cid";
-    $upd = $pdo->prepare($sql);
-    $upd->execute($params);
+    // Insert into order_status_history if table exists
+    try {
+        $historyStmt = $db->prepare("
+            INSERT INTO order_status_history (order_id, status, changed_by, notes, changed_at)
+            VALUES (?, 'Completed', ?, 'Marked as received by customer', NOW())
+        ");
+        $historyStmt->execute([$orderId, $customerId]);
+    } catch (PDOException $e) {
+        // Table might not exist, that's okay
+    }
 
-    echo json_encode(['success' => true, 'message' => 'Order marked as received']);
+    $db->commit();
 
-} catch (Throwable $e) {
-    error_log('mark_received error: ' . $e->getMessage());
+    ob_end_clean();
+    echo json_encode([
+        'status' => 'ok',
+        'success' => true,
+        'message' => 'Order marked as received successfully'
+    ]);
+
+} catch (Exception $e) {
+    if (isset($db) && $db->inTransaction()) {
+        $db->rollBack();
+    }
+    
+    ob_end_clean();
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server error']);
+    echo json_encode([
+        'status' => 'error',
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
 }

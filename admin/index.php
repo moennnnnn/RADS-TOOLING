@@ -24,7 +24,6 @@ if (!$isLoggedIn) {
     exit;
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -36,50 +35,16 @@ if (!$isLoggedIn) {
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" />
-    <!-- Quill Rich Text Editor (No API Key Required) -->
+    <!-- Quill Rich Text Editor -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <!-- Main CSS -->
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/style.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-admin.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/content_mgmt.css" />
+
     <style>
-        /* Enhanced modal and loading styles */
-        .modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .25);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: #fff;
-            border-radius: 16px;
-            padding: 1.5rem 2rem;
-            max-width: 700px;
-            width: min(700px, 92vw);
-            max-height: 80vh;
-            overflow: auto;
-            position: relative;
-        }
-
-        .modal-close {
-            position: absolute;
-            right: .75rem;
-            top: .5rem;
-            font-size: 1.5rem;
-            border: 0;
-            background: none;
-            cursor: pointer;
-        }
-
+        /* ===== Consolidated Modal, Loading, and UI styles (merged) ===== */
         .loading-overlay {
             position: fixed;
             inset: 0;
@@ -102,259 +67,311 @@ if (!$isLoggedIn) {
         }
 
         @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
+            to {
                 transform: rotate(360deg);
             }
         }
 
-        /* Role-based badge styles */
+        /* Role badges */
         .badge-owner {
             background: #8e44ad;
+            color: #fff;
         }
 
         .badge-admin {
             background: #3498db;
+            color: #fff;
         }
 
         .badge-secretary {
             background: #95a5a6;
+            color: #fff;
         }
 
-        /* Button action styles */
+        /* Button actions */
         .btn-action {
             background: none;
             border: none;
             cursor: pointer;
             padding: 6px;
-            font-size: 1.2em;
+            font-size: 1.1em;
             margin-right: 4px;
             border-radius: 6px;
             transition: background .15s, color .15s;
         }
 
         .btn-action.btn-edit {
-            color: #3498db;
-        }
-
-        .btn-action.btn-edit:hover {
-            background: #e3edfb;
-            color: #17416d;
+            color: #3498db
         }
 
         .btn-action.btn-delete {
-            color: #e74c3c;
-        }
-
-        .btn-action.btn-delete:hover {
-            background: #faeaea;
-            color: #a90f0f;
+            color: #e74c3c
         }
 
         .btn-action.btn-view {
-            color: #27ae60;
+            color: #27ae60
         }
 
-        .btn-action.btn-view:hover {
-            background: #eafaf1;
-            color: #1e8449;
+        .btn-action:hover {
+            background: #f3f6fb
         }
 
-        /* Enhanced form styles for profile editing */
-        .edit-profile-pic-group {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
+        /* Profile */
         .edit-profile-avatar {
             width: 80px;
             height: 80px;
             border-radius: 50%;
             object-fit: cover;
-            margin-bottom: 0.5rem;
             border: 3px solid var(--brand);
         }
 
-        /* ===== CHAT SUPPORT INTEGRATION STYLES ===== */
-
-        /* Override chat container for dashboard */
+        /* Chat overrides */
         section[data-section="chat"] .rt-admin-container {
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
         }
 
-        /* Adjust chat boxes for dashboard */
-        section[data-section="chat"] .rt-admin-box {
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Make thread list scrollable */
         section[data-section="chat"] .rt-thread-list {
             max-height: 500px;
             overflow-y: auto;
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 1200px) {
+        @media (max-width:1200px) {
             section[data-section="chat"] .rt-admin-container {
                 flex-direction: column;
             }
-
-            section[data-section="chat"] .rt-admin-sidebar {
-                width: 100%;
-            }
         }
 
-        /* Improve button visibility in dashboard */
-        section[data-section="chat"] .rt-btn {
-            display: inline-flex;
+        /* Modal (single unified) */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .6);
+            z-index: 9999;
             align-items: center;
-            gap: 6px;
+            justify-content: center;
+            padding: 20px;
         }
 
-        /* Smooth transitions */
-        section[data-section="chat"] .rt-thread-item {
-            transition: all 0.2s ease;
+        .modal.show {
+            display: flex;
         }
 
-        section[data-section="chat"] .rt-faq-row {
-            transition: background 0.2s ease;
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
         }
 
-        section[data-section="chat"] .rt-faq-row:hover {
-            background: #f9fbfd;
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #eaeaea;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-close,
+        .close-modal {
+            background: none;
+            border: 0;
+            cursor: pointer;
+            font-size: 1.3rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding: 16px;
+            border-top: 1px solid #eaeaea;
+            position: sticky;
+            bottom: 0;
+            background: #fff;
+        }
+
+        .btn-primary {
+            background: #2c5f8d;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: #e3e3e3;
+            color: #333;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .btn-danger {
+            background: #e14d4d;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer;
+        }
+
+        /* Editor & preview */
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            gap: 0;
+            height: 70vh;
+        }
+
+        .editor-panel {
+            border-right: 1px solid #e9e9e9;
+            background: #fafafa;
+            overflow: auto;
+        }
+
+        .preview-panel {
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        /* Forms & helpers */
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: #fff;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .toast.show {
+            display: block;
+        }
+
+        /* small utility */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 
 <body>
-    <!-- Loading overlay for initialization -->
+    <!-- Loading overlay -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
         <p>Loading dashboard...</p>
     </div>
 
-    <!-- ===== SIDEBAR ===== -->
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-        <div class="sidebar-logo">
-            <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-        </div>
+        <div class="sidebar-logo"><span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING</div>
         <div class="sidebar-nav">
-            <!-- Dashboard - Always visible -->
-            <span class="nav-item active" data-section="dashboard">
-                <a href="#">
-                    <span class="material-symbols-rounded">home</span>
+            <span class="nav-item active" data-section="dashboard"><a href="#"><span class="material-symbols-rounded">home</span>
                     <h2>Dashboard</h2>
-                </a>
-            </span>
-
-            <!-- Account Management - Owner and Admin only -->
-            <span class="nav-item" data-section="account">
-                <a href="#">
-                    <span class="material-symbols-rounded">person</span>
+                </a></span>
+            <span class="nav-item" data-section="account"><a href="#"><span class="material-symbols-rounded">person</span>
                     <h2>Account Management</h2>
-                </a>
-            </span>
-
-            <!-- Customer Management - Owner and Admin only -->
-            <span class="nav-item" data-section="customer">
-                <a href="#">
-                    <span class="material-symbols-rounded">groups</span>
+                </a></span>
+            <span class="nav-item" data-section="customer"><a href="#"><span class="material-symbols-rounded">groups</span>
                     <h2>Customer Management</h2>
-                </a>
-            </span>
-
-            <!-- Products Management - Owner and Admin only -->
-            <span class="nav-item" data-section="products">
-                <a href="#">
-                    <span class="material-symbols-rounded">door_sliding</span>
+                </a></span>
+            <span class="nav-item" data-section="products"><a href="#"><span class="material-symbols-rounded">door_sliding</span>
                     <h2>Products Management</h2>
-                </a>
-            </span>
-
-            <!-- Order Management - All roles -->
-            <span class="nav-item" data-section="orders">
-                <a href="#">
-                    <span class="material-symbols-rounded">list_alt</span>
+                </a></span>
+            <span class="nav-item" data-section="orders"><a href="#"><span class="material-symbols-rounded">list_alt</span>
                     <h2>Order Management</h2>
-                </a>
-            </span>
-
-            <!-- Report Generation - All roles -->
-            <span class="nav-item" data-section="reports">
-                <a href="#">
-                    <span class="material-symbols-rounded">insights</span>
+                </a></span>
+            <span class="nav-item" data-section="reports"><a href="#"><span class="material-symbols-rounded">insights</span>
                     <h2>Report Generation</h2>
-                </a>
-            </span>
-
-            <!-- Content Management - Owner and Admin only -->
-            <span class="nav-item" data-section="content">
-                <a href="#">
-                    <span class="material-symbols-rounded">campaign</span>
+                </a></span>
+            <span class="nav-item" data-section="content"><a href="#"><span class="material-symbols-rounded">campaign</span>
                     <h2>Content Management</h2>
-                </a>
-            </span>
-
-            <!-- Feedback & Ratings - All roles -->
-            <span class="nav-item" data-section="feedback">
-                <a href="#">
-                    <span class="material-symbols-rounded">star</span>
+                </a></span>
+            <span class="nav-item" data-section="feedback"><a href="#"><span class="material-symbols-rounded">star</span>
                     <h2>Feedback & Ratings</h2>
-                </a>
-            </span>
-
-            <!-- Chat Support - All roles -->
-            <span class="nav-item" data-section="chat">
-                <a href="#">
-                    <span class="material-symbols-rounded">chat</span>
+                </a></span>
+            <span class="nav-item" data-section="chat"><a href="#"><span class="material-symbols-rounded">chat</span>
                     <h2>Chat Support</h2>
-                </a>
-            </span>
-
-            <!-- Payment Verification - Owner and Admin only -->
-            <span class="nav-item" data-section="payment">
-                <a href="#">
-                    <span class="material-symbols-rounded">credit_card</span>
+                </a></span>
+            <span class="nav-item" data-section="payment"><a href="#"><span class="material-symbols-rounded">credit_card</span>
                     <h2>Payment Verification</h2>
-                </a>
-            </span>
+                </a></span>
         </div>
     </aside>
 
-    <!-- ===== MAIN CONTENT ===== -->
+    <!-- MAIN -->
     <div class="main-content">
-        <!-- ===== TOPBAR ===== -->
         <header class="topbar">
             <div class="topbar-profile">
                 <span class="admin-name">Welcome, <?php echo htmlspecialchars($adminName); ?></span>
                 <div class="profile-menu">
                     <img src="/RADS-TOOLING/assets/images/profile.png" alt="Admin" class="profile-avatar" id="profileIcon" />
                     <div class="profile-dropdown" id="profileDropdown">
-                        <button id="btnEditProfile">
-                            <span class="material-symbols-rounded">person</span>
-                            Edit Profile
-                        </button>
-                        <button id="btnChangePassword">
-                            <span class="material-symbols-rounded">key</span>
-                            Change Password
-                        </button>
-                        <button id="logoutBtn">
-                            <span class="material-symbols-rounded">logout</span>
-                            Logout
-                        </button>
+                        <button id="btnEditProfile"><span class="material-symbols-rounded">person</span> Edit Profile</button>
+                        <button id="btnChangePassword"><span class="material-symbols-rounded">key</span> Change Password</button>
+                        <button id="logoutBtn"><span class="material-symbols-rounded">logout</span> Logout</button>
                     </div>
                 </div>
             </div>
         </header>
 
-        <!-- ===== DASHBOARD ===== -->
+        <!-- DASHBOARD -->
         <section class="main-section show" data-section="dashboard">
             <div class="dashboard-widgets">
                 <div class="dashboard-card card-orders">
@@ -377,9 +394,9 @@ if (!$isLoggedIn) {
 
             <div class="dashboard-row">
                 <div class="dashboard-chart">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
                         <h2>Sales Overview</h2>
-                        <div class="chart-period-selector" style="display: flex; gap: 0.5rem;">
+                        <div class="chart-period-selector" style="display:flex;gap:.5rem">
                             <button class="period-btn active" data-period="day">1 Day</button>
                             <button class="period-btn" data-period="week">1 Week</button>
                             <button class="period-btn" data-period="month">1 Month</button>
@@ -402,7 +419,7 @@ if (!$isLoggedIn) {
                         </thead>
                         <tbody id="dashRecentOrders">
                             <tr>
-                                <td colspan="5" style="text-align:center;">Loading...</td>
+                                <td colspan="5" style="text-align:center">Loading...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -417,13 +434,11 @@ if (!$isLoggedIn) {
             </div>
         </section>
 
-        <!-- ===== ACCOUNT MANAGEMENT ===== -->
+        <!-- ACCOUNT -->
         <section class="main-section" data-section="account">
             <div class="section-header">
                 <h1>Account Management</h1>
-                <button class="btn-add-user" onclick="openModal('addUserModal')">
-                    <span class="material-symbols-rounded">person_add</span> Add Staff/Admin
-                </button>
+                <button class="btn-add-user" onclick="openModal('addUserModal')"><span class="material-symbols-rounded">person_add</span> Add Staff/Admin</button>
             </div>
             <div class="account-table-container">
                 <table class="account-table">
@@ -438,21 +453,19 @@ if (!$isLoggedIn) {
                     </thead>
                     <tbody id="userTableBody">
                         <tr>
-                            <td colspan="6" style="text-align:center;">Loading users...</td>
+                            <td colspan="6" style="text-align:center">Loading users...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ===== CUSTOMER MANAGEMENT ===== -->
+        <!-- CUSTOMER -->
         <section class="main-section" data-section="customer">
             <div class="section-header">
                 <h1>Customer Management</h1>
             </div>
-            <div class="customer-controls" style="margin-bottom:1rem">
-                <input type="text" id="customer-search" placeholder="Search by name, email, or username..." />
-            </div>
+            <div class="customer-controls" style="margin-bottom:1rem"><input type="text" id="customer-search" placeholder="Search by name, email, or username..." /></div>
             <div class="customer-table-container">
                 <table class="customer-table">
                     <thead>
@@ -467,14 +480,14 @@ if (!$isLoggedIn) {
                     </thead>
                     <tbody id="customerTableBody">
                         <tr>
-                            <td colspan="6" style="text-align:center;">Loading customers...</td>
+                            <td colspan="6" style="text-align:center">Loading customers...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ===== ORDER MANAGEMENT ===== -->
+        <!-- ORDERS -->
         <section class="main-section" data-section="orders">
             <div class="section-header">
                 <h1>Order Management</h1>
@@ -510,27 +523,21 @@ if (!$isLoggedIn) {
                     </thead>
                     <tbody id="orderTableBody">
                         <tr>
-                            <td colspan="8" style="text-align:center;">Loading orders...</td>
+                            <td colspan="8" style="text-align:center">Loading orders...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ===== PRODUCTS MANAGEMENT ===== -->
+        <!-- PRODUCTS -->
         <section class="main-section" data-section="products">
             <div class="section-header">
                 <h1>Product Management</h1>
-                <div class="product-header-actions">
-                    <button class="btn-add-product" onclick="openModal('addProductModal')">
-                        <span class="material-symbols-rounded">add_circle</span> Add Product
-                    </button>
-                </div>
+                <div class="product-header-actions"><button class="btn-add-product" onclick="openModal('addProductModal')"><span class="material-symbols-rounded">add_circle</span> Add Product</button></div>
             </div>
-
             <div class="products-controls">
-                <input type="text" class="products-search" id="product-search"
-                    placeholder="Search by name or description..." />
+                <input type="text" class="products-search" id="product-search" placeholder="Search by name or description..." />
                 <select class="products-filter" id="product-filter">
                     <option value="">All Types</option>
                     <option value="Kitchen Cabinet">Kitchen Cabinet</option>
@@ -540,7 +547,6 @@ if (!$isLoggedIn) {
                     <option value="Storage Cabinet">Storage Cabinet</option>
                 </select>
             </div>
-
             <div class="products-table-container">
                 <table class="products-table">
                     <thead>
@@ -557,134 +563,97 @@ if (!$isLoggedIn) {
                     </thead>
                     <tbody id="productTableBody">
                         <tr>
-                            <td colspan="8" style="text-align:center;">Loading products...</td>
+                            <td colspan="8" style="text-align:center">Loading products...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ===== CONTENT MANAGEMENT ===== -->
+        <!-- CONTENT MANAGEMENT -->
         <section class="main-section" data-section="content">
             <div class="section-header">
                 <h1>Content Management</h1>
-                <button class="btn-edit-content" id="btnEditContent">
-                    <span class="material-symbols-rounded">edit</span> Edit Content
-                </button>
+                <button class="btn-edit-content" id="btnEditContent"><span class="material-symbols-rounded">edit</span> Edit Content</button>
             </div>
-
-            <!-- Homepage Type Selector -->
-            <div class="cm-page-selector">
-                <label for="homepageType">Editing:</label>
-                <select id="homepageType" class="homepage-type-select">
+            <div class="cm-page-selector"><label for="homepageType">Editing:</label><select id="homepageType" class="homepage-type-select">
                     <option value="home_public">Public Landing Page</option>
                     <option value="home_customer">Customer Homepage</option>
-                </select>
-            </div>
-
-            <!-- Tab Navigation -->
+                </select></div>
             <div class="cm-tabs">
-                <button class="cm-tab active" data-page="home_public">
-                    <span class="material-symbols-rounded">home</span>
-                    Homepage
-                </button>
-                <button class="cm-tab" data-page="about">
-                    <span class="material-symbols-rounded">info</span>
-                    About Us
-                </button>
-                <button class="cm-tab" data-page="privacy">
-                    <span class="material-symbols-rounded">shield</span>
-                    Privacy Policy
-                </button>
-                <button class="cm-tab" data-page="terms">
-                    <span class="material-symbols-rounded">gavel</span>
-                    Terms & Conditions
-                </button>
+                <button class="cm-tab active" data-page="home_public"><span class="material-symbols-rounded">home</span> Homepage</button>
+                <button class="cm-tab" data-page="about"><span class="material-symbols-rounded">info</span> About Us</button>
+                <button class="cm-tab" data-page="privacy"><span class="material-symbols-rounded">shield</span> Privacy Policy</button>
+                <button class="cm-tab" data-page="terms"><span class="material-symbols-rounded">gavel</span> Terms & Conditions</button>
             </div>
-
-            <!-- Content Preview Area -->
             <div class="cm-preview-container">
-                <div class="cm-preview-card" id="previewCard">
-                    <iframe id="previewIframe" style="width:100%; height:600px; border:1px solid #e3edfb; border-radius:8px;"></iframe>
-                </div>
+                <div class="cm-preview-card" id="previewCard"><iframe id="previewIframe" style="width:100%; height:600px; border:1px solid #e3edfb; border-radius:8px;"></iframe></div>
             </div>
         </section>
 
-        <!-- ===== REPORT GENERATION ===== -->
+        <!-- REPORTS -->
         <section class="main-section" data-section="reports">
             <div class="section-header">
                 <h1>Report Generation</h1>
             </div>
-
             <div class="report-controls">
                 <label>From: <input type="date" class="report-date" id="report-from" /></label>
                 <label>To: <input type="date" class="report-date" id="report-to" /></label>
                 <button class="btn-generate" id="generateReportBtn">Generate Report</button>
-                <button class="btn-export" id="exportPdfBtn">
-                    <span class="material-symbols-rounded">picture_as_pdf</span> Download PDF
-                </button>
+                <button class="btn-export" id="exportPdfBtn"><span class="material-symbols-rounded">picture_as_pdf</span> Download PDF</button>
             </div>
 
-            <!-- Visual Summary Cards (backend-ready placeholders) -->
             <div class="report-summary">
+                <!-- summary cards (same as before) -->
                 <div class="summary-card card-total-sales" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#3db36b1a;"><span class="material-symbols-rounded"
-                            style="color:#3db36b;">payments</span></div>
+                    <div class="summary-icon" style="background:#3db36b1a;"><span class="material-symbols-rounded" style="color:#3db36b;">payments</span></div>
                     <div class="summary-title">Total Sales</div>
                     <div class="summary-value"><span id="rg-total-sales">₱0</span></div>
                 </div>
                 <div class="summary-card card-total-orders" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#3498db1a;"><span class="material-symbols-rounded"
-                            style="color:#3498db;">shopping_cart</span></div>
+                    <div class="summary-icon" style="background:#3498db1a;"><span class="material-symbols-rounded" style="color:#3498db;">shopping_cart</span></div>
                     <div class="summary-title">Total Orders</div>
                     <div class="summary-value"><span id="rg-total-orders">0</span></div>
                 </div>
                 <div class="summary-card card-average-order" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#f7b7311a;"><span class="material-symbols-rounded"
-                            style="color:#f7b731;">equalizer</span></div>
+                    <div class="summary-icon" style="background:#f7b7311a;"><span class="material-symbols-rounded" style="color:#f7b731;">equalizer</span></div>
                     <div class="summary-title">Avg. Order Value</div>
                     <div class="summary-value"><span id="rg-avg-order">₱0</span></div>
                 </div>
                 <div class="summary-card card-fully-paid" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#2f5b881a;"><span class="material-symbols-rounded"
-                            style="color:#2f5b88;">verified</span></div>
+                    <div class="summary-icon" style="background:#2f5b881a;"><span class="material-symbols-rounded" style="color:#2f5b88;">verified</span></div>
                     <div class="summary-title">Fully Paid Orders</div>
                     <div class="summary-value"><span id="rg-fully-paid">0</span></div>
                 </div>
                 <div class="summary-card card-cancelled" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#e14d4d1a;"><span class="material-symbols-rounded"
-                            style="color:#e14d4d;">block</span></div>
+                    <div class="summary-icon" style="background:#e14d4d1a;"><span class="material-symbols-rounded" style="color:#e14d4d;">block</span></div>
                     <div class="summary-title">Cancelled Orders</div>
                     <div class="summary-value"><span id="rg-cancelled">0</span></div>
                 </div>
                 <div class="summary-card card-pending" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#ffc4001a;"><span class="material-symbols-rounded"
-                            style="color:#ffc400;">pending</span></div>
+                    <div class="summary-icon" style="background:#ffc4001a;"><span class="material-symbols-rounded" style="color:#ffc400;">pending</span></div>
                     <div class="summary-title">Pending Orders</div>
                     <div class="summary-value"><span id="rg-pending">0</span></div>
                 </div>
                 <div class="summary-card card-new-customer" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#8e44ad1a;"><span class="material-symbols-rounded"
-                            style="color:#8e44ad;">group_add</span></div>
+                    <div class="summary-icon" style="background:#8e44ad1a;"><span class="material-symbols-rounded" style="color:#8e44ad;">group_add</span></div>
                     <div class="summary-title">New Customers</div>
                     <div class="summary-value"><span id="rg-new-customers">0</span></div>
                 </div>
                 <div class="summary-card card-feedbacks" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#2980b91a;"><span class="material-symbols-rounded"
-                            style="color:#2980b9;">star</span></div>
+                    <div class="summary-icon" style="background:#2980b91a;"><span class="material-symbols-rounded" style="color:#2980b9;">star</span></div>
                     <div class="summary-title">Feedbacks</div>
                     <div class="summary-value"><span id="rg-feedbacks">0</span></div>
                 </div>
                 <div class="summary-card card-most-ordered" style="cursor:pointer">
-                    <div class="summary-icon" style="background:#26c6da1a;"><span class="material-symbols-rounded"
-                            style="color:#26c6da;">category</span></div>
+                    <div class="summary-icon" style="background:#26c6da1a;"><span class="material-symbols-rounded" style="color:#26c6da;">category</span></div>
                     <div class="summary-title">Most Ordered Item</div>
                     <div class="summary-value"><span id="rg-most-item">—</span></div>
                 </div>
             </div>
         </section>
 
-        <!-- ===== FEEDBACK ===== -->
+        <!-- FEEDBACK (merged: keeps Actions column, unified) -->
         <section class="main-section" data-section="feedback">
             <div class="section-header">
                 <h1>Feedback & Ratings</h1>
@@ -699,74 +668,57 @@ if (!$isLoggedIn) {
                             <th>Comment</th>
                             <th>Order</th>
                             <th>Date</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="feedbackTableBody">
                         <tr>
-                            <td colspan="6" style="text-align:center;">Loading feedback...</td>
+                            <td colspan="7" style="text-align:center">Loading feedback...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- ===== CHAT SUPPORT ===== -->
+        <!-- CHAT SUPPORT (full merged) -->
         <section class="main-section" data-section="chat">
             <div class="section-header">
                 <h1>Chat Support</h1>
-                <div class="rt-user-info" style="font-size: 14px; color: #666;">
-                    Manage customer inquiries and FAQs
-                </div>
+                <div class="rt-user-info" style="font-size:14px;color:#666">Manage customer inquiries and FAQs</div>
             </div>
-
-            <div class="rt-admin-container" style="padding: 0; margin: 0; max-width: 100%;">
-                <!-- Left: Threads Sidebar -->
+            <div class="rt-admin-container" style="padding:0;margin:0;max-width:100%;">
                 <aside class="rt-admin-sidebar">
                     <div class="rt-admin-box">
                         <h3>Customer Threads</h3>
                         <input type="text" id="rtThreadSearch" class="rt-admin-search" placeholder="Search threads..." />
                         <div class="rt-thread-list" id="rtThreadList">
-                            <div style="padding:12px;color:#999;">Loading threads...</div>
+                            <div style="padding:12px;color:#999">Loading threads...</div>
                         </div>
                     </div>
                 </aside>
-
-                <!-- Right: Main Chat Area -->
                 <main class="rt-admin-main">
-                    <!-- Conversation Area -->
                     <div class="rt-admin-box">
                         <h3>Conversation</h3>
                         <div class="rt-admin-conv" id="rtAdminConv"></div>
-                        <div class="rt-input-row">
-                            <input type="text" id="rtAdminMsg" placeholder="Type a reply..." />
-                            <button id="rtAdminSend" class="rt-btn rt-btn-primary">
-                                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">send</span>
-                                Send
-                            </button>
-                        </div>
+                        <div class="rt-input-row"><input type="text" id="rtAdminMsg" placeholder="Type a reply..." /><button id="rtAdminSend" class="rt-btn rt-btn-primary"><span class="material-symbols-rounded" style="vertical-align:middle;font-size:18px">send</span> Send</button></div>
                     </div>
-
-                    <!-- FAQ Management -->
                     <div class="rt-admin-box">
                         <h3>Manage FAQs (Auto-Reply System)</h3>
                         <div class="rt-input-row">
-                            <input type="text" id="rtFaqQ" placeholder="Question (e.g., Do you deliver?)" style="flex: 1;" />
-                            <input type="text" id="rtFaqA" placeholder="Answer (e.g., Yes, we deliver within Cavite...)" style="flex: 2;" />
-                            <button id="rtFaqSave" class="rt-btn rt-btn-primary">
-                                <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 18px;">save</span>
-                                Save FAQ
-                            </button>
+                            <input type="text" id="rtFaqQ" placeholder="Question (e.g., Do you deliver?)" style="flex:1" />
+                            <input type="text" id="rtFaqA" placeholder="Answer (e.g., Yes, we deliver within Cavite...)" style="flex:2" />
+                            <button id="rtFaqSave" class="rt-btn rt-btn-primary"><span class="material-symbols-rounded" style="vertical-align:middle;font-size:18px">save</span> Save FAQ</button>
                         </div>
                         <table class="rt-faq-table">
                             <thead>
                                 <tr>
                                     <th>Question</th>
-                                    <th style="width:180px;">Actions</th>
+                                    <th style="width:180px">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="rtFaqTbody">
                                 <tr>
-                                    <td colspan="2" style="text-align: center; padding: 20px; color: #999;">Loading FAQs...</td>
+                                    <td colspan="2" style="text-align:center;padding:20px;color:#999">Loading FAQs...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -775,13 +727,11 @@ if (!$isLoggedIn) {
             </div>
         </section>
 
-        <!-- ===== PAYMENT VERIFICATION ===== -->
-
+        <!-- PAYMENT VERIFICATION -->
         <section class="main-section" data-section="payment">
             <div class="section-header">
                 <h1>Payment Verification</h1>
             </div>
-
             <div class="payments-table-container">
                 <table class="payments-table">
                     <thead>
@@ -797,7 +747,7 @@ if (!$isLoggedIn) {
                     </thead>
                     <tbody id="paymentsTableBody">
                         <tr>
-                            <td colspan="7" style="text-align:center;">Loading payments...</td>
+                            <td colspan="7" style="text-align:center">Loading payments...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -806,72 +756,68 @@ if (!$isLoggedIn) {
 
         <!-- Payment Details Modal -->
         <div class="modal" id="paymentDetailsModal">
-            <div class="modal-content" style="max-width: 900px;">
-                <button class="modal-close" onclick="closeModal('paymentDetailsModal')">×</button>
-                <h2>Payment Verification Details</h2>
-
-                <div id="paymentDetailsContent" style="display: grid; gap: 1.5rem;">
-                    <!-- Content will be populated by JavaScript -->
+            <div class="modal-content" style="max-width:900px;">
+                <div class="modal-header">
+                    <h2>Payment Verification Details</h2><button class="modal-close" onclick="closeModal('paymentDetailsModal')">×</button>
                 </div>
-
-                <div class="modal-actions" style="margin-top: 1.5rem;">
-                    <button type="button" class="btn-secondary" onclick="closeModal('paymentDetailsModal')">Close</button>
-                    <button type="button" id="btnRejectPayment" class="btn-danger" style="background: #e14d4d;">Reject</button>
-                    <button type="button" id="btnApprovePayment" class="btn-primary" style="background: #3db36b;">Approve</button>
+                <div id="paymentDetailsContent" style="display:grid;gap:1.5rem;padding:16px">
+                    <!-- populated by JS -->
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-secondary" onclick="closeModal('paymentDetailsModal')">Close</button>
+                    <button id="btnRejectPayment" class="btn-danger">Reject</button>
+                    <button id="btnApprovePayment" class="btn-primary">Approve</button>
                 </div>
             </div>
         </div>
 
         <!-- Reject Reason Modal -->
         <div class="modal" id="rejectReasonModal">
-            <div class="modal-content" style="max-width: 500px;">
-                <button class="modal-close" onclick="closeModal('rejectReasonModal')">×</button>
-                <h2>Reject Payment</h2>
-                <p>Please provide a reason for rejecting this payment:</p>
-                <textarea id="rejectReason" rows="4" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
-                <div class="modal-actions" style="margin-top: 1rem;">
-                    <button type="button" class="btn-secondary" onclick="closeModal('rejectReasonModal')">Cancel</button>
-                    <button type="button" id="btnConfirmReject" class="btn-danger" style="background: #e14d4d;">Confirm Reject</button>
+            <div class="modal-content" style="max-width:500px;">
+                <div class="modal-header">
+                    <h2>Reject Payment</h2><button class="modal-close" onclick="closeModal('rejectReasonModal')">×</button>
+                </div>
+                <div style="padding:16px">
+                    <p>Please provide a reason for rejecting this payment:</p>
+                    <textarea id="rejectReason" rows="4" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-secondary" onclick="closeModal('rejectReasonModal')">Cancel</button>
+                    <button id="btnConfirmReject" class="btn-danger">Confirm Reject</button>
                 </div>
             </div>
         </div>
 
-        <!-- ===== MODALS ===== -->
-
         <!-- Edit Profile Modal -->
         <div class="modal" id="editProfileModal">
             <div class="modal-content">
-                <button class="modal-close" aria-label="Close">×</button>
-                <h2>Edit Profile</h2>
-                <form id="editProfileForm">
-                    <div class="edit-profile-pic-group">
-                        <img id="editProfileAvatar" class="edit-profile-avatar"
-                            src="/RADS-TOOLING/assets/images/profile.png" alt="Avatar" />
-                        <label class="edit-pic-label" for="editProfilePic">Change Photo</label>
+                <div class="modal-header">
+                    <h2>Edit Profile</h2><button class="modal-close" onclick="closeModal('editProfileModal')">×</button>
+                </div>
+                <form id="editProfileForm" style="padding:16px">
+                    <div class="edit-profile-pic-group" style="display:flex;flex-direction:column;align-items:center;margin-bottom:1rem">
+                        <img id="editProfileAvatar" class="edit-profile-avatar" src="/RADS-TOOLING/assets/images/profile.png" alt="Avatar" />
+                        <label class="edit-pic-label" for="editProfilePic" style="cursor:pointer;margin-top:6px">Change Photo</label>
                         <input id="editProfilePic" type="file" accept="image/*" hidden />
                     </div>
-                    <input id="ep-fullname" name="full_name" placeholder="Full Name" required />
-                    <input id="ep-username" name="username" placeholder="Username" required />
-                    <div style="display:flex;gap:.5rem;justify-content:flex-end">
-                        <button type="submit" class="primary">Save Changes</button>
-                    </div>
+                    <input id="ep-fullname" name="full_name" placeholder="Full Name" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <input id="ep-username" name="username" placeholder="Username" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end"><button type="submit" class="btn-primary">Save Changes</button></div>
                 </form>
             </div>
         </div>
 
-
         <!-- Change Password Modal -->
         <div class="modal" id="changePasswordModal">
             <div class="modal-content">
-                <button class="modal-close" aria-label="Close">×</button>
-                <h2>Change Password</h2>
-                <form id="changePasswordForm">
-                    <input id="cp-old" type="password" placeholder="Current Password" required />
-                    <input id="cp-new" type="password" placeholder="New Password" required />
-                    <input id="cp-confirm" type="password" placeholder="Confirm New Password" required />
-                    <div style="display:flex;gap:.5rem;justify-content:flex-end">
-                        <button type="submit" class="primary">Update Password</button>
-                    </div>
+                <div class="modal-header">
+                    <h2>Change Password</h2><button class="modal-close" onclick="closeModal('changePasswordModal')">×</button>
+                </div>
+                <form id="changePasswordForm" style="padding:16px">
+                    <input id="cp-old" type="password" placeholder="Current Password" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <input id="cp-new" type="password" placeholder="New Password" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <input id="cp-confirm" type="password" placeholder="Confirm New Password" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end"><button type="submit" class="btn-primary">Update Password</button></div>
                 </form>
             </div>
         </div>
@@ -879,1316 +825,359 @@ if (!$isLoggedIn) {
         <!-- Add User Modal -->
         <div class="modal" id="addUserModal">
             <div class="modal-content">
-                <button class="modal-close" aria-label="Close">×</button>
-                <h2>Add Staff/Admin</h2>
-                <form id="addUserForm">
-                    <input id="au-username" name="username" placeholder="Username" required />
-                    <input id="au-fullname" name="full_name" placeholder="Full Name" required />
-                    <select id="au-role" name="role" required>
+                <div class="modal-header">
+                    <h2>Add Staff/Admin</h2><button class="modal-close" onclick="closeModal('addUserModal')">×</button>
+                </div>
+                <form id="addUserForm" style="padding:16px">
+                    <input id="au-username" name="username" placeholder="Username" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <input id="au-fullname" name="full_name" placeholder="Full Name" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <select id="au-role" name="role" required style="width:100%;padding:10px;margin-bottom:8px">
                         <option value="">Select Role</option>
                         <option value="Owner">Owner</option>
                         <option value="Admin">Admin</option>
                         <option value="Secretary">Secretary</option>
                     </select>
-                    <input id="au-password" type="password" name="password" placeholder="Temporary Password" required />
-                    <div style="display:flex;gap:.5rem;justify-content:flex-end">
-                        <button type="submit" class="primary">Create User</button>
-                    </div>
+                    <input id="au-password" type="password" name="password" placeholder="Temporary Password" required style="width:100%;padding:10px;margin-bottom:8px" />
+                    <div style="display:flex;gap:.5rem;justify-content:flex-end"><button type="submit" class="btn-primary">Create User</button></div>
                 </form>
             </div>
         </div>
 
-        <!-- View Order Modal (skeleton targets) -->
+        <!-- View Order Modal -->
         <div class="modal" id="viewOrderModal">
             <div class="modal-content">
-                <button class="modal-close" aria-label="Close">×</button>
-                <h2>Order Details</h2>
-                <p>Order: <span id="vo-code">—</span></p>
-                <p>Customer: <span id="vo-customer">—</span></p>
-                <p>Date: <span id="vo-date">—</span></p>
-                <p>Total: <span id="vo-total">₱0</span></p>
-                <p>Status: <span id="vo-status">—</span></p>
-                <p>Payment: <span id="vo-payment">—</span></p>
+                <div class="modal-header">
+                    <h2>Order Details</h2><button class="modal-close" onclick="closeModal('viewOrderModal')">×</button>
+                </div>
+                <div style="padding:16px">
+                    <p>Order: <span id="vo-code">—</span></p>
+                    <p>Customer: <span id="vo-customer">—</span></p>
+                    <p>Date: <span id="vo-date">—</span></p>
+                    <p>Total: <span id="vo-total">₱0</span></p>
+                    <p>Status: <span id="vo-status">—</span></p>
+                    <p>Payment: <span id="vo-payment">—</span></p>
+                </div>
             </div>
         </div>
 
-        <!-- Universal Confirm Modal (instant, no cancel) -->
+        <!-- Confirm Modal -->
         <div class="modal" id="confirmModal">
-            <div class="modal-content" style="max-width:360px;text-align:center;">
-                <button class="modal-close" aria-label="Close">×</button>
-                <h2 id="confirmTitle">Confirm</h2>
-                <p id="confirmMessage">Are you sure?</p>
-                <button id="confirmOkBtn" class="primary" type="button">OK</button>
-            </div>
-        </div>
-
-        <!-- ===== Scripts ===== -->
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="/RADS-TOOLING/assets/JS/script.js"></script>
-        <script src="/RADS-TOOLING/assets/JS/product_management.js"></script>
-
-
-        <script>
-            // Hide loading overlay once everything is loaded
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(() => {
-                    const loadingOverlay = document.getElementById('loadingOverlay');
-                    if (loadingOverlay) {
-                        loadingOverlay.style.display = 'none';
-                    } else if (targetSection === 'content') {
-                        // Initialize Content Management module when tab is clicked
-                        if (typeof CM !== 'undefined') {
-                            setTimeout(() => CM.init(), 100);
-                        }
-                    }
-                }, 1000); // Small delay to ensure proper initialization
-            });
-        </script>
-
-        <!-- Chat-specific modals -->
-        <div class="modal" id="chatDeleteModal" style="display:none;">
-            <div class="modal-content modal-small">
-                <button class="modal-close" onclick="closeChatModal('chatDeleteModal')">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="modal-icon-wrapper">
-                    <div class="modal-icon warning">
-                        <span class="material-symbols-rounded">delete</span>
-                    </div>
+            <div class="modal-content" style="max-width:360px;text-align:center">
+                <div class="modal-header">
+                    <h2 id="confirmTitle">Confirm</h2><button class="modal-close" onclick="closeModal('confirmModal')">×</button>
                 </div>
-                <h2 class="modal-title">Delete FAQ</h2>
-                <p class="modal-message">Delete this FAQ permanently? This action cannot be undone.</p>
-                <div class="modal-actions">
-                    <button onclick="closeChatModal('chatDeleteModal')" class="btn-modal-secondary">Cancel</button>
-                    <button id="chatDeleteConfirm" class="btn-modal-danger">Delete</button>
+                <div style="padding:16px">
+                    <p id="confirmMessage">Are you sure?</p><button id="confirmOkBtn" class="btn-primary" type="button">OK</button>
                 </div>
             </div>
         </div>
 
-        <div class="modal" id="chatSuccessModal" style="display:none;">
-            <div class="modal-content modal-small">
-                <button class="modal-close" onclick="closeChatModal('chatSuccessModal')">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="modal-icon-wrapper">
-                    <div class="modal-icon success">
-                        <span class="material-symbols-rounded">check_circle</span>
-                    </div>
-                </div>
-                <h2 class="modal-title" id="chatSuccessTitle">Success</h2>
-                <p class="modal-message" id="chatSuccessMessage">Operation completed successfully</p>
-                <div class="modal-actions">
-                    <button onclick="closeChatModal('chatSuccessModal')" class="btn-modal-primary">OK</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal" id="chatErrorModal" style="display:none;">
-            <div class="modal-content modal-small">
-                <button class="modal-close" onclick="closeChatModal('chatErrorModal')">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-                <div class="modal-icon-wrapper">
-                    <div class="modal-icon error">
-                        <span class="material-symbols-rounded">error</span>
-                    </div>
-                </div>
-                <h2 class="modal-title">Error</h2>
-                <p class="modal-message" id="chatErrorMessage">An error occurred</p>
-                <div class="modal-actions">
-                    <button onclick="closeChatModal('chatErrorModal')" class="btn-modal-primary">OK</button>
-                </div>
-            </div>
-        </div>
-
-        <style>
-            /* Modal Styles */
-            .modal {
-                display: none;
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 9999;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .modal.show {
-                display: flex;
-            }
-
-            .modal-dialog {
-                width: 95vw;
-                height: 95vh;
-                margin: auto;
-            }
-
-            .modal-fullscreen .modal-content {
-                width: 100%;
-                height: 100%;
-                background: white;
-                border-radius: 8px;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .modal-header {
-                padding: 20px;
-                border-bottom: 1px solid #e0e0e0;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .modal-header h2 {
-                margin: 0;
-                font-size: 1.5rem;
-            }
-
-            .modal-close {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 8px;
-                border-radius: 4px;
-            }
-
-            .modal-close:hover {
-                background: #f5f5f5;
-            }
-
-            .modal-body {
-                flex: 1;
-                overflow: hidden;
-            }
-
-            .editor-layout {
-                display: grid;
-                grid-template-columns: 500px 1fr;
-                height: 100%;
-                gap: 0;
-            }
-
-            /* LEFT Panel */
-            .editor-panel {
-                border-right: 1px solid #e0e0e0;
-                display: flex;
-                flex-direction: column;
-                background: #fafafa;
-            }
-
-            .editor-header {
-                padding: 16px;
-                border-bottom: 1px solid #e0e0e0;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .preview-status {
-                padding: 4px 12px;
-                border-radius: 12px;
-                font-size: 0.85rem;
-                font-weight: 600;
-            }
-
-            .status-draft {
-                background: #fff3cd;
-                color: #856404;
-            }
-
-            .status-published {
-                background: #d4edda;
-                color: #155724;
-            }
-
-            .editor-fields {
-                flex: 1;
-                overflow-y: auto;
-                padding: 20px;
-            }
-
-            .editor-section {
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                margin-bottom: 20px;
-            }
-
-            .editor-section h3 {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 16px;
-                font-size: 1.1rem;
-            }
-
-            .editor-section label {
-                display: block;
-                margin: 12px 0 6px;
-                font-weight: 600;
-                font-size: 0.9rem;
-            }
-
-            .quill-container {
-                height: 150px;
-                margin-bottom: 20px;
-            }
-
-            .form-input {
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                font-size: 0.95rem;
-            }
-
-            .btn-upload {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 10px 16px;
-                background: #1f4e74;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                margin-top: 10px;
-            }
-
-            .btn-upload:hover {
-                background: #163a56;
-            }
-
-            .alert {
-                padding: 12px;
-                border-radius: 6px;
-                margin-bottom: 16px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .alert-info {
-                background: #cfe2ff;
-                color: #084298;
-            }
-
-            .help-text {
-                font-size: 0.85rem;
-                color: #666;
-                margin-top: 6px;
-            }
-
-            /* RIGHT Panel */
-            .preview-panel {
-                display: flex;
-                flex-direction: column;
-                background: white;
-            }
-
-            .preview-header {
-                padding: 16px;
-                border-bottom: 1px solid #e0e0e0;
-            }
-
-            .preview-iframe-container {
-                flex: 1;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .preview-iframe-container iframe {
-                width: 100%;
-                height: 100%;
-                border: none;
-            }
-
-            /* Modal Footer */
-            .modal-footer {
-                padding: 16px 20px;
-                border-top: 1px solid #e0e0e0;
-                display: flex;
-                gap: 12px;
-                justify-content: flex-end;
-            }
-
-            .btn {
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                padding: 10px 20px;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-weight: 600;
-            }
-
-            .btn-secondary {
-                background: #6c757d;
-                color: white;
-            }
-
-            .btn-primary {
-                background: #0d6efd;
-                color: white;
-            }
-
-            .btn-success {
-                background: #28a745;
-                color: white;
-            }
-
-            .btn:hover {
-                opacity: 0.9;
-            }
-
-            /* Carousel Manager */
-            .carousel-item-edit {
-                display: flex;
-                gap: 12px;
-                align-items: center;
-                padding: 12px;
-                background: #f8f9fa;
-                border-radius: 6px;
-                margin-bottom: 12px;
-            }
-
-            .carousel-item-edit img {
-                width: 80px;
-                height: 80px;
-                object-fit: cover;
-                border-radius: 4px;
-            }
-
-            .carousel-info {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-
-            .carousel-info input {
-                padding: 6px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-            }
-
-            .carousel-actions {
-                display: flex;
-                gap: 6px;
-            }
-
-            .carousel-actions button {
-                padding: 6px;
-                border: none;
-                background: #fff;
-                border-radius: 4px;
-                cursor: pointer;
-            }
-
-            .carousel-actions button:hover {
-                background: #e9ecef;
-            }
-
-            .btn-delete {
-                color: #dc3545;
-            }
-
-            /* Toast Notifications */
-            .toast-container {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 99999;
-            }
-
-            .toast {
-                padding: 12px 20px;
-                margin-top: 10px;
-                border-radius: 6px;
-                color: white;
-                opacity: 0;
-                transform: translateY(20px);
-                transition: all 0.3s;
-            }
-
-            .toast.show {
-                opacity: 1;
-                transform: translateY(0);
-            }
-
-            .toast-info {
-                background: #0dcaf0;
-            }
-
-            .toast-success {
-                background: #28a745;
-            }
-
-            .toast-error {
-                background: #dc3545;
-            }
-        </style>
-
-        <script>
-            function closeChatModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.style.display = 'none';
-                }
-            }
-
-            function showChatSuccess(title, message) {
-                const modal = document.getElementById('chatSuccessModal');
-                const titleEl = document.getElementById('chatSuccessTitle');
-                const messageEl = document.getElementById('chatSuccessMessage');
-
-                if (titleEl) titleEl.textContent = title;
-                if (messageEl) messageEl.textContent = message;
-                if (modal) modal.style.display = 'flex';
-            }
-
-            function showChatError(message) {
-                const modal = document.getElementById('chatErrorModal');
-                const messageEl = document.getElementById('chatErrorMessage');
-
-                if (messageEl) messageEl.textContent = message;
-                if (modal) modal.style.display = 'flex';
-            }
-        </script>
-
-        <!-- ===== CONTENT MANAGEMENT EDIT MODAL ===== -->
+        <!-- Content Management Edit Modal (full editor + preview) -->
         <div class="modal" id="editModal">
-            <div class="modal-dialog modal-fullscreen">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 id="modalTitle">Edit Content</h2>
-                        <button class="modal-close" id="btnCloseModal">
-                            <span class="material-symbols-rounded">close</span>
-                        </button>
-                    </div>
-
-                    <div class="modal-body">
-                        <!-- Split Layout: Editor LEFT | Preview RIGHT -->
-                        <div class="editor-layout">
-                            <!-- LEFT: Editable Fields -->
-                            <div class="editor-panel">
-                                <div class="editor-header">
-                                    <h3>Edit Fields</h3>
-                                    <div class="editor-status">
-                                        <span id="previewStatus" class="preview-status status-published">Published</span>
-                                    </div>
-                                </div>
-
-                                <!-- Notice for Customer Homepage -->
-                                <div id="customerNotice" class="alert alert-info" style="display:none;">
-                                    <span class="material-symbols-rounded">info</span>
-                                    <p>Use <code>{{customer_name}}</code> as placeholder for customer's name</p>
-                                </div>
-
-                                <!-- Dynamic Editor Container -->
-                                <div id="editorContainer" class="editor-fields">
-                                    <!-- Fields will be injected here by JS -->
-                                </div>
+            <div class="modal-content" style="max-width:1200px">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Edit Content</h2><button class="modal-close" id="btnCloseModal" onclick="closeModal('editModal')">×</button>
+                </div>
+                <div style="padding:0">
+                    <div class="editor-layout">
+                        <div class="editor-panel">
+                            <div class="editor-header">
+                                <h3>Edit Fields</h3>
+                                <div class="editor-status"><span id="previewStatus" class="preview-status status-published">Published</span></div>
                             </div>
-
-                            <!-- RIGHT: Live Preview -->
-                            <div class="preview-panel">
-                                <div class="preview-header">
-                                    <h3>Live Preview</h3>
-                                </div>
-                                <div class="preview-iframe-container">
-                                    <iframe id="livePreviewIframe" frameborder="0"></iframe>
-                                </div>
+                            <div id="customerNotice" class="alert alert-info hidden" style="padding:12px"><span class="material-symbols-rounded">info</span>
+                                <p>Use <code>{{customer_name}}</code> as placeholder for customer's name</p>
+                            </div>
+                            <div id="editorContainer" class="editor-fields" style="padding:20px">
+                                <!-- injected by JS -->
                             </div>
                         </div>
+                        <div class="preview-panel">
+                            <div class="preview-header">
+                                <h3>Live Preview</h3>
+                            </div>
+                            <div class="preview-iframe-container"><iframe id="livePreviewIframe" frameborder="0"></iframe></div>
+                        </div>
                     </div>
-
-                    <div class="modal-footer">
-                        <button id="btnDiscard" class="btn btn-secondary">
-                            <span class="material-symbols-rounded">delete</span> Discard Changes
-                        </button>
-                        <button id="btnSaveDraft" class="btn btn-primary">
-                            <span class="material-symbols-rounded">save</span> Save Draft
-                        </button>
-                        <button id="btnPublish" class="btn btn-success">
-                            <span class="material-symbols-rounded">publish</span> Publish
-                        </button>
-                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="btnDiscard" class="btn-secondary">Discard Changes</button>
+                    <button id="btnSaveDraft" class="btn-primary">Save Draft</button>
+                    <button id="btnPublish" class="btn-success">Publish</button>
                 </div>
             </div>
         </div>
 
-        <!-- Toast Container -->
+        <!-- Toast container -->
         <div id="toastContainer" class="toast-container"></div>
 
-        <script src="/RADS-TOOLING/assets/JS/chat_admin.js"></script>
-        <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
-        <script src="/RADS-TOOLING/assets/JS/content_mgmt.js"></script>
-
-
-        <!-- ========== ADD PRODUCT MODAL ========== -->
-        <div id="addProductModal" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 800px;">
+        <!-- Add Product Modal (merged) -->
+        <div id="addProductModal" class="modal">
+            <div class="modal-content" style="max-width:800px">
                 <div class="modal-header">
-                    <h2>Add New Product</h2>
-                    <button class="close-modal" onclick="closeModal('addProductModal')">&times;</button>
+                    <h2>Add New Product</h2><button class="close-modal" onclick="closeModal('addProductModal')">×</button>
                 </div>
-
-                <form id="addProductForm">
-                    <!-- SCROLLABLE BODY -->
-                    <div class="modal-body">
-
-                        <!-- Row 1 -->
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="productName">Product Name *</label>
-                                <input type="text" id="productName" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="productType">Type *</label>
-                                <select id="productType" required>
-                                    <option value="">Select Type</option>
-                                    <option value="Kitchen Cabinet">Kitchen Cabinet</option>
-                                    <option value="Wardrobe">Wardrobe</option>
-                                    <option value="Office Cabinet">Office Cabinet</option>
-                                    <option value="Bathroom Cabinet">Bathroom Cabinet</option>
-                                    <option value="Storage Cabinet">Storage Cabinet</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Row 2 -->
-                        <div class="form-group">
-                            <label for="productDescription">Description</label>
-                            <textarea id="productDescription" rows="3"></textarea>
-                        </div>
-
-                        <!-- Row 3 -->
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="productPrice">Base Price (₱)</label>
-                                <input type="number" id="productPrice" step="0.01" value="0">
-                            </div>
-
-                            <div class="form-group">
-                                <label class="customizable-inline">
-                                    <input type="checkbox" id="isCustomizable">
-                                    <span>This product is customizable (3D)</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Row 4 -->
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="productImage">Product Image (Normal View)</label>
-                                <div class="pm-filebox">
-                                    <input type="file" id="productImage" accept="image/*">
-                                </div>
-                                <img id="productImagePreview" style="max-width: 200px; margin-top: 10px; display: none;">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="productModel">3D Model (.glb)</label>
-                                <div class="pm-filebox">
-                                    <input type="file" id="productModel" accept=".glb,model/gltf-binary" disabled>
-                                </div>
-                                <div id="productModelPreview" style="margin-top: 10px; display: none; color: #28a745;"></div>
-                            </div>
-                        </div>
-
-                        <!-- Note -->
-                        <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                            <p style="margin: 0; font-size: 14px; color: #555;">
-                                <strong>Note:</strong> After creating the product, use "Manage Customization Options"
-                                to assign textures, colors, and handles.
-                            </p>
-                        </div>
-                    </div><!-- /modal-body -->
-
-                    <!-- FOOTER (inside the form) -->
-                    <div class="modal-actions">
-                        <button type="button" class="btn-secondary" id="addProductCancelBtn">Cancel</button>
-                        <button type="submit" class="btn-primary">Add Product</button>
+                <form id="addProductForm" style="padding:16px">
+                    <div class="form-row">
+                        <div class="form-group"><label for="productName">Product Name *</label><input type="text" id="productName" required></div>
+                        <div class="form-group"><label for="productType">Type *</label><select id="productType" required>
+                                <option value="">Select Type</option>
+                                <option value="Kitchen Cabinet">Kitchen Cabinet</option>
+                                <option value="Wardrobe">Wardrobe</option>
+                                <option value="Office Cabinet">Office Cabinet</option>
+                                <option value="Bathroom Cabinet">Bathroom Cabinet</option>
+                                <option value="Storage Cabinet">Storage Cabinet</option>
+                            </select></div>
                     </div>
+                    <div class="form-group"><label for="productDescription">Description</label><textarea id="productDescription" rows="3"></textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="productPrice">Base Price (₱)</label><input type="number" id="productPrice" step="0.01" value="0"></div>
+                        <div class="form-group"><label class="customizable-inline"><input type="checkbox" id="isCustomizable"><span>This product is customizable (3D)</span></label></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="productImage">Product Image (Normal View)</label>
+                            <div class="pm-filebox"><input type="file" id="productImage" accept="image/*"></div><img id="productImagePreview" style="max-width:200px;margin-top:10px;display:none">
+                        </div>
+                        <div class="form-group"><label for="productModel">3D Model (.glb)</label>
+                            <div class="pm-filebox"><input type="file" id="productModel" accept=".glb,model/gltf-binary" disabled></div>
+                            <div id="productModelPreview" style="margin-top:10px;display:none;color:#28a745"></div>
+                        </div>
+                    </div>
+                    <div style="background:#e8f4f8;padding:15px;border-radius:8px;margin-top:15px">
+                        <p style="margin:0;font-size:14px;color:#555"><strong>Note:</strong> After creating the product, use "Manage Customization Options" to assign textures, colors, and handles.</p>
+                    </div>
+                    <div class="modal-actions"><button type="button" class="btn-secondary" id="addProductCancelBtn" onclick="closeModal('addProductModal')">Cancel</button><button type="submit" class="btn-primary">Add Product</button></div>
                 </form>
-            </div><!-- /modal-content -->
-        </div><!-- /modal -->
+            </div>
+        </div>
 
-
-        <!-- ========== MANAGE CUSTOMIZATION MODAL ========== -->
-        <div id="manageCustomizationModal" class="modal" style="display: none;">
-            <div class="modal-content" style="max-width: 900px;">
+        <!-- Manage Customization Modal (merged version) -->
+        <div id="manageCustomizationModal" class="modal">
+            <div class="modal-content" style="max-width:900px">
                 <div class="modal-header">
-                    <h2>Manage Customization Options</h2>
-                    <button class="close-modal" onclick="closeModal('manageCustomizationModal')">&times;</button>
+                    <h2>Manage Customization Options</h2><button class="close-modal" onclick="closeModal('manageCustomizationModal')">×</button>
                 </div>
+                <div style="padding:16px">
+                    <input type="hidden" id="customProductId">
+                    <div style="background:#e8f4f8;padding:15px;border-radius:8px;margin-bottom:20px">
+                        <h3 style="margin:0;color:#2c5f8d">Product: <span id="customProductName"></span></h3>
+                    </div>
 
-                <input type="hidden" id="customProductId">
+                    <!-- tabs -->
+                    <div class="customization-tabs" style="display:flex;gap:8px;margin-bottom:12px">
+                        <button type="button" class="tab-btn active" onclick="switchCustomTab('size', event)">Size Sliders</button>
+                        <button type="button" class="tab-btn" onclick="switchCustomTab('texture', event)">Textures</button>
+                        <button type="button" class="tab-btn" onclick="switchCustomTab('color', event)">Colors</button>
+                        <button type="button" class="tab-btn" onclick="switchCustomTab('handle', event)">Handles</button>
+                    </div>
 
-                <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <h3 style="margin: 0; color: #2c5f8d;">Product: <span id="customProductName"></span></h3>
-                </div>
+                    <!-- Size tab content -->
+                    <div id="sizeTabContent" class="tab-content">
+                        <h3 style="margin-bottom:15px">Size Slider Configuration</h3>
 
-                <!-- Tabs -->
-                <div class="customization-tabs">
-                    <button type="button" class="tab-btn active" onclick="switchCustomTab('size')">Size Sliders</button>
-                    <button type="button" class="tab-btn" onclick="switchCustomTab('texture')">Textures</button>
-                    <button type="button" class="tab-btn" onclick="switchCustomTab('color')">Colors</button>
-                    <button type="button" class="tab-btn" onclick="switchCustomTab('handle')">Handles</button>
-                </div>
-
-                <!-- Size Tab -->
-                <div id="sizeTabContent" class="tab-content">
-                    <h3 style="margin-bottom: 15px;">Size Slider Configuration</h3>
-
-                    <!-- ========== WIDTH ========== -->
-                    <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
-                        <h4 style="margin-bottom:10px;">Width Slider</h4>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Min Value</label>
-                                <input type="number" id="widthMinCustom" step="0.1" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Max Value</label>
-                                <input type="number" id="widthMaxCustom" step="0.1" value="300">
-                            </div>
-                            <div class="form-group">
-                                <label>Default</label>
-                                <input type="number" id="widthDefaultCustom" step="0.1" value="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Increment (Step)</label>
-                                <input type="number" id="widthStepCustom" step="0.1" value="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Unit</label>
-                                <select id="widthUnit">
-                                    <option value="cm" selected>cm</option>
-                                    <option value="mm">mm</option>
-                                    <option value="inch">inch</option>
-                                    <option value="ft">ft</option>
-                                    <option value="meter">meter</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <hr style="margin:10px 0;border:0;border-top:1px solid #ddd">
-
-                        <div style="display:flex;gap:20px;align-items:center;margin-bottom:8px;">
-                            <label><input type="radio" name="widthPricingMode" value="percm" checked> Per cm</label>
-                            <label><input type="radio" name="widthPricingMode" value="block"> Per block</label>
-                        </div>
-
-                        <!-- Per-cm -->
-                        <div id="widthPerCmFields">
+                        <!-- WIDTH -->
+                        <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px">
+                            <h4 style="margin-bottom:10px">Width Slider</h4>
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label>Price per Unit (₱)</label>
-                                    <input type="number" id="widthPPU" step="0.01" value="0">
+                                <div class="form-group"><label>Min Value</label><input type="number" id="widthMinCustom" step="0.1" value="0"></div>
+                                <div class="form-group"><label>Max Value</label><input type="number" id="widthMaxCustom" step="0.1" value="300"></div>
+                            </div>
+
+                            <hr style="margin:10px 0;border:0;border-top:1px solid #ddd">
+                            <div style="display:flex;gap:20px;align-items:center;margin-bottom:8px">
+                                <label><input type="radio" name="widthPricingMode" value="percm" checked> Per cm</label>
+                                <label><input type="radio" name="widthPricingMode" value="block"> Per block</label>
+                            </div>
+
+                            <div id="widthPerCmFields">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Price per Unit (₱)</label><input type="number" id="widthPPU" step="0.01" value="0"></div>
                                 </div>
+                            </div>
+
+                            <div id="widthBlockFields" style="display:none">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Block Size (cm)</label><input type="number" id="widthBlockCM" step="0.1" value="10"></div>
+                                    <div class="form-group"><label>Price per Block (₱)</label><input type="number" id="widthPerBlock" step="0.01" value="200"></div>
+                                </div>
+                                <small style="color:#666">Note: block size is always defined in centimeters.</small>
                             </div>
                         </div>
 
-                        <!-- Block -->
-                        <div id="widthBlockFields" style="display:none;">
+                        <!-- HEIGHT -->
+                        <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px">
+                            <h4 style="margin-bottom:10px">Height Slider</h4>
                             <div class="form-row">
-                                <div class="form-group">
-                                    <label>Block Size (cm)</label>
-                                    <input type="number" id="widthBlockCM" step="0.1" value="10">
-                                </div>
-                                <div class="form-group">
-                                    <label>Price per Block (₱)</label>
-                                    <input type="number" id="widthPerBlock" step="0.01" value="200">
+                                <div class="form-group"><label>Min Value</label><input type="number" id="heightMinCustom" step="0.1" value="0"></div>
+                                <div class="form-group"><label>Max Value</label><input type="number" id="heightMaxCustom" step="0.1" value="300"></div>
+                            </div>
+                            <hr style="margin:10px 0;border:0;border-top:1px solid #ddd">
+                            <div style="display:flex;gap:20px;align-items:center;margin-bottom:8px">
+                                <label><input type="radio" name="heightPricingMode" value="percm" checked> Per cm</label>
+                                <label><input type="radio" name="heightPricingMode" value="block"> Per block</label>
+                            </div>
+                            <div id="heightPerCmFields">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Price per Unit (₱)</label><input type="number" id="heightPPU" step="0.01" value="0"></div>
                                 </div>
                             </div>
-                            <small style="color:#666;">Note: block size is always defined in centimeters.</small>
+                            <div id="heightBlockFields" style="display:none">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Block Size (cm)</label><input type="number" id="heightBlockCM" step="0.1" value="10"></div>
+                                    <div class="form-group"><label>Price per Block (₱)</label><input type="number" id="heightPerBlock" step="0.01" value="300"></div>
+                                </div><small style="color:#666">Note: block size is always defined in centimeters.</small>
+                            </div>
+                        </div>
+
+                        <!-- DEPTH -->
+                        <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px">
+                            <h4 style="margin-bottom:10px">Depth Slider</h4>
+                            <div class="form-row">
+                                <div class="form-group"><label>Min Value</label><input type="number" id="depthMinCustom" step="0.1" value="0"></div>
+                                <div class="form-group"><label>Max Value</label><input type="number" id="depthMaxCustom" step="0.1" value="300"></div>
+                            </div>
+                            <hr style="margin:10px 0;border:0;border-top:1px solid #ddd">
+                            <div style="display:flex;gap:20px;align-items:center;margin-bottom:8px">
+                                <label><input type="radio" name="depthPricingMode" value="percm" checked> Per cm</label>
+                                <label><input type="radio" name="depthPricingMode" value="block"> Per block</label>
+                            </div>
+                            <div id="depthPerCmFields">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Price per Unit (₱)</label><input type="number" id="depthPPU" step="0.01" value="0"></div>
+                                </div>
+                            </div>
+                            <div id="depthBlockFields" style="display:none">
+                                <div class="form-row">
+                                    <div class="form-group"><label>Block Size (cm)</label><input type="number" id="depthBlockCM" step="0.1" value="10"></div>
+                                    <div class="form-group"><label>Price per Block (₱)</label><input type="number" id="depthPerBlock" step="0.01" value="150"></div>
+                                </div><small style="color:#666">Note: block size is always defined in centimeters.</small>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- ========== HEIGHT ========== -->
-                    <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
-                        <h4 style="margin-bottom:10px;">Height Slider</h4>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Min Value</label>
-                                <input type="number" id="heightMinCustom" step="0.1" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Max Value</label>
-                                <input type="number" id="heightMaxCustom" step="0.1" value="300">
-                            </div>
-                            <div class="form-group">
-                                <label>Default</label>
-                                <input type="number" id="heightDefaultCustom" step="0.1" value="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Increment (Step)</label>
-                                <input type="number" id="heightStepCustom" step="0.1" value="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Unit</label>
-                                <select id="heightUnit">
-                                    <option value="cm" selected>cm</option>
-                                    <option value="mm">mm</option>
-                                    <option value="inch">inch</option>
-                                    <option value="ft">ft</option>
-                                    <option value="meter">meter</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <hr style="margin:10px 0;border:0;border-top:1px solid #ddd">
-
-                        <div style="display:flex;gap:20px;align-items:center;margin-bottom:8px;">
-                            <label><input type="radio" name="heightPricingMode" value="percm" checked> Per cm</label>
-                            <label><input type="radio" name="heightPricingMode" value="block"> Per block</label>
-                        </div>
-
-                        <div id="heightPerCmFields">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Price per Unit (₱)</label>
-                                    <input type="number" id="heightPPU" step="0.01" value="0">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="heightBlockFields" style="display:none;">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Block Size (cm)</label>
-                                    <input type="number" id="heightBlockCM" step="0.1" value="10">
-                                </div>
-                                <div class="form-group">
-                                    <label>Price per Block (₱)</label>
-                                    <input type="number" id="heightPerBlock" step="0.01" value="300">
-                                </div>
-                            </div>
-                            <small style="color:#666;">Note: block size is always defined in centimeters.</small>
-                        </div>
+                    <!-- Texture tab -->
+                    <div id="textureTabContent" class="tab-content hidden" style="padding:8px;background:#f8f9fa;border-radius:8px">
+                        <h3>Select Available Textures</h3>
+                        <p style="color:#666">Check the textures that should be available for this product</p>
+                        <div id="texturesListContainer" style="max-height:400px;overflow-y:auto;border:1px solid #ddd;padding:15px;border-radius:8px;background:#f8f9fa"></div>
+                        <div style="margin-top:15px"><button type="button" class="btn-secondary" onclick="openAddTextureModal()"><span class="material-symbols-rounded">add</span> Add New Texture</button></div>
                     </div>
 
-                    <!-- ========== DEPTH ========== -->
-                    <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
-                        <h4 style="margin-bottom:10px;">Depth Slider</h4>
+                    <!-- Color tab -->
+                    <div id="colorTabContent" class="tab-content hidden" style="padding:8px">
+                        <h3>Select Available Colors</h3>
+                        <p style="color:#666">Check the colors that should be available for this product</p>
+                        <div id="colorsListContainer" style="max-height:400px;overflow-y:auto;border:1px solid #ddd;padding:15px;border-radius:8px;background:#f8f9fa"></div>
+                        <div style="margin-top:15px"><button type="button" class="btn-secondary" onclick="openAddColorModal()"><span class="material-symbols-rounded">add</span> Add New Color</button></div>
+                    </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Min Value</label>
-                                <input type="number" id="depthMinCustom" step="0.1" value="0">
-                            </div>
-                            <div class="form-group">
-                                <label>Max Value</label>
-                                <input type="number" id="depthMaxCustom" step="0.1" value="300">
-                            </div>
-                            <div class="form-group">
-                                <label>Default</label>
-                                <input type="number" id="depthDefaultCustom" step="0.1" value="100">
-                            </div>
-                            <div class="form-group">
-                                <label>Increment (Step)</label>
-                                <input type="number" id="depthStepCustom" step="0.1" value="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Unit</label>
-                                <select id="depthUnit">
-                                    <option value="cm" selected>cm</option>
-                                    <option value="mm">mm</option>
-                                    <option value="inch">inch</option>
-                                    <option value="ft">ft</option>
-                                    <option value="meter">meter</option>
-                                </select>
-                            </div>
-                        </div>
+                    <!-- Handle tab -->
+                    <div id="handleTabContent" class="tab-content hidden" style="padding:8px">
+                        <h3>Select Available Handles</h3>
+                        <p style="color:#666">Check the handle types that should be available for this product</p>
+                        <div id="handlesListContainer" style="max-height:400px;overflow-y:auto;border:1px solid #ddd;padding:15px;border-radius:8px;background:#f8f9fa"></div>
+                        <div style="margin-top:15px"><button type="button" class="btn-secondary" onclick="openAddHandleModal()"><span class="material-symbols-rounded">add</span> Add New Handle</button></div>
+                    </div>
 
-                        <hr style="margin:10px 0;border:0;border-top:1px solid #ddd">
-
-                        <div style="display:flex;gap:20px;align-items:center;margin-bottom:8px;">
-                            <label><input type="radio" name="depthPricingMode" value="percm" checked> Per cm</label>
-                            <label><input type="radio" name="depthPricingMode" value="block"> Per block</label>
-                        </div>
-
-                        <div id="depthPerCmFields">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Price per Unit (₱)</label>
-                                    <input type="number" id="depthPPU" step="0.01" value="0">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="depthBlockFields" style="display:none;">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Block Size (cm)</label>
-                                    <input type="number" id="depthBlockCM" step="0.1" value="10">
-                                </div>
-                                <div class="form-group">
-                                    <label>Price per Block (₱)</label>
-                                    <input type="number" id="depthPerBlock" step="0.01" value="150">
-                                </div>
-                            </div>
-                            <small style="color:#666;">Note: block size is always defined in centimeters.</small>
-                        </div>
+                    <div class="modal-actions" style="margin-top:12px">
+                        <button type="button" class="btn-secondary" onclick="closeModal('manageCustomizationModal')">Cancel</button>
+                        <button type="button" class="btn-primary" onclick="saveCustomizationOptions()">Save Changes</button>
                     </div>
                 </div>
-
-            </div>
-
-            <!-- Texture Tab -->
-            <div id="textureTabContent" class="tab-content" style="display: none;">
-                <h3 style="margin-bottom: 15px;">Select Available Textures</h3>
-                <p style="color: #666; margin-bottom: 20px;">Check the textures that should be available for this product</p>
-
-                <div id="texturesListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f8f9fa;">
-                    <!-- Populated by JavaScript -->
-                </div>
-
-                <div style="margin-top: 15px;">
-                    <button type="button" class="btn-secondary" onclick="openAddTextureModal()">
-                        <span class="material-symbols-rounded">add</span> Add New Texture
-                    </button>
-                </div>
-            </div>
-
-            <!-- Color Tab -->
-            <div id="colorTabContent" class="tab-content" style="display: none;">
-                <h3 style="margin-bottom: 15px;">Select Available Colors</h3>
-                <p style="color: #666; margin-bottom: 20px;">Check the colors that should be available for this product</p>
-
-                <div id="colorsListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f8f9fa;">
-                    <!-- Populated by JavaScript -->
-                </div>
-
-                <div style="margin-top: 15px;">
-                    <button type="button" class="btn-secondary" onclick="openAddColorModal()">
-                        <span class="material-symbols-rounded">add</span> Add New Color
-                    </button>
-                </div>
-            </div>
-
-            <!-- Handle Tab -->
-            <div id="handleTabContent" class="tab-content" style="display: none;">
-                <h3 style="margin-bottom: 15px;">Select Available Handles</h3>
-                <p style="color: #666; margin-bottom: 20px;">Check the handle types that should be available for this product</p>
-
-                <div id="handlesListContainer" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f8f9fa;">
-                    <!-- Populated by JavaScript -->
-                </div>
-
-                <div style="margin-top: 15px;">
-                    <button type="button" class="btn-secondary" onclick="openAddHandleModal()">
-                        <span class="material-symbols-rounded">add</span> Add New Handle
-                    </button>
-                </div>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="closeModal('manageCustomizationModal')">Cancel</button>
-                <button type="button" class="btn-primary" onclick="saveCustomizationOptions()">Save Changes</button>
             </div>
         </div>
-    </div>
 
-    <script>
-        // Toggle per-cm vs block fields
-        function bindPricingToggles(dim) {
-            const radios = document.querySelectorAll(`input[name="${dim}PricingMode"]`);
-            const percm = document.getElementById(`${dim}PerCmFields`);
-            const block = document.getElementById(`${dim}BlockFields`);
-            const sync = () => {
-                const mode = [...radios].find(r => r.checked)?.value || 'percm';
-                percm.style.display = mode === 'percm' ? '' : 'none';
-                block.style.display = mode === 'block' ? '' : 'none';
-            };
-            radios.forEach(r => r.addEventListener('change', sync));
-            sync();
-        }
-        ['width', 'height', 'depth'].forEach(bindPricingToggles);
-    </script>
-
-    <script>
-        // Tab switching function
-        function switchCustomTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.style.display = 'none';
-            });
-
-            // Remove active class from all buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            // Show selected tab
-            document.getElementById(`${tabName}TabContent`).style.display = 'block';
-
-            // Add active class to clicked button
-            event.target.classList.add('active');
-        }
-    </script>
-
-    <style>
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.6);
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .modal-content {
-            background: #fff;
-            padding: 0;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 25px;
-            border-bottom: 2px solid #e3e3e3;
-            position: sticky;
-            top: 0;
-            background: #fff;
-            z-index: 10;
-        }
-
-        .modal-header h2 {
-            margin: 0;
-            color: #2c5f8d;
-            font-size: 1.5rem;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 2rem;
-            cursor: pointer;
-            color: #999;
-            transition: color 0.2s;
-        }
-
-        .close-modal:hover {
-            color: #333;
-        }
-
-        .modal form,
-        .modal>div:not(.modal-header) {
-            padding: 25px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #2c5f8d;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            padding: 20px 25px;
-            border-top: 2px solid #e3e3e3;
-            position: sticky;
-            bottom: 0;
-            background: #fff;
-        }
-
-        .btn-primary,
-        .btn-secondary {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-primary {
-            background: #2c5f8d;
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            background: #1e4567;
-        }
-
-        .btn-secondary {
-            background: #e3e3e3;
-            color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #d0d0d0;
-        }
-
-        .customization-option-item {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            margin-bottom: 10px;
-            background: #fff;
-            border: 1px solid #e3e3e3;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .customization-option-item:hover {
-            border-color: #2c5f8d;
-            box-shadow: 0 2px 8px rgba(44, 95, 141, 0.1);
-        }
-
-        .customization-option-item input[type="checkbox"] {
-            margin-right: 10px;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .customization-option-item label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            margin: 0;
-            font-weight: normal;
-            flex: 1;
-        }
-
-        .tab-content {
-            min-height: 300px;
-        }
-
-        .badge {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-info {
-            background: #e8f4f8;
-            color: #2c5f8d;
-        }
-
-        .badge-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .badge-secondary {
-            background: #e3e3e3;
-            color: #666;
-        }
-    </style>
-
-    <!-- ========== ADD TEXTURE MODAL ========== -->
-    <div id="addTextureModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2>Add New Texture</h2>
-                <button class="close-modal" onclick="closeModal('addTextureModal')">&times;</button>
-            </div>
-
-            <form id="addTextureForm" onsubmit="handleAddTexture(event)">
-                <div class="form-group">
-                    <label for="textureName">Texture Name *</label>
-                    <input type="text" id="textureName" required placeholder="e.g., Oak Wood, Marble White">
+        <!-- Add Texture / Color / Handle Modals (merged versions) -->
+        <div id="addTextureModal" class="modal">
+            <div class="modal-content" style="max-width:600px">
+                <div class="modal-header">
+                    <h2>Add New Texture</h2><button class="close-modal" onclick="closeModal('addTextureModal')">×</button>
                 </div>
-
-                <div class="form-group">
-                    <label for="textureCode">Texture Code *</label>
-                    <input type="text" id="textureCode" required placeholder="e.g., WOOD_OAK, MARBLE_WHITE">
-                    <small style="color: #666;">Use uppercase with underscores</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="textureDescription">Description</label>
-                    <textarea id="textureDescription" rows="3" placeholder="Describe the texture..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="textureBasePrice">Base Price (₱)</label>
-                    <input type="number" id="textureBasePrice" step="0.01" value="0">
-                </div>
-
-                <div class="form-group">
-                    <label for="textureImage">Texture Image *</label>
-                    <input type="file" id="textureImage" accept="image/*" required onchange="handleTextureImagePreview(event)">
-                    <img id="textureImagePreview" style="max-width: 200px; margin-top: 10px; display: none; border-radius: 8px;">
-                </div>
-
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="textureIsActive" checked>
-                        <span>Active (Available for selection)</span>
-                    </label>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal('addTextureModal')">Cancel</button>
-                    <button type="submit" class="btn-primary">Add Texture</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ========== ADD COLOR MODAL ========== -->
-    <div id="addColorModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2>Add New Color</h2>
-                <button class="close-modal" onclick="closeModal('addColorModal')">&times;</button>
-            </div>
-
-            <form id="addColorForm" onsubmit="handleAddColor(event)">
-                <div class="form-group">
-                    <label for="colorName">Color Name *</label>
-                    <input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White">
-                </div>
-
-                <div class="form-group">
-                    <label for="colorCode">Color Code *</label>
-                    <input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY">
-                    <small style="color: #666;">Use uppercase with underscores</small>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="colorHex">Hex Color Value *</label>
-                        <input type="color" id="colorHex" value="#000000" required style="height: 50px;">
+                <form id="addTextureForm" onsubmit="handleAddTexture(event)" style="padding:16px">
+                    <div class="form-group"><label for="textureName">Texture Name *</label><input type="text" id="textureName" required placeholder="e.g., Oak Wood, Marble White"></div>
+                    <div class="form-group"><label for="textureCode">Texture Code *</label><input type="text" id="textureCode" required placeholder="e.g., WOOD_OAK, MARBLE_WHITE"><small style="color:#666">Use uppercase with underscores</small></div>
+                    <div class="form-group"><label for="textureDescription">Description</label><textarea id="textureDescription" rows="3"></textarea></div>
+                    <div class="form-group"><label for="textureBasePrice">Base Price (₱)</label><input type="number" id="textureBasePrice" step="0.01" value="0"></div>
+                    <div class="form-group" style="margin-top:14px;">
+                        <label style="font-weight:600; display:block; margin-bottom:8px;">Allowed Parts</label>
+                        <div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));gap: 10px;text-align: center;padding: 10px 12px;border: 1px solid #ddd;border-radius: 8px;background: #f9fafb;">
+                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                <input type="checkbox" name="textureParts" value="body" style="margin-bottom:4px;">
+                                Body / Frame
+                            </label>
+                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                <input type="checkbox" name="textureParts" value="door" style="margin-bottom:4px;">
+                                Door
+                            </label>
+                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                <input type="checkbox" name="textureParts" value="interior" style="margin-bottom:4px;">
+                                Interior
+                            </label>
+                        </div>
+                        <small style="color:#666; display:block; margin-top:6px;">
+                            Select where this texture may be applied.
+                        </small>
                     </div>
-
-                    <div class="form-group">
-                        <label for="colorHexText">Hex Code</label>
-                        <input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
+                    <div class="form-group"><label for="textureImage">Texture Image *</label><input type="file" id="textureImage" accept="image/*" required onchange="handleTextureImagePreview(event)"><img id="textureImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
+                    <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
+                            <input type="checkbox" id="textureIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                        </div>
+                        <div style="flex:1;">
+                            <label for="textureIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
+                            <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the texture from customers.</small>
+                        </div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="colorBasePrice">Base Price (₱)</label>
-                    <input type="number" id="colorBasePrice" step="0.01" value="0">
-                </div>
-
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="colorIsActive" checked>
-                        <span>Active (Available for selection)</span>
-                    </label>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button>
-                    <button type="submit" class="btn-primary">Add Color</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ========== ADD HANDLE MODAL ========== -->
-    <div id="addHandleModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2>Add New Handle Type</h2>
-                <button class="close-modal" onclick="closeModal('addHandleModal')">&times;</button>
+                    <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addTextureModal')">Cancel</button><button type="submit" class="btn-primary">Add Texture</button></div>
+                </form>
             </div>
-
-            <form id="addHandleForm" onsubmit="handleAddHandle(event)">
-                <div class="form-group">
-                    <label for="handleName">Handle Name *</label>
-                    <input type="text" id="handleName" required placeholder="e.g., Modern Silver, Classic Brass">
-                </div>
-
-                <div class="form-group">
-                    <label for="handleCode">Handle Code *</label>
-                    <input type="text" id="handleCode" required placeholder="e.g., MODERN_SILVER, CLASSIC_BRASS">
-                    <small style="color: #666;">Use uppercase with underscores</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="handleDescription">Description</label>
-                    <textarea id="handleDescription" rows="3" placeholder="Describe the handle type..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="handleBasePrice">Base Price (₱)</label>
-                    <input type="number" id="handleBasePrice" step="0.01" value="0">
-                </div>
-
-                <div class="form-group">
-                    <label for="handleImage">Handle Image *</label>
-                    <input type="file" id="handleImage" accept="image/*" required onchange="handleHandleImagePreview(event)">
-                    <img id="handleImagePreview" style="max-width: 200px; margin-top: 10px; display: none; border-radius: 8px;">
-                </div>
-
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="handleIsActive" checked>
-                        <span>Active (Available for selection)</span>
-                    </label>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal('addHandleModal')">Cancel</button>
-                    <button type="submit" class="btn-primary">Add Handle</button>
-                </div>
-            </form>
         </div>
-    </div>
+
+        <div id="addColorModal" class="modal">
+            <div class="modal-content" style="max-width:600px">
+                <div class="modal-header">
+                    <h2>Add New Color</h2><button class="close-modal" onclick="closeModal('addColorModal')">×</button>
+                </div>
+                <form id="addColorForm" onsubmit="handleAddColor(event)" style="padding:16px">
+                    <div class="form-group"><label for="colorName">Color Name *</label><input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White"></div>
+                    <div class="form-group"><label for="colorCode">Color Code *</label><input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY"><small style="color:#666">Use uppercase with underscores</small></div>
+                    <div class="form-row">
+                        <div class="form-group"><label for="colorHex">Hex Color Value *</label><input type="color" id="colorHex" value="#000000" required style="height:50px"></div>
+                        <div class="form-group"><label for="colorHexText">Hex Code</label><input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000"></div>
+                    </div>
+                    <div class="form-group"><label for="colorBasePrice">Base Price (₱)</label><input type="number" id="colorBasePrice" step="0.01" value="0"></div>
+                    <div class="form-group"><label><input type="checkbox" id="colorIsActive" checked> Active (Available for selection)</label></div>
+                    <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button><button type="submit" class="btn-primary">Add Color</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="addHandleModal" class="modal">
+            <div class="modal-content" style="max-width:600px">
+                <div class="modal-header">
+                    <h2>Add New Handle Type</h2><button class="close-modal" onclick="closeModal('addHandleModal')">×</button>
+                </div>
+                <form id="addHandleForm" onsubmit="handleAddHandle(event)" style="padding:16px">
+                    <div class="form-group"><label for="handleName">Handle Name *</label><input type="text" id="handleName" required placeholder="e.g., Modern Silver, Classic Brass"></div>
+                    <div class="form-group"><label for="handleCode">Handle Code *</label><input type="text" id="handleCode" required placeholder="e.g., MODERN_SILVER, CLASSIC_BRASS"><small style="color:#666">Use uppercase with underscores</small></div>
+                    <div class="form-group"><label for="handleDescription">Description</label><textarea id="handleDescription" rows="3"></textarea></div>
+                    <div class="form-group"><label for="handleBasePrice">Base Price (₱)</label><input type="number" id="handleBasePrice" step="0.01" value="0"></div>
+                    <div class="form-group"><label for="handleImage">Handle Image *</label><input type="file" id="handleImage" accept="image/*" required onchange="handleHandleImagePreview(event)"><img id="handleImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
+                    <div class="form-group"><label><input type="checkbox" id="handleIsActive" checked> Active (Available for selection)</label></div>
+                    <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addHandleModal')">Cancel</button><button type="submit" class="btn-primary">Add Handle</button></div>
+                </form>
+            </div>
+        </div>
+
+    </div> <!-- end main-content -->
+
+    <!-- SCRIPTS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/RADS-TOOLING/assets/JS/script.js"></script>
+    <script src="/RADS-TOOLING/assets/JS/product_management.js"></script>
+    <script src="/RADS-TOOLING/assets/JS/chat_admin.js"></script>
+    <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
+    <script src="/RADS-TOOLING/assets/JS/content_mgmt.js"></script>
 
     <script>
         // Open modals
@@ -2234,41 +1223,132 @@ if (!$isLoggedIn) {
                 showNotification('error', 'Failed to upload texture image');
             }
         }
+    </script>
 
-        // Handle Image Preview
+    <script>
+        // Safe fallback if openModal / closeModal not defined in external scripts
+        window.openModal = window.openModal || function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('show');
+        };
+        window.closeModal = window.closeModal || function(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('show');
+        };
+
+        // Hide loading overlay once DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+                // Initialize content manager if present and content section visible
+                const contentSection = document.querySelector('section[data-section="content"]');
+                if (contentSection && contentSection.classList.contains('show')) {
+                    if (typeof CM !== 'undefined' && typeof CM.init === 'function') {
+                        setTimeout(() => CM.init(), 100);
+                    }
+                }
+            }, 300);
+        });
+
+        // switchCustomTab now accepts event param
+        function switchCustomTab(tabName, event) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const target = document.getElementById(`${tabName}TabContent`) || document.getElementById(`${tabName}TabContent`);
+            // fallback: our IDs are e.g., sizeTabContent, textureTabContent...
+            const el = document.getElementById(`${tabName}TabContent`) || document.getElementById(`${tabName}TabContent`);
+            // more robust showing:
+            const mapping = {
+                size: document.getElementById('sizeTabContent'),
+                texture: document.getElementById('textureTabContent'),
+                color: document.getElementById('colorTabContent'),
+                handle: document.getElementById('handleTabContent')
+            };
+            if (mapping[tabName]) mapping[tabName].classList.remove('hidden');
+            if (event && event.target) event.target.classList.add('active');
+        }
+
+        // Pricing toggles binder (works for width/height/depth)
+        function bindPricingToggles(dim) {
+            const radios = document.querySelectorAll(`input[name="${dim}PricingMode"]`);
+            const percm = document.getElementById(`${dim}PerCmFields`);
+            const block = document.getElementById(`${dim}BlockFields`);
+            const sync = () => {
+                const mode = [...radios].find(r => r.checked)?.value || 'percm';
+                if (percm) percm.style.display = (mode === 'percm' ? '' : 'none');
+                if (block) block.style.display = (mode === 'block' ? '' : 'none');
+            };
+            radios.forEach(r => r.addEventListener('change', sync));
+            sync();
+        }
+        ['width', 'height', 'depth'].forEach(bindPricingToggles);
+
+        // Image upload previews & add handlers (kept as in original merged)
+        async function handleTextureImagePreview(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('image', file);
+            try {
+                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_texture_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const preview = document.getElementById('textureImagePreview');
+                    if (preview) {
+                        preview.src = `/RADS-TOOLING/uploads/textures/${data.data.filename}`;
+                        preview.style.display = 'block';
+                        preview.dataset.filename = data.data.filename;
+                    }
+                    showNotification('success', 'Texture image uploaded successfully');
+                } else {
+                    showNotification('error', data.message || 'Upload failed');
+                }
+            } catch (err) {
+                console.error(err);
+                showNotification('error', 'Failed to upload texture image');
+            }
+        }
+
         async function handleHandleImagePreview(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const formData = new FormData();
             formData.append('image', file);
-
             try {
                 const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_handle_image', {
                     method: 'POST',
                     body: formData
                 });
-
                 const data = await response.json();
-
                 if (data.success) {
                     const preview = document.getElementById('handleImagePreview');
-                    preview.src = `/RADS-TOOLING/uploads/handles/${data.data.filename}`;
-                    preview.style.display = 'block';
-                    preview.dataset.filename = data.data.filename;
+                    if (preview) {
+                        preview.src = `/RADS-TOOLING/uploads/handles/${data.data.filename}`;
+                        preview.style.display = 'block';
+                        preview.dataset.filename = data.data.filename;
+                    }
                     showNotification('success', 'Handle image uploaded successfully');
                 } else {
-                    showNotification('error', data.message);
+                    showNotification('error', data.message || 'Upload failed');
                 }
-            } catch (error) {
-                console.error('Upload handle image error:', error);
+            } catch (err) {
+                console.error(err);
                 showNotification('error', 'Failed to upload handle image');
             }
         }
 
-        // Add Texture
+        // Add texture/color/handle handlers (merged)
         async function handleAddTexture(e) {
             e.preventDefault();
+
+            const allowedParts = Array.from(document.querySelectorAll('input[name="textureParts"]:checked')).map(cb => cb.value);
 
             const formData = {
                 texture_name: document.getElementById('textureName').value,
@@ -2276,38 +1356,32 @@ if (!$isLoggedIn) {
                 description: document.getElementById('textureDescription').value,
                 base_price: parseFloat(document.getElementById('textureBasePrice').value) || 0,
                 is_active: document.getElementById('textureIsActive').checked ? 1 : 0,
-                texture_image: document.getElementById('textureImagePreview').dataset.filename || ''
+                texture_image: document.getElementById('textureImagePreview')?.dataset?.filename || '',
+                allowed_parts: allowedParts
             };
-
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_texture', {
+                const res = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_texture', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formData)
                 });
-
-                const data = await response.json();
-
+                const data = await res.json();
                 if (data.success) {
                     showNotification('success', 'Texture added successfully');
                     closeModal('addTextureModal');
                     document.getElementById('addTextureForm').reset();
-                    loadTextures();
-                } else {
-                    showNotification('error', data.message);
-                }
-            } catch (error) {
-                console.error('Add texture error:', error);
+                    if (typeof loadTextures === 'function') loadTextures();
+                } else showNotification('error', data.message || 'Failed to add texture');
+            } catch (err) {
+                console.error(err);
                 showNotification('error', 'Failed to add texture');
             }
         }
 
-        // Add Color
         async function handleAddColor(e) {
             e.preventDefault();
-
             const formData = {
                 color_name: document.getElementById('colorName').value,
                 color_code: document.getElementById('colorCode').value,
@@ -2315,83 +1389,84 @@ if (!$isLoggedIn) {
                 base_price: parseFloat(document.getElementById('colorBasePrice').value) || 0,
                 is_active: document.getElementById('colorIsActive').checked ? 1 : 0
             };
-
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_color', {
+                const res = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_color', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formData)
                 });
-
-                const data = await response.json();
-
+                const data = await res.json();
                 if (data.success) {
                     showNotification('success', 'Color added successfully');
                     closeModal('addColorModal');
                     document.getElementById('addColorForm').reset();
-                    loadColors();
-                } else {
-                    showNotification('error', data.message);
-                }
-            } catch (error) {
-                console.error('Add color error:', error);
+                    if (typeof loadColors === 'function') loadColors();
+                } else showNotification('error', data.message || 'Failed to add color');
+            } catch (err) {
+                console.error(err);
                 showNotification('error', 'Failed to add color');
             }
         }
 
-        // Add Handle
         async function handleAddHandle(e) {
             e.preventDefault();
-
             const formData = {
                 handle_name: document.getElementById('handleName').value,
                 handle_code: document.getElementById('handleCode').value,
                 description: document.getElementById('handleDescription').value,
                 base_price: parseFloat(document.getElementById('handleBasePrice').value) || 0,
                 is_active: document.getElementById('handleIsActive').checked ? 1 : 0,
-                handle_image: document.getElementById('handleImagePreview').dataset.filename || ''
+                handle_image: document.getElementById('handleImagePreview')?.dataset?.filename || ''
             };
-
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_handle', {
+                const res = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_handle', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(formData)
                 });
-
-                const data = await response.json();
-
+                const data = await res.json();
                 if (data.success) {
                     showNotification('success', 'Handle added successfully');
                     closeModal('addHandleModal');
                     document.getElementById('addHandleForm').reset();
-                    loadHandles();
-                } else {
-                    showNotification('error', data.message);
-                }
-            } catch (error) {
-                console.error('Add handle error:', error);
+                    if (typeof loadHandles === 'function') loadHandles();
+                } else showNotification('error', data.message || 'Failed to add handle');
+            } catch (err) {
+                console.error(err);
                 showNotification('error', 'Failed to add handle');
             }
         }
 
-        // Sync color picker and text input
+        // Sync color picker/text
         document.getElementById('colorHex')?.addEventListener('input', (e) => {
-            document.getElementById('colorHexText').value = e.target.value;
+            const t = document.getElementById('colorHexText');
+            if (t) t.value = e.target.value;
         });
-
         document.getElementById('colorHexText')?.addEventListener('input', (e) => {
-            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                document.getElementById('colorHex').value = e.target.value;
-            }
+            if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) document.getElementById('colorHex').value = e.target.value;
         });
+
+        // Minimal notification helper (uses toast container)
+        function showNotification(type, message) {
+            const c = document.getElementById('toastContainer');
+            if (!c) return alert(message);
+            const t = document.createElement('div');
+            t.className = 'toast show toast-' + (type || 'info');
+            t.textContent = message;
+            if (type === 'success') t.style.background = '#28a745';
+            else if (type === 'error') t.style.background = '#dc3545';
+            else t.style.background = '#0dcaf0';
+            c.appendChild(t);
+            setTimeout(() => {
+                t.classList.remove('show');
+                t.remove();
+            }, 3500);
+        }
     </script>
-
-
 </body>
 
 </html>

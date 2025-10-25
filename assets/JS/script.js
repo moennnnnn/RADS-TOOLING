@@ -1952,28 +1952,46 @@ async function loadFeedback() {
     if (!tbody) return;
 
     try {
-        const res = await fetch('/RADS-TOOLING/backend/api/feedback/admin_list.php', {
-  credentials: 'same-origin',
-  headers: { 'Accept': 'application/json' }
-});
+        const resp = await fetch('/RADS-TOOLING/backend/api/feedback/admin_list.php', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
 
-        if (!response.ok) {
-            throw new Error('Failed to load feedback');
+        // log status
+        console.log('loadFeedback: HTTP', resp.status, resp.statusText);
+
+        // always read raw text so we can see server error output
+        const raw = await resp.text();
+        console.log('loadFeedback: raw response:', raw.slice(0, 2000)); // show up to 2000 chars
+
+        // try parse JSON if applicable
+        let json = null;
+        try {
+            json = JSON.parse(raw);
+        } catch (err) {
+            console.warn('loadFeedback: JSON parse failed', err);
         }
 
-        const result = await response.json();
-
-        if (!result.success) {
-            throw new Error(result.message || 'Failed to load feedback');
+        if (!resp.ok) {
+            // resp is not OK (e.g. 500). show error with body preview.
+            throw new Error(`Server returned HTTP ${resp.status}: ${raw.slice(0,200)}`);
         }
 
-        displayFeedback(result.data || []);
+        if (!json || !json.success) {
+            // either invalid JSON or success:false
+            const msg = (json && json.message) ? json.message : 'Invalid or missing JSON response';
+            throw new Error(msg + (raw ? ` — raw: ${raw.slice(0,200)}` : ''));
+        }
+
+        displayFeedback(json.data || []);
 
     } catch (error) {
         console.error('Error loading feedback:', error);
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">Error loading feedback</td></tr>';
+        // optional: showNotification('Failed to load feedback: ' + error.message, 'error');
     }
 }
+
 
 function displayFeedback(feedbackList) {
     const tbody = document.getElementById('feedbackTableBody');
@@ -2016,7 +2034,7 @@ function displayFeedback(feedbackList) {
 
 async function releaseFeedback(feedbackId) {
     try {
-        const response = await fetch('/RADS-TOOLING/backend/api/release_feedback.php', {
+        const response = await fetch('/RADS-TOOLING/backend/api/feedback/release.php', {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -2050,7 +2068,7 @@ async function hideFeedback(feedbackId) {
         okText: 'Hide',
         onConfirm: async () => {
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/release_feedback.php', {
+                const response = await fetch('/RADS-TOOLING/backend/api/feedback/release.php', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {

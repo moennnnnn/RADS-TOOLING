@@ -1,24 +1,41 @@
 <?php
-// ===== Error visibility (safe-by-default) =====
+// public/testimonials.php
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
-require_once __DIR__ . '/../backend/config/app.php';
+// Try to load config
+$configPaths = [
+    __DIR__ . '/../backend/config/app.php',
+    __DIR__ . '/../../backend/config/app.php',
+    __DIR__ . '/../backend/config/database.php'
+];
 
-// If $pdo isn't provided by app.php, fall back to Database singleton
+$pdo = null;
+foreach ($configPaths as $configPath) {
+    if (file_exists($configPath)) {
+        require_once $configPath;
+        break;
+    }
+}
+
 if (!isset($pdo) || !$pdo) {
-    // Try to resolve via config/database.php if your app structure uses it
-    $dbConfig = __DIR__ . '/../backend/config/database.php';
-    if (file_exists($dbConfig)) {
-        require_once $dbConfig;
-        if (class_exists('Database')) {
-            try {
-                $pdo = Database::getInstance()->getConnection();
-            } catch (Throwable $e) {
-                error_log('Testimonials DB connection error: ' . $e->getMessage());
-                $pdo = null;
-            }
+    if (class_exists('Database')) {
+        try {
+            $pdo = Database::getInstance()->getConnection();
+        } catch (Throwable $e) {
+            error_log('Testimonials DB error: ' . $e->getMessage());
         }
+    }
+}
+
+if (!$pdo) {
+    try {
+        $pdo = new PDO("mysql:host=localhost;dbname=rads_tooling;charset=utf8mb4", "root", "");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('Testimonials DB connection failed: ' . $e->getMessage());
     }
 }
 
@@ -27,17 +44,17 @@ $stats = ['count' => 0, 'avg' => 0];
 
 if ($pdo instanceof PDO) {
     try {
-        // Summary (count + average of released)
-        $qStats = $pdo->query("
-            SELECT COUNT(*) AS cnt, COALESCE(ROUND(AVG(rating),1),0) AS avg_rating
+        $statsQuery = $pdo->query("
+            SELECT 
+                COUNT(*) AS cnt, 
+                COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating
             FROM feedback
             WHERE is_released = 1
         ");
-        $row = $qStats->fetch(PDO::FETCH_ASSOC);
-        $stats['count'] = (int)($row['cnt'] ?? 0);
-        $stats['avg']   = (float)($row['avg_rating'] ?? 0);
+        $statsRow = $statsQuery->fetch(PDO::FETCH_ASSOC);
+        $stats['count'] = (int)($statsRow['cnt'] ?? 0);
+        $stats['avg'] = (float)($statsRow['avg_rating'] ?? 0);
 
-        // Released testimonials list (newest first, up to 50)
         $stmt = $pdo->prepare("
             SELECT 
                 f.rating,
@@ -52,21 +69,17 @@ if ($pdo instanceof PDO) {
         ");
         $stmt->execute();
         $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
     } catch (Throwable $e) {
         error_log('Testimonials query error: ' . $e->getMessage());
-        $testimonials = [];
     }
-} else {
-    // Could not connect to DB; show empty state without breaking the page
-    error_log('Testimonials: no PDO connection available.');
 }
 
-function e(string $s): string
-{
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+function e(string $s): string { 
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); 
 }
-function safeDate(?string $s): string
-{
+
+function safeDate(?string $s): string {
     if (!$s) return '—';
     $t = strtotime($s);
     return $t ? date('M d, Y', $t) : e($s);
@@ -74,7 +87,6 @@ function safeDate(?string $s): string
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -84,61 +96,40 @@ function safeDate(?string $s): string
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
         }
-
+        
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
             min-height: 100vh;
-            padding: 2rem;
+            color: #2c3e50;
         }
 
-        .container {
+        /* Header matching homepage */
+        .top-header {
+            background: linear-gradient(135deg, #4a6fa5 0%, #6b8cce 100%);
+            padding: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,.1);
+        }
+
+        .header-content {
             max-width: 1200px;
             margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            color: #fff;
-            margin-bottom: 2rem;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: .25rem;
-        }
-
-        .header p {
-            font-size: 1rem;
-            opacity: .9;
-        }
-
-        .summary-bar {
+            padding: 0 2rem;
             display: flex;
-            gap: 1rem;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
             color: #fff;
-            margin-bottom: 2.5rem;
-        }
-
-        .summary-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            background: rgba(255, 255, 255, .15);
-            padding: .5rem .9rem;
-            border-radius: 999px;
-            font-weight: 600;
-        }
-
-        .summary-chip .material-symbols-rounded {
-            font-size: 18px;
+            text-decoration: none;
         }
 
         .back-link {
@@ -147,113 +138,237 @@ function safeDate(?string $s): string
             gap: .5rem;
             color: #fff;
             text-decoration: none;
-            padding: .6rem 1rem;
-            background: rgba(255, 255, 255, .2);
+            padding: .6rem 1.2rem;
+            background: rgba(255,255,255,.15);
             border-radius: 8px;
-            margin-bottom: 1.25rem;
-            transition: background .2s ease;
+            transition: all .2s ease;
+            font-weight: 500;
+            border: 1px solid rgba(255,255,255,.3);
         }
 
         .back-link:hover {
-            background: rgba(255, 255, 255, .3);
+            background: rgba(255,255,255,.25);
+            transform: translateX(-3px);
+        }
+
+        /* Main content */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: .5rem;
+            font-weight: 700;
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .6rem;
+            background: #fff;
+            padding: .8rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            color: #4a6fa5;
+            box-shadow: 0 4px 15px rgba(0,0,0,.08);
+            border: 2px solid #e9ecef;
+        }
+
+        .summary-chip .material-symbols-rounded {
+            font-size: 22px;
+            color: #fbbf24;
         }
 
         .testimonials-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 2rem;
         }
 
         .testimonial-card {
             background: #fff;
-            padding: 1.25rem 1.25rem 1rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, .18);
-            transition: transform .25s ease;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+            transition: all .3s ease;
+            position: relative;
+            border: 1px solid #e9ecef;
         }
 
         .testimonial-card:hover {
-            transform: translateY(-4px);
+            transform: translateY(-8px);
+            box-shadow: 0 8px 30px rgba(74,111,165,.2);
+            border-color: #4a6fa5;
+        }
+
+        .testimonial-card::before {
+            content: '"';
+            position: absolute;
+            top: -5px;
+            left: 15px;
+            font-size: 80px;
+            color: rgba(74,111,165,.08);
+            font-family: Georgia, serif;
+            line-height: 1;
         }
 
         .rating {
             display: flex;
-            gap: .2rem;
-            margin-bottom: .6rem;
+            gap: .3rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
         }
 
         .star {
             color: #fbbf24;
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             line-height: 1;
         }
 
         .star.empty {
-            color: #d1d5db;
+            color: #dee2e6;
         }
 
         .comment {
-            color: #4b5563;
-            line-height: 1.6;
-            margin: .35rem 0 0.9rem;
+            color: #495057;
+            line-height: 1.7;
+            margin: 1rem 0 1.5rem;
             font-style: italic;
             white-space: pre-wrap;
+            position: relative;
+            z-index: 1;
+            font-size: .95rem;
         }
 
         .customer-info {
             display: flex;
             align-items: center;
-            gap: .6rem;
-            padding-top: .7rem;
-            border-top: 1px solid #e5e7eb;
+            gap: .8rem;
+            padding-top: 1rem;
+            border-top: 2px solid #f1f3f5;
         }
 
         .avatar {
-            width: 36px;
-            height: 36px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: #eef2ff;
-            color: #4f46e5;
+            background: linear-gradient(135deg, #4a6fa5, #6b8cce);
+            color: #fff;
             font-weight: 700;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 8px rgba(74,111,165,.3);
+        }
+
+        .customer-details {
+            flex: 1;
         }
 
         .customer-name {
             font-weight: 600;
-            color: #667eea;
+            color: #4a6fa5;
+            display: block;
+            margin-bottom: 2px;
+            font-size: .95rem;
         }
 
         .customer-date {
-            font-size: .875rem;
-            color: #9ca3af;
+            font-size: .85rem;
+            color: #868e96;
         }
 
         .empty-state {
             text-align: center;
-            color: #fff;
-            padding: 4rem 2rem;
+            padding: 5rem 2rem;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,.08);
         }
 
         .empty-state .icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: .6;
+            font-size: 5rem;
+            color: #4a6fa5;
+            margin-bottom: 1.5rem;
+            opacity: .5;
+        }
+
+        .empty-state h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: .5rem;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1rem;
+            }
+            
+            .page-header h1 {
+                font-size: 2rem;
+            }
+            
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .summary-bar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .header-content {
+                padding: 0 1rem;
+            }
         }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <a href="/RADS-TOOLING/public/index.php" class="back-link">
-            <span class="material-symbols-rounded">arrow_back</span>
-            Back to Home
-        </a>
+    <!-- Header matching homepage -->
+    <div class="top-header">
+        <div class="header-content">
+            <a href="/RADS-TOOLING/public/index.php" class="logo">RADS TOOLING</a>
+            <a href="/RADS-TOOLING/public/index.php" class="back-link">
+                <span class="material-symbols-rounded">arrow_back</span>
+                Back to Home
+            </a>
+        </div>
+    </div>
 
-        <div class="header">
+    <div class="container">
+        <div class="page-header">
             <h1>Customer Testimonials</h1>
-            <p>See what our customers say about us</p>
+            <p>See what our satisfied customers are saying</p>
         </div>
 
         <div class="summary-bar">
@@ -263,7 +378,7 @@ function safeDate(?string $s): string
             </span>
             <span class="summary-chip">
                 <span class="material-symbols-rounded">reviews</span>
-                <?php echo (int)$stats['count']; ?> verified <?php echo $stats['count'] == 1 ? 'review' : 'reviews'; ?>
+                <?php echo number_format($stats['count']); ?> verified <?php echo $stats['count'] == 1 ? 'review' : 'reviews'; ?>
             </span>
         </div>
 
@@ -273,37 +388,46 @@ function safeDate(?string $s): string
                     <span class="material-symbols-rounded">sentiment_satisfied</span>
                 </div>
                 <h2>No testimonials yet</h2>
-                <p>Be the first to share your experience!</p>
+                <p>Be the first to share your experience with us!</p>
             </div>
         <?php else: ?>
             <div class="testimonials-grid">
-                <?php foreach ($testimonials as $t):
+                <?php foreach ($testimonials as $t): 
                     $name = trim($t['customer_name'] ?? 'Customer');
                     $initials = '';
-                    if ($name !== '') {
+                    if ($name !== '' && $name !== 'Customer') {
                         $parts = preg_split('/\s+/', $name);
-                        $initials = strtoupper(mb_substr($parts[0], 0, 1) . (isset($parts[1]) ? mb_substr($parts[1], 0, 1) : ''));
+                        $initials = strtoupper(
+                            mb_substr($parts[0], 0, 1) . 
+                            (isset($parts[1]) ? mb_substr($parts[1], 0, 1) : '')
+                        );
+                    } else {
+                        $initials = 'C';
                     }
                     $rating = (int)($t['rating'] ?? 0);
                     $comment = trim((string)($t['comment'] ?? ''));
-                ?>
+                    ?>
                     <div class="testimonial-card">
                         <div class="rating" aria-label="<?php echo $rating; ?> out of 5 stars">
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <?php for ($i=1; $i<=5; $i++): ?>
                                 <span class="star <?php echo $i <= $rating ? '' : 'empty'; ?>">★</span>
                             <?php endfor; ?>
                         </div>
 
                         <?php if ($comment !== ''): ?>
                             <div class="comment">
-                                “<?php echo nl2br(e($comment)); ?>”
+                                "<?php echo nl2br(e($comment)); ?>"
                             </div>
                         <?php endif; ?>
 
                         <div class="customer-info">
-                            <span class="avatar" aria-hidden="true"><?php echo e($initials ?: 'C'); ?></span>
-                            <span class="customer-name"><?php echo e($name); ?></span>
-                            <span class="customer-date">• <?php echo safeDate($t['created_at'] ?? null); ?></span>
+                            <span class="avatar" aria-hidden="true">
+                                <?php echo e($initials); ?>
+                            </span>
+                            <div class="customer-details">
+                                <span class="customer-name"><?php echo e($name); ?></span>
+                                <span class="customer-date"><?php echo safeDate($t['created_at'] ?? null); ?></span>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -311,5 +435,4 @@ function safeDate(?string $s): string
         <?php endif; ?>
     </div>
 </body>
-
 </html>

@@ -578,11 +578,10 @@
             const toTarget = v => (v * k) / t;
             return {
                 dim,
-                range: `${fmtUnit(toTarget(c.min), unit, toTarget(c.step))} – ${fmtUnit(toTarget(c.max), unit, toTarget(c.step))} ${unit}`,
-                step: `${fmtUnit(toTarget(c.step), unit, toTarget(c.step))} ${unit}`,
+                range: `${fmtUnit(toTarget(c.min), unit)} – ${fmtUnit(toTarget(c.max), unit)} ${unit}`,
                 price:
                     (Number(c.price_block_cm) > 0 && Number(c.price_per_block) > 0)
-                        ? `₱ ${fmt(c.price_per_block)} / every ${fmtUnit((UNIT_TO_CM[c.unit] || 1) ? (c.price_block_cm / (UNIT_TO_CM['cm'] || 1)) : c.price_block_cm, 'cm', c.step)} cm`
+                        ? `₱ ${fmt(c.price_per_block)} / every ${fmtUnit((UNIT_TO_CM[c.unit] || 1) ? (c.price_block_cm / (UNIT_TO_CM['cm'] || 1)) : c.price_block_cm, 'cm')} cm`
                         : `₱ ${fmt(c.price_per_unit || 0)} / ${c.unit}`
             };
         });
@@ -603,7 +602,6 @@
       <tr>
         <td style="padding:6px 10px;font-weight:600;text-transform:capitalize">${d.dim}</td>
         <td style="padding:6px 10px">${d.range}</td>
-        <td style="padding:6px 10px">${d.step}</td>
         <td style="padding:6px 10px">${d.price}</td>
       </tr>`).join('');
 
@@ -633,7 +631,6 @@
           <tr style="background:#f8fafc">
             <th style="text-align:left;padding:8px 10px">Dimension</th>
             <th style="text-align:left;padding:8px 10px">Range</th>
-            <th style="text-align:left;padding:8px 10px">Increment</th>
             <th style="text-align:left;padding:8px 10px">Price per unit</th>
           </tr>
         </thead>

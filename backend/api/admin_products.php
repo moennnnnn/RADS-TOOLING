@@ -259,7 +259,9 @@ function viewProduct(PDO $conn): void
                 'default'         => (float)($rowSC['default_value'] ?? 0),
                 'step'            => (float)($rowSC['step_value'] ?? 1),
                 'price_per_unit'  => (float)($rowSC['price_per_unit'] ?? 0), // ₱ per cm (internal base unit)
-                'unit'            => $rowSC['measurement_unit'] ?? 'cm'
+                'unit'            => $rowSC['measurement_unit'] ?? 'cm',
+                'price_block_cm'  => (float)($rowSC['price_block_cm'] ?? 0),   // cm per block (always cm)
+                'price_per_block' => (float)($rowSC['price_per_block'] ?? 0),  // ₱ per block
             ];
         }
 
@@ -385,8 +387,11 @@ function addProduct(PDO $conn): void
         // If customizable, insert size configuration
         if (!empty($input['is_customizable']) && !empty($input['size_config'])) {
             foreach ($input['size_config'] as $dimension => $config) {
-                $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, default_value, step_value, price_per_unit, measurement_unit)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, 
+                        default_value, step_value,
+                        price_per_unit, measurement_unit, 
+                        price_block_cm, price_per_block)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($sql);
                 $stmt->execute([
                     $productId,
@@ -396,7 +401,9 @@ function addProduct(PDO $conn): void
                     $config['default_value'] ?? 100,
                     $config['step_value'] ?? 1,
                     $config['price_per_unit'] ?? 0.00,
-                    $input['measurement_unit'] ?? 'cm'
+                    $input['measurement_unit'] ?? 'cm',
+                    (float)($config['price_block_cm'] ?? 0),
+                    (float)($config['price_per_block'] ?? 0),
                 ]);
             }
         }

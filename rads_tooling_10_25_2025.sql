@@ -3,14 +3,14 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 21, 2025 at 06:41 PM
--- Generation Time: Oct 24, 2025 at 03:23 AM
+-- Generation Time: Oct 25, 2025 at 06:34 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -118,6 +118,14 @@ CREATE TABLE `colors` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `colors`
+--
+
+INSERT INTO `colors` (`id`, `color_name`, `color_code`, `hex_value`, `base_price`, `is_active`, `created_at`) VALUES
+(1, 'black lang', 'black nga ', '#000000', 200.00, 1, '2025-10-24 05:18:43'),
+(2, 'yellow na', 'YELLOW NAMAN', '#fbff00', 250.00, 1, '2025-10-24 17:28:14');
+
 -- --------------------------------------------------------
 
 --
@@ -207,8 +215,17 @@ CREATE TABLE `feedback` (
   `rating` tinyint(4) NOT NULL,
   `comment` text DEFAULT NULL,
   `status` enum('pending','released') DEFAULT 'pending',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `is_released` tinyint(1) DEFAULT 0,
+  `released_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `feedback`
+--
+
+INSERT INTO `feedback` (`id`, `order_id`, `customer_id`, `rating`, `comment`, `status`, `created_at`, `is_released`, `released_at`) VALUES
+(1, 23, 16, 5, 'great', 'released', '2025-10-24 04:17:26', 1, '2025-10-25 03:53:18');
 
 -- --------------------------------------------------------
 
@@ -279,6 +296,8 @@ CREATE TABLE `orders` (
   `cancelled_at` timestamp NULL DEFAULT NULL,
   `received_at` datetime DEFAULT NULL COMMENT 'When customer marked as received',
   `received_by_customer` tinyint(1) DEFAULT 0,
+  `is_received` tinyint(1) NOT NULL DEFAULT 0,
+  `customer_received_at` datetime DEFAULT NULL,
   `mode` enum('delivery','pickup') NOT NULL DEFAULT 'pickup',
   `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,
   `vat` decimal(12,2) NOT NULL DEFAULT 0.00,
@@ -289,42 +308,42 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `order_code`, `customer_id`, `total_amount`, `payment_status`, `is_installment`, `status`, `order_date`, `cancelled_by`, `cancellation_reason`, `cancelled_at`, `received_at`, `received_by_customer`, `mode`, `subtotal`, `vat`, `created_at`) VALUES
-(1, 'RT2510191662', 32, 6100.00, 'Partially Paid', 1, 'Processing', '2025-10-19 02:54:47', NULL, NULL, NULL, NULL, 0, 'delivery', 5000.00, 600.00, '2025-10-19 02:54:47'),
-(2, 'RT2510197711', 32, 6100.00, 'Pending', 0, 'Pending', '2025-10-19 02:55:40', NULL, NULL, NULL, NULL, 0, 'delivery', 5000.00, 600.00, '2025-10-19 02:55:40'),
-(3, 'RT2510199547', 32, 22400500.00, 'Pending', 0, 'Pending', '2025-10-19 02:58:49', NULL, NULL, NULL, NULL, 0, 'delivery', 20000000.00, 2400000.00, '2025-10-19 02:58:49'),
-(4, 'RT2510195084', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 07:43:37', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 07:43:37'),
-(5, 'RT2510196971', 32, 612.00, 'Pending', 0, 'Processing', '2025-10-19 07:43:45', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 07:43:45'),
-(6, 'RT2510194314', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 08:10:05', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 08:10:05'),
-(7, 'RT2510192809', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 08:10:23', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 08:10:23'),
-(8, 'RT2510190690', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 08:12:19', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 08:12:19'),
-(9, 'RT2510197430', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 10:53:53', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 10:53:53'),
-(10, 'RT2510197755', 32, 5600.00, 'Pending', 0, 'Completed', '2025-10-19 13:04:03', NULL, NULL, NULL, NULL, 0, 'pickup', 5000.00, 600.00, '2025-10-19 13:04:03'),
-(11, 'RT2510197721', 16, 112.00, 'Pending', 0, 'Pending', '2025-10-19 13:57:28', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-19 13:57:28'),
-(12, 'RT2510195567', 16, 112.00, 'Pending', 0, 'Pending', '2025-10-19 13:57:39', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-19 13:57:39'),
-(13, 'RT2510191542', 16, 112.00, 'Pending', 0, 'Pending', '2025-10-19 13:57:46', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-19 13:57:46'),
-(14, 'RT2510194004', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:18:43', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:18:43'),
-(15, 'RT2510193173', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:18:50', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:18:50'),
-(16, 'RT2510199905', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:23:25', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:23:25'),
-(17, 'RT2510198555', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:23:31', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:23:31'),
-(18, 'RT2510195032', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:24:41', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:24:41'),
-(19, 'RT2510199574', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:24:56', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:24:56'),
-(20, 'RT2510195445', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:45:09', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 14:45:09'),
-(21, 'RT2510190307', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 15:03:40', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 15:03:40'),
-(22, 'RT2510192285', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 15:12:34', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 15:12:34'),
-(23, 'RT2510199582', 16, 112.00, 'Partially Paid', 0, 'Completed', '2025-10-19 15:58:34', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-19 15:58:34'),
-(24, 'RT2510201261', 16, 612.00, 'Fully Paid', 0, 'Processing', '2025-10-19 16:34:44', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-19 16:34:44'),
-(25, 'RT2510207729', 16, 112.00, 'Partially Paid', 0, 'Processing', '2025-10-19 17:46:39', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-19 17:46:39'),
-(26, 'RT2510200726', 32, 612.00, 'Pending', 1, 'Pending', '2025-10-20 11:00:56', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-20 11:00:56'),
-(27, 'RT2510214540', 32, 612.00, 'Pending', 1, '', '2025-10-20 22:29:55', NULL, NULL, NULL, NULL, 0, 'delivery', 100.00, 12.00, '2025-10-20 22:29:55'),
-(28, 'RT2510217005', 32, 637.76, '', 1, '', '2025-10-21 01:38:26', NULL, NULL, NULL, NULL, 0, 'delivery', 123.00, 14.76, '2025-10-21 01:38:26'),
-(29, 'RT2510214493', 32, 112.00, '', 1, '', '2025-10-21 02:58:06', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-21 02:58:06'),
-(30, 'RT2510219137', 32, 112.00, '', 1, '', '2025-10-21 03:02:07', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-21 03:02:07'),
-(31, 'RT2510213207', 32, 112.00, '', 1, 'Processing', '2025-10-21 03:02:43', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-21 03:02:43'),
-(32, 'RT2510213845', 32, 112.00, '', 1, 'Processing', '2025-10-21 03:03:46', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-21 03:03:46'),
-(33, 'RT2510213440', 32, 112.00, 'Pending', 1, '', '2025-10-21 03:04:30', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-21 03:04:30'),
-(34, 'RT2510214793', 32, 112.00, '', 1, 'Processing', '2025-10-21 03:09:04', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-21 03:09:04'),
-(35, 'RT2510228417', 32, 112.00, 'Pending', 1, '', '2025-10-22 12:49:31', NULL, NULL, NULL, NULL, 0, 'pickup', 100.00, 12.00, '2025-10-22 12:49:31');
+INSERT INTO `orders` (`id`, `order_code`, `customer_id`, `total_amount`, `payment_status`, `is_installment`, `status`, `order_date`, `cancelled_by`, `cancellation_reason`, `cancelled_at`, `received_at`, `received_by_customer`, `is_received`, `customer_received_at`, `mode`, `subtotal`, `vat`, `created_at`) VALUES
+(1, 'RT2510191662', 32, 6100.00, 'Partially Paid', 1, 'Processing', '2025-10-19 02:54:47', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 5000.00, 600.00, '2025-10-19 02:54:47'),
+(2, 'RT2510197711', 32, 6100.00, 'Pending', 0, 'Pending', '2025-10-19 02:55:40', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 5000.00, 600.00, '2025-10-19 02:55:40'),
+(3, 'RT2510199547', 32, 22400500.00, 'Pending', 0, 'Pending', '2025-10-19 02:58:49', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 20000000.00, 2400000.00, '2025-10-19 02:58:49'),
+(4, 'RT2510195084', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 07:43:37', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 07:43:37'),
+(5, 'RT2510196971', 32, 612.00, 'Pending', 0, 'Processing', '2025-10-19 07:43:45', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 07:43:45'),
+(6, 'RT2510194314', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 08:10:05', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 08:10:05'),
+(7, 'RT2510192809', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 08:10:23', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 08:10:23'),
+(8, 'RT2510190690', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 08:12:19', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 08:12:19'),
+(9, 'RT2510197430', 32, 612.00, 'Pending', 0, 'Pending', '2025-10-19 10:53:53', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 10:53:53'),
+(10, 'RT2510197755', 32, 5600.00, 'Pending', 0, 'Completed', '2025-10-19 13:04:03', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 5000.00, 600.00, '2025-10-19 13:04:03'),
+(11, 'RT2510197721', 16, 112.00, 'Pending', 0, 'Pending', '2025-10-19 13:57:28', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-19 13:57:28'),
+(12, 'RT2510195567', 16, 112.00, 'Pending', 0, 'Pending', '2025-10-19 13:57:39', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-19 13:57:39'),
+(13, 'RT2510191542', 16, 112.00, 'Pending', 0, 'Pending', '2025-10-19 13:57:46', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-19 13:57:46'),
+(14, 'RT2510194004', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:18:43', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:18:43'),
+(15, 'RT2510193173', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:18:50', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:18:50'),
+(16, 'RT2510199905', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:23:25', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:23:25'),
+(17, 'RT2510198555', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:23:31', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:23:31'),
+(18, 'RT2510195032', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:24:41', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:24:41'),
+(19, 'RT2510199574', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:24:56', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:24:56'),
+(20, 'RT2510195445', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 14:45:09', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 14:45:09'),
+(21, 'RT2510190307', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 15:03:40', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 15:03:40'),
+(22, 'RT2510192285', 16, 612.00, 'Pending', 0, 'Pending', '2025-10-19 15:12:34', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 15:12:34'),
+(23, 'RT2510199582', 16, 112.00, 'Partially Paid', 0, 'Completed', '2025-10-19 15:58:34', NULL, NULL, NULL, NULL, 1, 1, '2025-10-24 12:02:50', 'pickup', 100.00, 12.00, '2025-10-19 15:58:34'),
+(24, 'RT2510201261', 16, 612.00, 'Fully Paid', 0, 'Processing', '2025-10-19 16:34:44', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-19 16:34:44'),
+(25, 'RT2510207729', 16, 112.00, 'Partially Paid', 0, 'Processing', '2025-10-19 17:46:39', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-19 17:46:39'),
+(26, 'RT2510200726', 32, 612.00, 'Pending', 1, 'Pending', '2025-10-20 11:00:56', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-20 11:00:56'),
+(27, 'RT2510214540', 32, 612.00, 'Pending', 1, '', '2025-10-20 22:29:55', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 100.00, 12.00, '2025-10-20 22:29:55'),
+(28, 'RT2510217005', 32, 637.76, '', 1, '', '2025-10-21 01:38:26', NULL, NULL, NULL, NULL, 0, 0, NULL, 'delivery', 123.00, 14.76, '2025-10-21 01:38:26'),
+(29, 'RT2510214493', 32, 112.00, '', 1, '', '2025-10-21 02:58:06', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-21 02:58:06'),
+(30, 'RT2510219137', 32, 112.00, '', 1, '', '2025-10-21 03:02:07', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-21 03:02:07'),
+(31, 'RT2510213207', 32, 112.00, '', 1, 'Processing', '2025-10-21 03:02:43', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-21 03:02:43'),
+(32, 'RT2510213845', 32, 112.00, '', 1, 'Processing', '2025-10-21 03:03:46', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-21 03:03:46'),
+(33, 'RT2510213440', 32, 112.00, 'Pending', 1, '', '2025-10-21 03:04:30', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-21 03:04:30'),
+(34, 'RT2510214793', 32, 112.00, '', 1, 'Processing', '2025-10-21 03:09:04', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-21 03:09:04'),
+(35, 'RT2510228417', 32, 112.00, 'Pending', 1, '', '2025-10-22 12:49:31', NULL, NULL, NULL, NULL, 0, 0, NULL, 'pickup', 100.00, 12.00, '2025-10-22 12:49:31');
 
 -- --------------------------------------------------------
 
@@ -683,9 +702,9 @@ CREATE TABLE `products` (
 INSERT INTO `products` (`id`, `name`, `type`, `description`, `price`, `stock`, `image`, `model_3d`, `measurement_unit`, `is_customizable`, `created_at`, `created_by`, `status`, `released_at`, `is_archived`, `archived_at`) VALUES
 (10, 'test', 'Kitchen Cabinet', 'wawaawwa', 15000.00, 0, 'product_1760525903_68ef7e4f293a2.jpg', '', 'cm', 0, '2025-10-15 10:58:27', 1, 'released', '2025-10-17 01:59:00', 0, NULL),
 (11, 'testsetsdsada', 'Office Cabinet', 'dadsdadadsad', 20000000.00, 0, 'product_1760525997_68ef7ead28c9f.jpg', '', 'cm', 0, '2025-10-15 11:00:01', 1, 'released', '2025-10-17 01:58:58', 0, NULL),
-(12, 'dsdasdasdada', 'Kitchen Cabinet', 'dadsadawqdddada', 5000.00, 0, 'product_1760527224_68ef83788d9e3.png', '', 'cm', 1, '2025-10-15 11:20:28', 1, 'released', '2025-10-16 19:08:46', 0, NULL),
-(13, 'test1', 'Office Cabinet', 'dsadasasdsa', 100.00, 0, 'product_1760531268_68ef93446993b.png', '', 'cm', 1, '2025-10-15 12:27:50', 1, 'released', '2025-10-16 19:08:24', 0, NULL),
-(14, 'test', 'Wardrobe', 'testsss', 123.00, 0, '', '', 'cm', 1, '2025-10-20 11:45:28', 1, 'released', '2025-10-21 01:47:25', 0, NULL);
+(12, 'dsdasdasdada', 'Kitchen Cabinet', 'dadsadawqdddada', 5000.00, 0, 'product_1760527224_68ef83788d9e3.png', '', 'cm', 0, '2025-10-15 11:20:28', 1, 'released', '2025-10-24 10:25:04', 0, NULL),
+(13, 'test1', 'Office Cabinet', 'dsadasasdsa', 100.00, 0, 'product_1760531268_68ef93446993b.png', '', 'cm', 0, '2025-10-15 12:27:50', 1, 'released', '2025-10-16 19:08:24', 0, NULL),
+(14, 'test', 'Wardrobe', 'testsss', 1000.00, 0, 'product_1761272746_68fae3aaaf08a.jpg', 'model_1761272983_68fae49775f0d.glb', 'cm', 1, '2025-10-20 11:45:28', 1, 'released', '2025-10-21 01:47:25', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -702,6 +721,14 @@ CREATE TABLE `product_colors` (
   `is_default` tinyint(1) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `product_colors`
+--
+
+INSERT INTO `product_colors` (`id`, `product_id`, `color_id`, `custom_price`, `display_order`, `is_default`, `created_at`) VALUES
+(8, 14, 1, NULL, 0, 0, '2025-10-24 19:25:58'),
+(9, 14, 2, NULL, 1, 0, '2025-10-24 19:25:58');
 
 -- --------------------------------------------------------
 
@@ -732,7 +759,6 @@ CREATE TABLE `product_size_config` (
   `min_value` decimal(10,2) NOT NULL DEFAULT 0.00,
   `max_value` decimal(10,2) NOT NULL DEFAULT 300.00,
   `default_value` decimal(10,2) NOT NULL DEFAULT 100.00,
-  `step_value` decimal(10,2) NOT NULL DEFAULT 1.00,
   `price_per_unit` decimal(10,2) DEFAULT 0.00,
   `measurement_unit` varchar(20) DEFAULT 'cm',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -744,16 +770,16 @@ CREATE TABLE `product_size_config` (
 -- Dumping data for table `product_size_config`
 --
 
-INSERT INTO `product_size_config` (`id`, `product_id`, `dimension_type`, `min_value`, `max_value`, `default_value`, `step_value`, `price_per_unit`, `measurement_unit`, `created_at`, `price_block_cm`, `price_per_block`) VALUES
-(1, 12, 'width', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-15 11:27:37', 0.00, 0.00),
-(2, 12, 'height', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-15 11:27:37', 0.00, 0.00),
-(3, 12, 'depth', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-15 11:27:37', 0.00, 0.00),
-(4, 13, 'width', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-15 12:28:09', 0.00, 0.00),
-(5, 13, 'height', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-15 12:28:10', 0.00, 0.00),
-(6, 13, 'depth', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-15 12:28:10', 0.00, 0.00),
-(19, 14, 'width', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-23 18:18:10', 0.00, 0.00),
-(20, 14, 'height', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-23 18:18:10', 0.00, 0.00),
-(21, 14, 'depth', 0.00, 300.00, 100.00, 1.00, 0.00, 'cm', '2025-10-23 18:18:10', 0.00, 0.00);
+INSERT INTO `product_size_config` (`id`, `product_id`, `dimension_type`, `min_value`, `max_value`, `default_value`, `price_per_unit`, `measurement_unit`, `created_at`, `price_block_cm`, `price_per_block`) VALUES
+(1, 12, 'width', 0.00, 300.00, 100.00, 0.00, 'cm', '2025-10-15 11:27:37', 0.00, 0.00),
+(2, 12, 'height', 0.00, 300.00, 100.00, 0.00, 'cm', '2025-10-15 11:27:37', 0.00, 0.00),
+(3, 12, 'depth', 0.00, 300.00, 100.00, 0.00, 'cm', '2025-10-15 11:27:37', 0.00, 0.00),
+(4, 13, 'width', 0.00, 300.00, 100.00, 0.00, 'cm', '2025-10-15 12:28:09', 0.00, 0.00),
+(5, 13, 'height', 0.00, 300.00, 100.00, 0.00, 'cm', '2025-10-15 12:28:10', 0.00, 0.00),
+(6, 13, 'depth', 0.00, 300.00, 100.00, 0.00, 'cm', '2025-10-15 12:28:10', 0.00, 0.00),
+(76, 14, 'width', 50.00, 200.00, 100.00, 100.00, 'cm', '2025-10-24 19:25:57', 0.00, 0.00),
+(77, 14, 'height', 80.00, 280.00, 100.00, 200.00, 'cm', '2025-10-24 19:25:58', 0.00, 0.00),
+(78, 14, 'depth', 50.00, 250.00, 100.00, 550.00, 'cm', '2025-10-24 19:25:58', 0.00, 0.00);
 
 -- --------------------------------------------------------
 
@@ -921,13 +947,13 @@ CREATE TABLE `rt_chat_threads` (
 --
 
 INSERT INTO `rt_chat_threads` (`id`, `thread_code`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`, `status`, `last_message_at`, `created_at`, `admin_last_read`, `customer_cleared_at`) VALUES
-(1, 'E12BBF23C765B137ECC6DFDDA9B6E419', 16, 'Moen Secapuri', NULL, NULL, 'open', '2025-10-13 01:58:36', '2025-10-08 16:33:13', '2025-10-23 19:17:28', '2025-10-13 01:56:35'),
-(2, '57F84B08CC89FE1733CF3FA628487512', 19, 'vien santos', NULL, NULL, 'open', '2025-10-09 19:47:48', '2025-10-08 16:36:33', '2025-10-13 01:54:45', '2025-10-09 19:48:14'),
-(3, '8A4C83FDA3C3E38DD3548FF63EC0EF06', 17, 'Moen Secapuri', NULL, NULL, 'open', '2025-10-09 22:39:58', '2025-10-08 17:08:12', '2025-10-13 01:54:46', '2025-10-09 19:16:21'),
-(4, 'EFEE22638F01990688999B16CA09EEB8', 23, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:27:07', '2025-10-10 14:07:16', '2025-10-13 01:54:47', NULL),
-(5, '1D71C7F2C061F237DD7B2EDCF001569B', 24, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:29:09', '2025-10-10 15:28:51', '2025-10-23 19:17:29', '2025-10-10 23:29:23'),
-(6, '0FC92274A86149522300CAEC5BF3D4BF', 32, 'Vien Santos', NULL, NULL, 'open', '2025-10-18 21:08:53', '2025-10-18 13:08:53', '2025-10-23 19:17:30', NULL),
-(7, '97369A6D963C38E5CAEBF7B90A1D7DC5', 1, 'System Owner44', NULL, NULL, 'open', '2025-10-23 19:24:22', '2025-10-23 11:24:22', NULL, NULL);
+(1, 'E12BBF23C765B137ECC6DFDDA9B6E419', 16, 'Moen Secapuri', NULL, NULL, 'open', '2025-10-13 01:58:36', '2025-10-08 16:33:13', '2025-10-25 08:38:19', '2025-10-13 01:56:35'),
+(2, '57F84B08CC89FE1733CF3FA628487512', 19, 'vien santos', NULL, NULL, 'open', '2025-10-09 19:47:48', '2025-10-08 16:36:33', '2025-10-25 08:38:15', '2025-10-09 19:48:14'),
+(3, '8A4C83FDA3C3E38DD3548FF63EC0EF06', 17, 'Moen Secapuri', NULL, NULL, 'open', '2025-10-09 22:39:58', '2025-10-08 17:08:12', '2025-10-25 08:38:14', '2025-10-09 19:16:21'),
+(4, 'EFEE22638F01990688999B16CA09EEB8', 23, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:27:07', '2025-10-10 14:07:16', '2025-10-25 08:38:16', NULL),
+(5, '1D71C7F2C061F237DD7B2EDCF001569B', 24, 'Vien Santos', NULL, NULL, 'open', '2025-10-10 23:29:09', '2025-10-10 15:28:51', '2025-10-25 08:38:18', '2025-10-10 23:29:23'),
+(6, '0FC92274A86149522300CAEC5BF3D4BF', 32, 'Vien Santos', NULL, NULL, 'open', '2025-10-18 21:08:53', '2025-10-18 13:08:53', '2025-10-25 08:38:19', NULL),
+(7, '97369A6D963C38E5CAEBF7B90A1D7DC5', 1, 'System Owner44', NULL, NULL, 'open', '2025-10-23 19:24:22', '2025-10-23 11:24:22', '2025-10-25 08:38:35', NULL);
 
 -- --------------------------------------------------------
 
@@ -985,7 +1011,7 @@ INSERT INTO `rt_faqs` (`id`, `question`, `answer`, `is_active`, `created_at`, `u
 (3, 'Can I customize size/color?', 'Yes! Share your preferred dimensions and color; we will confirm feasibility and pricing.', 1, '2025-10-06 14:42:30', '2025-10-09 10:53:24'),
 (10, 'What are your lead times?', 'Typical build time is 7–14 days depending on customization.', 1, '2025-10-07 12:03:42', '2025-10-07 12:03:42'),
 (12, 'What are your operating hours?', 'We operate from 8am-5pm', 1, '2025-10-07 14:24:18', '2025-10-07 17:16:12'),
-(14, 'Do you deliver?', 'Yes! We deliver within Cavite and nearby areas!', 1, '2025-10-09 10:27:33', '2025-10-09 10:27:33');
+(14, 'Do you deliver?', 'Yes! We deliver within Cavite and nearby areas!', 1, '2025-10-09 10:27:33', '2025-10-25 00:38:27');
 
 -- --------------------------------------------------------
 
@@ -1002,6 +1028,18 @@ CREATE TABLE `textures` (
   `description` text DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `texture_allowed_parts`
+--
+
+CREATE TABLE `texture_allowed_parts` (
+  `id` int(11) NOT NULL,
+  `texture_id` int(11) NOT NULL,
+  `part_name` varchar(60) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -1292,6 +1330,14 @@ ALTER TABLE `textures`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `texture_allowed_parts`
+--
+ALTER TABLE `texture_allowed_parts`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ux_texture_part` (`texture_id`,`part_name`),
+  ADD KEY `texture_id` (`texture_id`);
+
+--
 -- Indexes for table `user_logs`
 --
 ALTER TABLE `user_logs`
@@ -1332,7 +1378,7 @@ ALTER TABLE `cart_items`
 -- AUTO_INCREMENT for table `colors`
 --
 ALTER TABLE `colors`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `customers`
@@ -1356,7 +1402,7 @@ ALTER TABLE `customization_steps`
 -- AUTO_INCREMENT for table `feedback`
 --
 ALTER TABLE `feedback`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `handle_types`
@@ -1446,7 +1492,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `product_colors`
 --
 ALTER TABLE `product_colors`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `product_handles`
@@ -1458,7 +1504,7 @@ ALTER TABLE `product_handles`
 -- AUTO_INCREMENT for table `product_size_config`
 --
 ALTER TABLE `product_size_config`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `product_textures`
@@ -1494,6 +1540,12 @@ ALTER TABLE `rt_faqs`
 -- AUTO_INCREMENT for table `textures`
 --
 ALTER TABLE `textures`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `texture_allowed_parts`
+--
+ALTER TABLE `texture_allowed_parts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --

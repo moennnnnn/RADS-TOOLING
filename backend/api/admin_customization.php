@@ -25,9 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Helper function for JSON responses
-function sendJSON(bool $success, string $message, $data = null, int $code = 200): void {
+function sendJSON(bool $success, string $message, $data = null, int $code = 200): void
+{
     if (ob_get_level()) ob_clean();
-    
+
     http_response_code($code);
     echo json_encode([
         'success' => $success,
@@ -38,12 +39,12 @@ function sendJSON(bool $success, string $message, $data = null, int $code = 200)
 }
 
 // Error handlers
-set_error_handler(function($severity, $message, $file, $line) {
+set_error_handler(function ($severity, $message, $file, $line) {
     error_log("PHP Error: $message in $file on line $line");
     sendJSON(false, 'Server error occurred', null, 500);
 });
 
-set_exception_handler(function($e) {
+set_exception_handler(function ($e) {
     error_log("Exception: " . $e->getMessage());
     sendJSON(false, 'An error occurred', null, 500);
 });
@@ -56,7 +57,8 @@ try {
 }
 
 // Check authentication
-function requireStaffAuth(): void {
+function requireStaffAuth(): void
+{
     if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? null) === 'staff') {
         return;
     }
@@ -66,7 +68,7 @@ function requireStaffAuth(): void {
     if (!empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
         return;
     }
-    
+
     sendJSON(false, 'Unauthorized access', null, 401);
 }
 
@@ -98,7 +100,7 @@ try {
         case 'delete_texture':
             deleteTexture($conn);
             break;
-        
+
         // Colors
         case 'list_colors':
             listColors($conn);
@@ -112,7 +114,7 @@ try {
         case 'delete_color':
             deleteColor($conn);
             break;
-        
+
         // Handles
         case 'list_handles':
             listHandles($conn);
@@ -126,7 +128,7 @@ try {
         case 'delete_handle':
             deleteHandle($conn);
             break;
-        
+
         // Product Assignments
         case 'update_size_config':
             updateSizeConfig($conn);
@@ -140,7 +142,7 @@ try {
         case 'assign_handles':
             assignHandles($conn);
             break;
-        
+
         case 'upload_texture_image':
             uploadTextureImage();
             break;
@@ -157,11 +159,47 @@ try {
 }
 
 // ========== TEXTURE FUNCTIONS ==========
-function listTextures(PDO $conn): void {
+function listTextures(PDO $conn): void
+{
     try {
-        $sql = "SELECT * FROM textures ORDER BY texture_name ASC";
-        $stmt = $conn->query($sql);
-        $textures = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // optional filter by product_id (so customer page can request textures for a product)
+        $product_id = isset($_GET['product_id']) ? (int)$_GET['product_id'] : 0;
+
+        if ($product_id) {
+            $sql = "SELECT t.* FROM textures t
+                    JOIN product_textures pt ON pt.texture_id = t.id
+                    WHERE pt.product_id = :pid AND t.is_active = 1
+                    ORDER BY t.texture_name ASC";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([':pid' => $product_id]);
+            $textures = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $sql = "SELECT * FROM textures WHERE is_active = 1 ORDER BY texture_name ASC";
+            $stmt = $conn->query($sql);
+            $textures = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // fetch allowed parts for all textures in one query (avoid N+1)
+        if (!empty($textures)) {
+            $ids = array_column($textures, 'id');
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $pstmt = $conn->prepare("SELECT texture_id, part_name FROM texture_allowed_parts WHERE texture_id IN ($placeholders)");
+            $pstmt->execute($ids);
+            $rows = $pstmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $allowedMap = [];
+            foreach ($rows as $r) {
+                $tid = (int)$r['texture_id'];
+                $allowedMap[$tid][] = $r['part_name'];
+            }
+
+            // attach allowed_parts array to each texture
+            foreach ($textures as &$t) {
+                $tid = (int)$t['id'];
+                $t['allowed_parts'] = $allowedMap[$tid] ?? [];
+            }
+            unset($t);
+        }
 
         sendJSON(true, 'Textures retrieved successfully', $textures);
     } catch (Throwable $e) {
@@ -170,21 +208,23 @@ function listTextures(PDO $conn): void {
     }
 }
 
-function addTexture(PDO $conn): void {
+function addTexture(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['texture_name']) || empty($input['texture_code'])) {
         sendJSON(false, 'Texture name and code are required', null, 400);
     }
 
     try {
+        $conn->beginTransaction();
+
         $sql = "INSERT INTO textures (texture_name, texture_code, texture_image, base_price, description, is_active) 
                 VALUES (?, ?, ?, ?, ?, ?)";
-        
         $stmt = $conn->prepare($sql);
         $stmt->execute([
             $input['texture_name'],
@@ -195,31 +235,47 @@ function addTexture(PDO $conn): void {
             $input['is_active'] ?? 1
         ]);
 
-        $textureId = $conn->lastInsertId();
+        $textureId = (int)$conn->lastInsertId();
 
+        // save allowed_parts (if any)
+        if (!empty($input['allowed_parts']) && is_array($input['allowed_parts'])) {
+            $ins = $conn->prepare("INSERT IGNORE INTO texture_allowed_parts (texture_id, part_name) VALUES (?, ?)");
+            foreach ($input['allowed_parts'] as $part) {
+                $ins->execute([$textureId, trim($part)]);
+            }
+        }
+
+        $conn->commit();
         sendJSON(true, 'Texture added successfully', ['id' => $textureId]);
-
     } catch (PDOException $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
         error_log("Add texture error: " . $e->getMessage());
-        if ($e->errorInfo[1] === 1062) {
+        if (isset($e->errorInfo[1]) && $e->errorInfo[1] === 1062) {
             sendJSON(false, 'Texture code already exists', null, 400);
         }
+        sendJSON(false, 'Failed to add texture', null, 500);
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
+        error_log("Add texture error: " . $e->getMessage());
         sendJSON(false, 'Failed to add texture', null, 500);
     }
 }
 
-function updateTexture(PDO $conn): void {
+function updateTexture(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['id'])) {
         sendJSON(false, 'Texture ID is required', null, 400);
     }
 
     try {
+        $conn->beginTransaction();
+
         $updateFields = [];
         $params = [];
 
@@ -248,31 +304,46 @@ function updateTexture(PDO $conn): void {
             $params[] = $input['is_active'];
         }
 
-        if (empty($updateFields)) {
-            sendJSON(false, 'No fields to update', null, 400);
+        if (!empty($updateFields)) {
+            $params[] = $input['id'];
+            $sql = 'UPDATE textures SET ' . implode(', ', $updateFields) . ' WHERE id = ?';
+            $stmt = $conn->prepare($sql);
+            $stmt->execute($params);
         }
 
-        $params[] = $input['id'];
-        $sql = 'UPDATE textures SET ' . implode(', ', $updateFields) . ' WHERE id = ?';
-        $stmt = $conn->prepare($sql);
-        $stmt->execute($params);
+        // sync allowed_parts (delete existing then insert new, if provided)
+        if (isset($input['allowed_parts'])) {
+            // clear existing
+            $del = $conn->prepare("DELETE FROM texture_allowed_parts WHERE texture_id = ?");
+            $del->execute([$input['id']]);
 
+            if (!empty($input['allowed_parts']) && is_array($input['allowed_parts'])) {
+                $ins = $conn->prepare("INSERT IGNORE INTO texture_allowed_parts (texture_id, part_name) VALUES (?, ?)");
+                foreach ($input['allowed_parts'] as $part) {
+                    $ins->execute([$input['id'], trim($part)]);
+                }
+            }
+        }
+
+        $conn->commit();
         sendJSON(true, 'Texture updated successfully');
-
     } catch (Throwable $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
         error_log("Update texture error: " . $e->getMessage());
         sendJSON(false, 'Failed to update texture', null, 500);
     }
 }
 
-function deleteTexture(PDO $conn): void {
+
+function deleteTexture(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-    
+
     if (!$id) {
         sendJSON(false, 'Texture ID required', null, 400);
     }
@@ -280,9 +351,8 @@ function deleteTexture(PDO $conn): void {
     try {
         $stmt = $conn->prepare('DELETE FROM textures WHERE id = ?');
         $stmt->execute([$id]);
-        
-        sendJSON(true, 'Texture deleted successfully');
 
+        sendJSON(true, 'Texture deleted successfully');
     } catch (Throwable $e) {
         error_log("Delete texture error: " . $e->getMessage());
         sendJSON(false, 'Failed to delete texture', null, 500);
@@ -290,7 +360,8 @@ function deleteTexture(PDO $conn): void {
 }
 
 // ========== COLOR FUNCTIONS ==========
-function listColors(PDO $conn): void {
+function listColors(PDO $conn): void
+{
     try {
         $sql = "SELECT * FROM colors ORDER BY color_name ASC";
         $stmt = $conn->query($sql);
@@ -303,13 +374,14 @@ function listColors(PDO $conn): void {
     }
 }
 
-function addColor(PDO $conn): void {
+function addColor(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['color_name']) || empty($input['color_code']) || empty($input['hex_value'])) {
         sendJSON(false, 'Color name, code, and hex value are required', null, 400);
     }
@@ -317,7 +389,7 @@ function addColor(PDO $conn): void {
     try {
         $sql = "INSERT INTO colors (color_name, color_code, hex_value, base_price, is_active) 
                 VALUES (?, ?, ?, ?, ?)";
-        
+
         $stmt = $conn->prepare($sql);
         $stmt->execute([
             $input['color_name'],
@@ -330,7 +402,6 @@ function addColor(PDO $conn): void {
         $colorId = $conn->lastInsertId();
 
         sendJSON(true, 'Color added successfully', ['id' => $colorId]);
-
     } catch (PDOException $e) {
         error_log("Add color error: " . $e->getMessage());
         if ($e->errorInfo[1] === 1062) {
@@ -340,13 +411,14 @@ function addColor(PDO $conn): void {
     }
 }
 
-function updateColor(PDO $conn): void {
+function updateColor(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['id'])) {
         sendJSON(false, 'Color ID is required', null, 400);
     }
@@ -386,21 +458,21 @@ function updateColor(PDO $conn): void {
         $stmt->execute($params);
 
         sendJSON(true, 'Color updated successfully');
-
     } catch (Throwable $e) {
         error_log("Update color error: " . $e->getMessage());
         sendJSON(false, 'Failed to update color', null, 500);
     }
 }
 
-function deleteColor(PDO $conn): void {
+function deleteColor(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-    
+
     if (!$id) {
         sendJSON(false, 'Color ID required', null, 400);
     }
@@ -408,9 +480,8 @@ function deleteColor(PDO $conn): void {
     try {
         $stmt = $conn->prepare('DELETE FROM colors WHERE id = ?');
         $stmt->execute([$id]);
-        
-        sendJSON(true, 'Color deleted successfully');
 
+        sendJSON(true, 'Color deleted successfully');
     } catch (Throwable $e) {
         error_log("Delete color error: " . $e->getMessage());
         sendJSON(false, 'Failed to delete color', null, 500);
@@ -418,7 +489,8 @@ function deleteColor(PDO $conn): void {
 }
 
 // ========== HANDLE FUNCTIONS ==========
-function listHandles(PDO $conn): void {
+function listHandles(PDO $conn): void
+{
     try {
         $sql = "SELECT * FROM handle_types ORDER BY handle_name ASC";
         $stmt = $conn->query($sql);
@@ -431,13 +503,14 @@ function listHandles(PDO $conn): void {
     }
 }
 
-function addHandle(PDO $conn): void {
+function addHandle(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['handle_name']) || empty($input['handle_code'])) {
         sendJSON(false, 'Handle name and code are required', null, 400);
     }
@@ -445,7 +518,7 @@ function addHandle(PDO $conn): void {
     try {
         $sql = "INSERT INTO handle_types (handle_name, handle_code, handle_image, base_price, description, is_active) 
                 VALUES (?, ?, ?, ?, ?, ?)";
-        
+
         $stmt = $conn->prepare($sql);
         $stmt->execute([
             $input['handle_name'],
@@ -459,7 +532,6 @@ function addHandle(PDO $conn): void {
         $handleId = $conn->lastInsertId();
 
         sendJSON(true, 'Handle added successfully', ['id' => $handleId]);
-
     } catch (PDOException $e) {
         error_log("Add handle error: " . $e->getMessage());
         if ($e->errorInfo[1] === 1062) {
@@ -469,13 +541,14 @@ function addHandle(PDO $conn): void {
     }
 }
 
-function updateHandle(PDO $conn): void {
+function updateHandle(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'PUT') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['id'])) {
         sendJSON(false, 'Handle ID is required', null, 400);
     }
@@ -519,21 +592,21 @@ function updateHandle(PDO $conn): void {
         $stmt->execute($params);
 
         sendJSON(true, 'Handle updated successfully');
-
     } catch (Throwable $e) {
         error_log("Update handle error: " . $e->getMessage());
         sendJSON(false, 'Failed to update handle', null, 500);
     }
 }
 
-function deleteHandle(PDO $conn): void {
+function deleteHandle(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
     $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-    
+
     if (!$id) {
         sendJSON(false, 'Handle ID required', null, 400);
     }
@@ -541,9 +614,8 @@ function deleteHandle(PDO $conn): void {
     try {
         $stmt = $conn->prepare('DELETE FROM handle_types WHERE id = ?');
         $stmt->execute([$id]);
-        
-        sendJSON(true, 'Handle deleted successfully');
 
+        sendJSON(true, 'Handle deleted successfully');
     } catch (Throwable $e) {
         error_log("Delete handle error: " . $e->getMessage());
         sendJSON(false, 'Failed to delete handle', null, 500);
@@ -551,13 +623,14 @@ function deleteHandle(PDO $conn): void {
 }
 
 // ========== PRODUCT ASSIGNMENT FUNCTIONS ==========
-function updateSizeConfig(PDO $conn): void {
+function updateSizeConfig(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['product_id'])) {
         sendJSON(false, 'Product ID is required', null, 400);
     }
@@ -572,8 +645,11 @@ function updateSizeConfig(PDO $conn): void {
         // Insert new config
         if (!empty($input['size_config'])) {
             foreach ($input['size_config'] as $dimension => $config) {
-                $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, default_value, step_value, price_per_unit, measurement_unit)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, 
+                        default_value, step_value,
+                        price_per_unit, measurement_unit, 
+                        price_block_cm, price_per_block)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($sql);
                 $stmt->execute([
                     $input['product_id'],
@@ -583,14 +659,15 @@ function updateSizeConfig(PDO $conn): void {
                     $config['default_value'] ?? 100,
                     $config['step_value'] ?? 1,
                     $config['price_per_unit'] ?? 0.00,
-                    $config['measurement_unit'] ?? 'cm'
+                    $config['measurement_unit'] ?? 'cm',
+                    (float)($config['price_block_cm'] ?? 0),
+                    (float)($config['price_per_block'] ?? 0),
                 ]);
             }
         }
 
         $conn->commit();
         sendJSON(true, 'Size configuration updated successfully');
-
     } catch (Throwable $e) {
         $conn->rollBack();
         error_log("Update size config error: " . $e->getMessage());
@@ -598,13 +675,14 @@ function updateSizeConfig(PDO $conn): void {
     }
 }
 
-function assignTextures(PDO $conn): void {
+function assignTextures(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['product_id']) || !isset($input['texture_ids'])) {
         sendJSON(false, 'Product ID and texture IDs are required', null, 400);
     }
@@ -627,7 +705,6 @@ function assignTextures(PDO $conn): void {
 
         $conn->commit();
         sendJSON(true, 'Textures assigned successfully');
-
     } catch (Throwable $e) {
         $conn->rollBack();
         error_log("Assign textures error: " . $e->getMessage());
@@ -635,13 +712,14 @@ function assignTextures(PDO $conn): void {
     }
 }
 
-function assignColors(PDO $conn): void {
+function assignColors(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['product_id']) || !isset($input['color_ids'])) {
         sendJSON(false, 'Product ID and color IDs are required', null, 400);
     }
@@ -664,7 +742,6 @@ function assignColors(PDO $conn): void {
 
         $conn->commit();
         sendJSON(true, 'Colors assigned successfully');
-
     } catch (Throwable $e) {
         $conn->rollBack();
         error_log("Assign colors error: " . $e->getMessage());
@@ -672,13 +749,14 @@ function assignColors(PDO $conn): void {
     }
 }
 
-function assignHandles(PDO $conn): void {
+function assignHandles(PDO $conn): void
+{
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (empty($input['product_id']) || !isset($input['handle_ids'])) {
         sendJSON(false, 'Product ID and handle IDs are required', null, 400);
     }
@@ -701,7 +779,6 @@ function assignHandles(PDO $conn): void {
 
         $conn->commit();
         sendJSON(true, 'Handles assigned successfully');
-
     } catch (Throwable $e) {
         $conn->rollBack();
         error_log("Assign handles error: " . $e->getMessage());
@@ -710,14 +787,15 @@ function assignHandles(PDO $conn): void {
 }
 
 // ========== FILE UPLOAD FUNCTIONS ==========
-function uploadTextureImage(): void {
+function uploadTextureImage(): void
+{
     if (empty($_FILES['image'])) {
         sendJSON(false, 'No image file provided', null, 400);
     }
 
     $file = $_FILES['image'];
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    
+
     if (!in_array($file['type'], $allowedTypes)) {
         sendJSON(false, 'Invalid file type. Only JPG, PNG, and WEBP allowed', null, 400);
     }
@@ -738,14 +816,15 @@ function uploadTextureImage(): void {
     }
 }
 
-function uploadHandleImage(): void {
+function uploadHandleImage(): void
+{
     if (empty($_FILES['image'])) {
         sendJSON(false, 'No image file provided', null, 400);
     }
 
     $file = $_FILES['image'];
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    
+
     if (!in_array($file['type'], $allowedTypes)) {
         sendJSON(false, 'Invalid file type. Only JPG, PNG, and WEBP allowed', null, 400);
     }
@@ -765,4 +844,3 @@ function uploadHandleImage(): void {
         sendJSON(false, 'Failed to upload handle image', null, 500);
     }
 }
-?>

@@ -510,9 +510,10 @@ function populateCustomizationModal(product) {
     const mode = (cfg.pricing_mode === 'block') ? 'block' : 'percm';
     if (modeRadios && modeRadios.length) {
       [...modeRadios].forEach(r => r.checked = (r.value === mode));
-      // trigger toggle (if meron kang binder)
+      // trigger toggle on the actually checked radio so UI shows correct fields
       const evt = new Event('change');
-      modeRadios[0].dispatchEvent(evt);
+      const checkedRadio = [...modeRadios].find(r => r.checked);
+      if (checkedRadio) checkedRadio.dispatchEvent(evt);
     }
   };
 
@@ -583,7 +584,6 @@ function packDimFromModal(prefix) {
   const min = Number(document.getElementById(prefix + 'MinCustom')?.value || 0);
   const max = Number(document.getElementById(prefix + 'MaxCustom')?.value || 0);
   const def = Number(document.getElementById(prefix + 'DefaultCustom')?.value || min);
-  const step = Number(document.getElementById(prefix + 'StepCustom')?.value || 1);
 
   // pricing mode radios: name="widthPricingMode"/"heightPricingMode"/"depthPricingMode"
   const modeEl = document.querySelector(`input[name="${prefix}PricingMode"]:checked`);
@@ -597,7 +597,6 @@ function packDimFromModal(prefix) {
     min_value: min,
     max_value: max,
     default_value: def,
-    step_value: step,
     measurement_unit: unit,
 
     pricing_mode,       // NEW: 'percm' or 'block'
@@ -617,7 +616,6 @@ async function saveCustomizationOptions() {
     const min = valNum(`${dim}MinCustom`);
     const max = valNum(`${dim}MaxCustom`);
     const def = (el(`${dim}DefaultCustom`) || el(`${dim}DefCustom`)) ? Number((el(`${dim}DefaultCustom`) || el(`${dim}DefCustom`)).value || 0) : undefined;
-    const step = el(`${dim}StepCustom`) ? Number(el(`${dim}StepCustom`).value || 1) : undefined;
     const unit = (el(`${dim}Unit`)?.value) || (currentProduct?.measurement_unit || 'cm');
 
     const ppu = el(`${dim}PPU`) ? Number(el(`${dim}PPU`).value || 0)
@@ -630,16 +628,24 @@ async function saveCustomizationOptions() {
     const radios = document.getElementsByName(`${dim}PricingMode`);
     const mode = [...radios].find(r => r.checked)?.value || 'percm';
 
+    // NORMALIZE mode -> stay 'percm' or 'block' (existing)
+    const pricing_mode = (mode === 'block') ? 'block' : 'percm';
+
+    // If percm selected, force block values to zero BEFORE sending
+    const price_block_cm = (pricing_mode === 'percm') ? 0 : bSize;
+    const price_per_block = (pricing_mode === 'percm') ? 0 : bCost;
+    const price_per_unit = ppu; // used when percm (or as fallback)
+
     return {
       min_value: min,
       max_value: max,
       ...(def !== undefined ? { default_value: def } : {}),
       ...(step !== undefined ? { step_value: step } : {}),
       measurement_unit: unit,
-      pricing_mode: mode,          // 'percm' | 'block'
-      price_per_unit: ppu,         // used when mode==='percm'
-      price_block_cm: bSize,       // used when mode==='block'
-      price_per_block: bCost       // used when mode==='block'
+      pricing_mode: pricing_mode,   // 'percm' | 'block'
+      price_per_unit: price_per_unit,
+      price_block_cm: price_block_cm,
+      price_per_block: price_per_block
     };
   };
 
