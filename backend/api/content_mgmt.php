@@ -1,7 +1,7 @@
 <?php
 
 while (ob_get_level()) {
-    ob_end_clean();
+  ob_end_clean();
 }
 ob_start();
 
@@ -9,6 +9,19 @@ require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../../includes/guard.php';
 
 guard_require_staff();
+
+/** @var \PDO|null $pdo */
+global $pdo;
+if (!isset($pdo) || !($pdo instanceof PDO)) {
+  error_log("FATAL: missing/invalid \$pdo in content_mgmt.php");
+  http_response_code(500);
+  echo json_encode([
+    'success' => false,
+    'message' => 'Database connection not available. Check config/app.php'
+  ]);
+  exit;
+}
+
 
 // CRITICAL: Stop ALL output before JSON
 header('Content-Type: application/json; charset=utf-8');
@@ -22,291 +35,292 @@ if (ob_get_level()) ob_end_clean();
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 try {
-    if ($action === 'get') {
-        getContent();
-    } elseif ($action === 'save') {
-        saveContent();
-    } elseif ($action === 'publish') {
-        publishContent();
-    } elseif ($action === 'discard') {
-        discardDraft();
-    } elseif ($action === 'upload_image') {
-        uploadImage();
-    } else {
-        throw new Exception('Invalid action');
-    }
+  if ($action === 'get') {
+    getContent();
+  } elseif ($action === 'save') {
+    saveContent();
+  } elseif ($action === 'publish') {
+    publishContent();
+  } elseif ($action === 'discard') {
+    discardDraft();
+  } elseif ($action === 'upload_image') {
+    uploadImage();
+  } else {
+    throw new Exception('Invalid action');
+  }
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
-    exit;
+  http_response_code(500);
+  echo json_encode([
+    'success' => false,
+    'message' => $e->getMessage()
+  ]);
+  exit;
 }
 
 function getContent()
 {
-    global $pdo;
+  global $pdo;
 
-    $page = $_GET['page'] ?? 'home_public';
-    $status = $_GET['status'] ?? 'draft';
+  $page = $_GET['page'] ?? 'home_public';
+  $status = $_GET['status'] ?? 'draft';
 
-    $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
-    if (!in_array($page, $validPages)) {
-        throw new Exception('Invalid page');
-    }
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  if (!in_array($page, $validPages)) {
+    throw new Exception('Invalid page');
+  }
 
-    // Try to get requested status (draft or published)
-    $stmt = $pdo->prepare("
+  // Try to get requested status (draft or published)
+  $stmt = $pdo->prepare("
         SELECT content_data, updated_at, updated_by, status
         FROM rt_cms_pages 
         WHERE page_key = ? AND status = ?
         ORDER BY updated_at DESC 
         LIMIT 1
     ");
-    $stmt->execute([$page, $status]);
+  $stmt->execute([$page, $status]);
+  $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  // If no draft, fall back to published
+  if (!$result && $status === 'draft') {
+    $stmt->execute([$page, 'published']);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
+  }
 
-    // If no draft, fall back to published
-    if (!$result && $status === 'draft') {
-        $stmt->execute([$page, 'published']);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    if ($result) {
-        $content = json_decode($result['content_data'], true);
-        echo json_encode([
-            'success' => true,
-            'content' => $content,
-            'status' => $result['status'],
-            'updated_at' => $result['updated_at'],
-            'updated_by' => $result['updated_by']
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    } else {
-        // Return default content
-        echo json_encode([
-            'success' => true,
-            'content' => getDefaultContent($page),
-            'status' => 'published',
-            'updated_at' => null,
-            'updated_by' => 'System'
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    }
+  if ($result) {
+    $content = json_decode($result['content_data'], true);
+    echo json_encode([
+      'success' => true,
+      'content' => $content,
+      'status' => $result['status'],
+      'updated_at' => $result['updated_at'],
+      'updated_by' => $result['updated_by']
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  } else {
+    // Return default content
+    echo json_encode([
+      'success' => true,
+      'content' => getDefaultContent($page),
+      'status' => 'published',
+      'updated_at' => null,
+      'updated_by' => 'System'
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  }
 }
 
 function saveContent()
 {
-    global $pdo;
+  global $pdo;
 
-    $page = $_POST['page'] ?? '';
-    $content = $_POST['content'] ?? '';
+  $page = $_POST['page'] ?? '';
+  $content = $_POST['content'] ?? '';
 
-    $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
-    if (!in_array($page, $validPages)) {
-        throw new Exception('Invalid page');
-    }
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  if (!in_array($page, $validPages)) {
+    throw new Exception('Invalid page');
+  }
 
-    $contentData = json_decode($content, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        throw new Exception('Invalid JSON content: ' . json_last_error_msg());
-    }
+  $contentData = json_decode($content, true);
+  if (json_last_error() !== JSON_ERROR_NONE) {
+    throw new Exception('Invalid JSON content: ' . json_last_error_msg());
+  }
 
-    $staffName = $_SESSION['staff']['full_name'] ?? 'Admin';
+  $staffName = $_SESSION['staff']['full_name'] ?? 'Admin';
 
-    $pageNames = [
-        'home_public' => 'Public Homepage',
-        'home_customer' => 'Customer Homepage',
-        'about' => 'About Us',
-        'privacy' => 'Privacy Policy',
-        'terms' => 'Terms & Conditions'
-    ];
+  $pageNames = [
+    'home_public' => 'Public Homepage',
+    'home_customer' => 'Customer Homepage',
+    'about' => 'About Us',
+    'privacy' => 'Privacy Policy',
+    'terms' => 'Terms & Conditions'
+  ];
 
-    $newContentJson = json_encode($contentData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  $newContentJson = json_encode($contentData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-    // Check if content actually changed
-    $stmt = $pdo->prepare("
+  // Check if content actually changed
+  $stmt = $pdo->prepare("
         SELECT content_data 
         FROM rt_cms_pages 
         WHERE page_key = ? AND status = 'draft' 
         ORDER BY updated_at DESC 
         LIMIT 1
     ");
+  $stmt->execute([$page]);
+  $existingDraft = $stmt->fetch(PDO::FETCH_ASSOC);
+
+  if ($existingDraft && $existingDraft['content_data'] === $newContentJson) {
+    echo json_encode([
+      'success' => true,
+      'message' => 'No changes detected',
+      'unchanged' => true
+    ]);
+    return;
+  }
+
+  // Start transaction
+  $pdo->beginTransaction();
+
+  try {
+    // Delete ALL old drafts for this page
+    $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'draft'");
     $stmt->execute([$page]);
-    $existingDraft = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($existingDraft && $existingDraft['content_data'] === $newContentJson) {
-        echo json_encode([
-            'success' => true,
-            'message' => 'No changes detected',
-            'unchanged' => true
-        ]);
-        return;
-    }
+    // Get next version
+    $stmt = $pdo->prepare("SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM rt_cms_pages WHERE page_key = ?");
+    $stmt->execute([$page]);
+    $nextVersion = $stmt->fetch(PDO::FETCH_ASSOC)['next_version'];
 
-    // Start transaction
-    $pdo->beginTransaction();
-
-    try {
-        // Delete ALL old drafts for this page
-        $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'draft'");
-        $stmt->execute([$page]);
-
-        // Get next version
-        $stmt = $pdo->prepare("SELECT COALESCE(MAX(version), 0) + 1 as next_version FROM rt_cms_pages WHERE page_key = ?");
-        $stmt->execute([$page]);
-        $nextVersion = $stmt->fetch(PDO::FETCH_ASSOC)['next_version'];
-
-        // Insert new draft with current timestamp
-        $stmt = $pdo->prepare("
+    // Insert new draft with current timestamp
+    $stmt = $pdo->prepare("
             INSERT INTO rt_cms_pages (page_key, page_name, content_data, status, version, updated_by, updated_at)
             VALUES (?, ?, ?, 'draft', ?, ?, NOW())
         ");
-        $stmt->execute([$page, $pageNames[$page], $newContentJson, $nextVersion, $staffName]);
+    $stmt->execute([$page, $pageNames[$page], $newContentJson, $nextVersion, $staffName]);
 
-        // CRITICAL: Commit immediately
-        $pdo->commit();
+    // CRITICAL: Commit immediately
+    $pdo->commit();
 
-        // Wait for database to finish writing
-        usleep(150000); // 150ms
+    // Wait for database to finish writing
+    usleep(150000); // 150ms
 
-        echo json_encode([
-            'success' => true,
-            'message' => 'Draft saved successfully',
-            'timestamp' => time()
-        ]);
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        throw $e;
-    }
+    echo json_encode([
+      'success' => true,
+      'message' => 'Draft saved successfully',
+      'timestamp' => time()
+    ]);
+  } catch (Exception $e) {
+    $pdo->rollBack();
+    throw $e;
+  }
 }
 
 function publishContent()
 {
-    global $pdo;
+  global $pdo;
 
-    $page = $_POST['page'] ?? '';
+  $page = $_POST['page'] ?? '';
 
-    $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
-    if (!in_array($page, $validPages)) {
-        throw new Exception('Invalid page');
-    }
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  if (!in_array($page, $validPages)) {
+    throw new Exception('Invalid page');
+  }
 
-    $pdo->beginTransaction();
+  $pdo->beginTransaction();
 
-    // Get latest draft
-    $stmt = $pdo->prepare("SELECT * FROM rt_cms_pages WHERE page_key = ? AND status = 'draft' ORDER BY updated_at DESC LIMIT 1");
-    $stmt->execute([$page]);
-    $draft = $stmt->fetch(PDO::FETCH_ASSOC);
+  // Get latest draft
+  $stmt = $pdo->prepare("SELECT * FROM rt_cms_pages WHERE page_key = ? AND status = 'draft' ORDER BY updated_at DESC LIMIT 1");
+  $stmt->execute([$page]);
+  $draft = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$draft) {
-        throw new Exception('No draft to publish');
-    }
+  if (!$draft) {
+    throw new Exception('No draft to publish');
+  }
 
-    // Delete old published version
-    $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'published'");
-    $stmt->execute([$page]);
+  // Delete old published version
+  $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'published'");
+  $stmt->execute([$page]);
 
-    // Insert draft as published
-    $stmt = $pdo->prepare("
-        INSERT INTO rt_cms_pages (page_key, page_name, content_data, status, version, updated_by)
-        VALUES (?, ?, ?, 'published', ?, ?)
-    ");
-    $stmt->execute([$draft['page_key'], $draft['page_name'], $draft['content_data'], $draft['version'], $draft['updated_by']]);
+  // Insert draft as published
+  $stmt = $pdo->prepare("
+  INSERT INTO rt_cms_pages (page_key, page_name, content_data, status, version, updated_by, updated_at)
+  VALUES (?, ?, ?, 'published', ?, ?, NOW())
+");
+  $stmt->execute([$draft['page_key'], $draft['page_name'], $draft['content_data'], $draft['version'], $draft['updated_by']]);
 
-    $pdo->commit();
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Content published successfully'
-    ]);
+  $pdo->commit();
+
+  echo json_encode([
+    'success' => true,
+    'message' => 'Content published successfully'
+  ]);
 }
 
 function discardDraft()
 {
-    global $pdo;
+  global $pdo;
 
-    $page = $_POST['page'] ?? '';
+  $page = $_POST['page'] ?? '';
 
-    $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
-    if (!in_array($page, $validPages)) {
-        throw new Exception('Invalid page');
-    }
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  if (!in_array($page, $validPages)) {
+    throw new Exception('Invalid page');
+  }
 
-    $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'draft'");
-    $stmt->execute([$page]);
+  $stmt = $pdo->prepare("DELETE FROM rt_cms_pages WHERE page_key = ? AND status = 'draft'");
+  $stmt->execute([$page]);
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Draft discarded successfully'
-    ]);
+  echo json_encode([
+    'success' => true,
+    'message' => 'Draft discarded successfully'
+  ]);
 }
 
 function getDefaultContent($page)
 {
-    $defaults = [
-        'home_public' => [
-            'hero_headline' => '<h1>Welcome to RADS Tooling</h1>',
-            'hero_subtitle' => '<p>Your trusted partner in custom cabinets</p>',
-            'carousel_images' => [],
-            'footer_email' => 'RadsTooling@gmail.com',
-            'footer_phone' => '+63 976 228 4270'
-        ],
-        'home_customer' => [
-            'welcome_message' => '<h1>Welcome back, {{customer_name}}!</h1>',
-            'intro_text' => '<p>Explore our latest designs</p>'
-        ],
-        'about' => [
-            'content' => '<h1>About Us</h1><p>Content goes here...</p>'
-        ],
-        'privacy' => [
-            'content' => '<h1>Privacy Policy</h1><p>Content goes here...</p>'
-        ],
-        'terms' => [
-            'content' => '<h1>Terms & Conditions</h1><p>Content goes here...</p>'
-        ]
-    ];
+  $defaults = [
+    'home_public' => [
+      'hero_headline' => '<h1>Welcome to RADS Tooling</h1>',
+      'hero_subtitle' => '<p>Your trusted partner in custom cabinets</p>',
+      'carousel_images' => [],
+      'footer_email' => 'RadsTooling@gmail.com',
+      'footer_phone' => '+63 976 228 4270'
+    ],
+    'home_customer' => [
+      'welcome_message' => '<h1>Welcome back, {{customer_name}}!</h1>',
+      'intro_text' => '<p>Explore our latest designs</p>'
+    ],
+    'about' => [
+      'content' => '<h1>About Us</h1><p>Content goes here...</p>'
+    ],
+    'privacy' => [
+      'content' => '<h1>Privacy Policy</h1><p>Content goes here...</p>'
+    ],
+    'terms' => [
+      'content' => '<h1>Terms & Conditions</h1><p>Content goes here...</p>'
+    ]
+  ];
 
-    return $defaults[$page] ?? [];
+  return $defaults[$page] ?? [];
 }
 
 function uploadImage()
 {
-    try {
-        if (!isset($_FILES['image'])) {
-            throw new Exception('No file uploaded - $_FILES is empty');
-        }
-
-        $file = $_FILES['image'];
-        $group = $_POST['group'] ?? 'general';
-
-        // Debug logging
-        error_log('Upload attempt - File: ' . ($file['name'] ?? 'unknown'));
-        error_log('Upload attempt - Size: ' . ($file['size'] ?? 0));
-        error_log('Upload attempt - Error: ' . ($file['error'] ?? 'none'));
-
-        // Load upload helper
-        $uploadHelperPath = __DIR__ . '/../helpers/upload.php';
-
-        if (!file_exists($uploadHelperPath)) {
-            throw new Exception('Upload helper not found');
-        }
-
-        require_once $uploadHelperPath;
-
-        // CHANGED: Call the renamed function
-        $result = processFileUpload($file, $group);
-
-        // Log result
-        error_log('Upload result: ' . json_encode($result));
-
-        echo json_encode($result);
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => $e->getMessage(),
-            'file' => __FILE__,
-            'line' => __LINE__
-        ]);
+  try {
+    if (!isset($_FILES['image'])) {
+      throw new Exception('No file uploaded - $_FILES is empty');
     }
+
+    $file = $_FILES['image'];
+    $group = $_POST['group'] ?? 'general';
+
+    // Debug logging
+    error_log('Upload attempt - File: ' . ($file['name'] ?? 'unknown'));
+    error_log('Upload attempt - Size: ' . ($file['size'] ?? 0));
+    error_log('Upload attempt - Error: ' . ($file['error'] ?? 'none'));
+
+    // Load upload helper
+    $uploadHelperPath = __DIR__ . '/../helpers/upload.php';
+
+    if (!file_exists($uploadHelperPath)) {
+      throw new Exception('Upload helper not found');
+    }
+
+    require_once $uploadHelperPath;
+
+    // CHANGED: Call the renamed function
+    $result = processFileUpload($file, $group);
+
+    // Log result
+    error_log('Upload result: ' . json_encode($result));
+
+    echo json_encode($result);
+  } catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+      'success' => false,
+      'message' => $e->getMessage(),
+      'file' => __FILE__,
+      'line' => __LINE__
+    ]);
+  }
 }

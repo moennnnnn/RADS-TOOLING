@@ -252,10 +252,8 @@ class AuthAPI
             ');
             $updateStmt->execute([$verificationCode, $verificationExpires, $user['id']]);
 
-            if (class_exists('Mailer')) {
-                $mailer = new Mailer();
-                $ok = $mailer->sendVerificationCode($email, $user['full_name'], $verificationCode);
-                if (!$ok) error_log("[MAIL] sendVerificationCode returned false for {$email}");
+            if (function_exists('sendVerificationEmail')) {
+                sendVerificationEmail($email, $user['full_name'], $verificationCode);
             } else {
                 error_log("Verification code for {$email}: {$verificationCode}");
             }
@@ -267,81 +265,46 @@ class AuthAPI
         }
     }
 
-    /* --------------------------------- Registration -------------------------------- */
+    /* ---------------------------------- Registration -------------------------------- */
 
     private function registerCustomer(array $input): void
     {
-        // Validate required fields
-        $required = ['first_name', 'last_name', 'email', 'username', 'password'];
-        foreach ($required as $field) {
-            if (empty(trim((string)($input[$field] ?? '')))) {
-                $this->send(false, "Field '$field' is required");
-                return;
-            }
-        }
+        $username  = trim((string)($input['username'] ?? ''));
+        $fullName  = trim((string)($input['full_name'] ?? ''));
+        $email     = trim((string)($input['email'] ?? ''));
+        $password  = (string)($input['password'] ?? '');
 
-        $firstName = trim((string)$input['first_name']);
-        $lastName  = trim((string)$input['last_name']);
-        $email     = trim((string)$input['email']);
-        $username  = trim((string)$input['username']);
-        $password  = (string)$input['password'];
-
-        // --- Normalize phone using util (accepts phone_local or phone) ---
-        try {
-            $phone = normalize_ph_phone($input['phone_local'] ?? $input['phone'] ?? '');
-        } catch (RuntimeException $e) {
-            $this->send(false, 'Enter a valid PH mobile (+63 + 10 digits).');
+        if ($username === '' || $fullName === '' || $email === '' || $password === '') {
+            $this->send(false, 'All fields are required');
             return;
         }
 
-        // --- Uniqueness check for phone ---
-        $stmt = $this->conn->prepare('SELECT id FROM customers WHERE phone = ? LIMIT 1');
-        $stmt->execute([$phone]);
-        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
-            $this->send(false, 'Mobile number is already taken');
-            return;
-        }
-        // Validate email format
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $this->send(false, 'Invalid email format');
             return;
         }
 
-        // Validate password strength (minimum 6 characters; keep your rule)
-        if (strlen($password) < 8) {
-            $this->send(false, 'Password must be at least 8 characters long');
-            return;
-        }
-
-        // Validate username (alphanumeric + underscore, 3-20 chars)
-        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
-            $this->send(false, 'Username must be 3-20 characters (letters, numbers, underscore only)');
+        if (mb_strlen($password) < 6) {
+            $this->send(false, 'Password must be at least 6 characters');
             return;
         }
 
         try {
-            // CASE-SENSITIVE duplicates for username and email
-            $stmt = $this->conn->prepare('
-            SELECT id FROM customers
-            WHERE username = BINARY ? OR email = BINARY ?
-            LIMIT 1
-            ');
-            $stmt->execute([$username, $email]);
-            if ($stmt->fetch(PDO::FETCH_ASSOC)) {
-                $this->send(false, 'Email or username already exists');
-                return;
-            }
+            $phone = normalize_ph_phone($input['phone_local'] ?? $input['phone'] ?? '');
+        } catch (RuntimeException $e) {
+            $this->send(false, $e->getMessage());
+            return;
+        }
 
-            $hashedPassword       = password_hash($password, PASSWORD_DEFAULT);
-            $verificationCode     = sprintf('%06d', random_int(100000, 999999));
-            $verificationExpires  = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-            $fullName             = $firstName . ' ' . $lastName;
+        $hashedPassword      = password_hash($password, PASSWORD_BCRYPT);
+        $verificationCode    = sprintf('%06d', random_int(100000, 999999));
+        $verificationExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
+        try {
             $stmt = $this->conn->prepare('
-                INSERT INTO customers (
-                    username, full_name, email, phone, password, 
-                    email_verified, verification_code, verification_expires, created_at
-                ) VALUES (?, ?, ?, ?, ?, 0, ?, ?, NOW())
+                INSERT INTO customers 
+                (username, full_name, email, phone, password, verification_code, verification_expires, email_verified)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0)
             ');
             $stmt->execute([
                 $username,
@@ -355,10 +318,8 @@ class AuthAPI
 
             $customerId = (int)$this->conn->lastInsertId();
 
-            // Send verification email if mailer exists
-            if (class_exists('Mailer')) {
-                $mailer = new Mailer();
-                $mailer->sendVerificationCode($email, $fullName, $verificationCode);
+            if (function_exists('sendVerificationEmail')) {
+                sendVerificationEmail($email, $fullName, $verificationCode);
             } else {
                 error_log("Verification code for {$email}: {$verificationCode}");
             }
@@ -514,8 +475,9 @@ class AuthAPI
 
     private function loginStaff(string $username, string $password): void
     {
+        // 🔥 UPDATED: Added 'status' field to SELECT query
         $stmt = $this->conn->prepare(
-            'SELECT id, username, password, full_name, role, profile_image
+            'SELECT id, username, password, full_name, role, profile_image, status
      FROM admin_users
      WHERE username = BINARY ?
      LIMIT 1'
@@ -525,6 +487,12 @@ class AuthAPI
 
         if (!$user || !password_verify($password, $user['password'])) {
             $this->send(false, 'Invalid username or password');
+            return;
+        }
+
+        // 🔥 NEW: Check if account is inactive
+        if ($user['status'] === 'inactive') {
+            $this->send(false, 'Your account is inactive. Please contact an admin to activate your account.');
             return;
         }
 

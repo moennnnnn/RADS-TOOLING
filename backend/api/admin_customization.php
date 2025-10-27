@@ -97,6 +97,12 @@ try {
         case 'update_texture':
             updateTexture($conn);
             break;
+        case 'assign_textures_parts':
+            assignTexturesParts($conn);
+            break;
+        case 'list_product_textures_parts':
+            listProductTexturesParts($conn);
+            break;
         case 'delete_texture':
             deleteTexture($conn);
             break;
@@ -629,51 +635,113 @@ function updateSizeConfig(PDO $conn): void
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
+    // read JSON body
+    $raw = file_get_contents('php://input');
+    $input = json_decode($raw, true);
+    // log payload for debugging (will be helpful if an error occurs)
+    error_log("updateSizeConfig payload: " . ($raw ?: '[empty]'));
 
     if (empty($input['product_id'])) {
         sendJSON(false, 'Product ID is required', null, 400);
     }
 
+    // Normalize: accept either 'step_value' or 'increment' from frontend
+    if (!empty($input['size_config']) && is_array($input['size_config'])) {
+        foreach ($input['size_config'] as $k => &$cfg) {
+            if (isset($cfg['increment']) && !isset($cfg['step_value'])) {
+                $cfg['step_value'] = $cfg['increment'];
+            }
+            // ensure numeric defaults exist
+            $cfg['min_value'] = isset($cfg['min_value']) ? (float)$cfg['min_value'] : 0.0;
+            $cfg['max_value'] = isset($cfg['max_value']) ? (float)$cfg['max_value'] : 300.0;
+            if (isset($cfg['default_value'])) $cfg['default_value'] = (float)$cfg['default_value'];
+            $cfg['step_value'] = isset($cfg['step_value']) ? (float)$cfg['step_value'] : 1.0;
+            $cfg['price_per_unit'] = isset($cfg['price_per_unit']) ? (float)$cfg['price_per_unit'] : 0.0;
+            $cfg['measurement_unit'] = $cfg['measurement_unit'] ?? 'cm';
+            $cfg['price_block_cm'] = isset($cfg['price_block_cm']) ? (float)$cfg['price_block_cm'] : 0.0;
+            $cfg['price_per_block'] = isset($cfg['price_per_block']) ? (float)$cfg['price_per_block'] : 0.0;
+        }
+        unset($cfg);
+    }
+
     try {
         $conn->beginTransaction();
 
-        // Delete existing config
-        $stmt = $conn->prepare('DELETE FROM product_size_config WHERE product_id = ?');
-        $stmt->execute([$input['product_id']]);
+        // Delete existing config rows for this product
+        $del = $conn->prepare('DELETE FROM product_size_config WHERE product_id = ?');
+        $del->execute([$input['product_id']]);
 
-        // Insert new config
-        if (!empty($input['size_config'])) {
-            foreach ($input['size_config'] as $dimension => $config) {
-                $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, 
-                        default_value, step_value,
-                        price_per_unit, measurement_unit, 
-                        price_block_cm, price_per_block)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-                $stmt = $conn->prepare($sql);
-                $stmt->execute([
-                    $input['product_id'],
-                    $dimension,
-                    $config['min_value'] ?? 0,
-                    $config['max_value'] ?? 300,
-                    $config['default_value'] ?? 100,
-                    $config['step_value'] ?? 1,
-                    $config['price_per_unit'] ?? 0.00,
-                    $config['measurement_unit'] ?? 'cm',
-                    (float)($config['price_block_cm'] ?? 0),
-                    (float)($config['price_per_block'] ?? 0),
-                ]);
+        // If there's no size_config to insert, commit and return success
+        if (empty($input['size_config'])) {
+            $conn->commit();
+            sendJSON(true, 'Size configuration updated successfully');
+        }
+
+        // Insert new config rows.
+        // NOTE: column list intentionally matches your DB: (product_id, dimension_type, min_value, max_value, default_value, step_value, price_per_unit, measurement_unit, price_block_cm, price_per_block)
+        $sql = "INSERT INTO product_size_config (
+                    product_id, dimension_type, min_value, max_value, default_value,
+                    step_value, price_per_unit, measurement_unit, price_block_cm, price_per_block
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+
+        foreach ($input['size_config'] as $dimension => $config) {
+            // if size_config was sent as an indexed array (0,1,2) and not keyed by dimension,
+            // try to extract dimension from 'dimension_type' field inside config:
+            if (is_int($dimension) && !isset($config['dimension_type'])) {
+                sendJSON(false, 'Invalid size_config format: expected associative object keyed by dimension or include dimension_type inside each config', null, 400);
             }
+
+            // dimension type: either key or inner property
+            $dimType = is_string($dimension) ? $dimension : ($config['dimension_type'] ?? null);
+            if (!$dimType) {
+                sendJSON(false, 'Missing dimension type for size config', null, 400);
+            }
+
+            // ensure config numeric conversions already applied above, but re-check safety
+            $min = (float)($config['min_value'] ?? 0.0);
+            $max = (float)($config['max_value'] ?? 300.0);
+            $def = isset($config['default_value']) ? (float)$config['default_value'] : null;
+            // fallback default value if null
+            if ($def === null) $def = $min;
+
+            $stepVal = (float)($config['step_value'] ?? 1.0);
+            $ppu = (float)($config['price_per_unit'] ?? 0.0);
+            $unit = $config['measurement_unit'] ?? 'cm';
+            $blockCm = (float)($config['price_block_cm'] ?? 0.0);
+            $perBlock = (float)($config['price_per_block'] ?? 0.0);
+
+            // execute insert (10 placeholders)
+            $stmt->execute([
+                $input['product_id'],
+                $dimType,
+                $min,
+                $max,
+                $def,
+                $stepVal,
+                $ppu,
+                $unit,
+                $blockCm,
+                $perBlock
+            ]);
         }
 
         $conn->commit();
         sendJSON(true, 'Size configuration updated successfully');
     } catch (Throwable $e) {
-        $conn->rollBack();
-        error_log("Update size config error: " . $e->getMessage());
+        if ($conn->inTransaction()) $conn->rollBack();
+
+        // Log detailed error info for debugging
+        $err = "updateSizeConfig error: " . $e->getMessage();
+        if ($e instanceof PDOException && isset($e->errorInfo)) {
+            $err .= ' | SQLSTATE: ' . ($e->errorInfo[0] ?? '') . ' | Code: ' . ($e->errorInfo[1] ?? '') . ' | Msg: ' . ($e->errorInfo[2] ?? '');
+        }
+        error_log($err);
+        // also include last payload in log (already logged at top)
         sendJSON(false, 'Failed to update size configuration', null, 500);
     }
 }
+
 
 function assignTextures(PDO $conn): void
 {
@@ -842,5 +910,105 @@ function uploadHandleImage(): void
         sendJSON(true, 'Handle image uploaded successfully', ['filename' => $filename]);
     } else {
         sendJSON(false, 'Failed to upload handle image', null, 500);
+    }
+}
+function assignTexturesParts(PDO $conn): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (empty($input['product_id']) || !isset($input['assignments'])) {
+        sendJSON(false, 'Product ID and assignments are required', null, 400);
+    }
+
+    try {
+        $conn->beginTransaction();
+
+        // Delete existing part assignments for this product
+        $stmt = $conn->prepare('DELETE FROM product_texture_parts WHERE product_id = ?');
+        $stmt->execute([$input['product_id']]);
+
+        // Insert new part assignments
+        if (!empty($input['assignments'])) {
+            $stmt = $conn->prepare('INSERT INTO product_texture_parts (product_id, texture_id, part_key) VALUES (?, ?, ?)');
+
+            foreach ($input['assignments'] as $assignment) {
+                $textureId = (int)$assignment['texture_id'];
+                $parts = $assignment['parts'] ?? [];
+
+                foreach ($parts as $part) {
+                    if (in_array($part, ['body', 'door', 'interior'])) {
+                        $stmt->execute([$input['product_id'], $textureId, $part]);
+                    }
+                }
+            }
+        }
+
+        $conn->commit();
+        sendJSON(true, 'Texture parts assignments saved successfully');
+    } catch (Throwable $e) {
+        if ($conn->inTransaction()) $conn->rollBack();
+        error_log("Assign texture parts error: " . $e->getMessage());
+        sendJSON(false, 'Failed to save texture parts assignments', null, 500);
+    }
+}
+
+function listProductTexturesParts(PDO $conn): void
+{
+    if (empty($_GET['product_id'])) {
+        sendJSON(false, 'Product ID is required', null, 400);
+    }
+
+    try {
+        $productId = (int)$_GET['product_id'];
+
+        // Get textures assigned to this product with their allowed parts
+        $sql = "SELECT t.*, ptp.part_key, pt.display_order
+                FROM textures t
+                JOIN product_textures pt ON pt.texture_id = t.id
+                LEFT JOIN product_texture_parts ptp ON ptp.texture_id = t.id AND ptp.product_id = pt.product_id
+                WHERE pt.product_id = ? AND t.is_active = 1
+                ORDER BY pt.display_order ASC, t.texture_name ASC";
+
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$productId]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group by texture and collect parts
+        $texturesMap = [];
+        foreach ($rows as $row) {
+            $textureId = (int)$row['id'];
+            if (!isset($texturesMap[$textureId])) {
+                $texturesMap[$textureId] = [
+                    'id' => $textureId,
+                    'texture_name' => $row['texture_name'],
+                    'texture_code' => $row['texture_code'],
+                    'texture_image' => $row['texture_image'],
+                    'base_price' => $row['base_price'],
+                    'description' => $row['description'],
+                    'display_order' => $row['display_order'],
+                    'allowed_parts' => []
+                ];
+            }
+
+            if (!empty($row['part_key'])) {
+                $texturesMap[$textureId]['allowed_parts'][] = $row['part_key'];
+            }
+        }
+
+        // Convert to indexed array and remove duplicates from allowed_parts
+        $textures = array_values($texturesMap);
+        foreach ($textures as &$texture) {
+            $texture['allowed_parts'] = array_unique($texture['allowed_parts']);
+        }
+        unset($texture);
+
+        sendJSON(true, 'Product texture parts retrieved successfully', $textures);
+    } catch (Throwable $e) {
+        error_log("List product texture parts error: " . $e->getMessage());
+        sendJSON(false, 'Failed to retrieve product texture parts', null, 500);
     }
 }

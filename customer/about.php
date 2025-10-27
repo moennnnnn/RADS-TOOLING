@@ -114,10 +114,6 @@ if ($img) {
                     </div>
 
                     <!-- Cart -->
-<<<<<<< HEAD
-=======
-                    <!-- Dapat ganito -->
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                     <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>

@@ -1,16 +1,15 @@
 <?php
 // Admin customer management API
+// ✅ FIXED: Removed delete function, show created_at in list
 error_reporting(E_ALL);
 ini_set('display_errors', 0); // Don't display errors in production
 
 if (session_status() === PHP_SESSION_NONE) {
-    if (session_status() === PHP_SESSION_NONE) {
     session_start();
-}
 }
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');  // ✅ REMOVED DELETE
 header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -79,9 +78,7 @@ try {
         case 'update':
             update_customer($pdo);
             break;
-        case 'delete':
-            delete_customer($pdo);
-            break;
+        // ✅ REMOVED: delete case
         default:
             handleError('Invalid action', 400);
             break;
@@ -106,8 +103,10 @@ function get_customers(PDO $pdo) {
             $params = [$searchTerm, $searchTerm, $searchTerm];
         }
         
+        // ✅ FIXED: Added created_at to results
         $sql = "SELECT id, username, full_name, email, phone, 
-                       email_verified, created_at, profile_image
+                       email_verified, created_at, profile_image,
+                       DATE_FORMAT(created_at, '%M %d, %Y %h:%i %p') as formatted_date
                 FROM customers 
                 $where
                 ORDER BY created_at DESC 
@@ -146,9 +145,12 @@ function view_customer(PDO $pdo) {
             handleError('Customer ID required', 400);
         }
         
+        // ✅ FIXED: Show formatted created date
         $stmt = $pdo->prepare('
             SELECT id, username, full_name, email, phone, address,
-                   email_verified, created_at, profile_image
+                   email_verified, created_at,
+                   DATE_FORMAT(created_at, "%M %d, %Y %h:%i %p") as formatted_date,
+                   profile_image
             FROM customers 
             WHERE id = ?
         ');
@@ -258,45 +260,5 @@ function update_customer(PDO $pdo) {
     }
 }
 
-function delete_customer(PDO $pdo) {
-    if ($_SERVER['REQUEST_METHOD'] !== 'DELETE' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-        handleError('Method not allowed', 405);
-    }
-    
-    try {
-        $input = json_decode(file_get_contents('php://input'), true);
-        $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
-        
-        if (!$id) {
-            handleError('Customer ID required', 400);
-        }
-        
-        // Check if customer exists first
-        $checkStmt = $pdo->prepare('SELECT id FROM customers WHERE id = ?');
-        $checkStmt->execute([$id]);
-        if (!$checkStmt->fetch()) {
-            handleError('Customer not found', 404);
-        }
-        
-        // Check if customer has orders (optional - you might want to prevent deletion)
-        $orderCheck = $pdo->prepare('SELECT COUNT(*) as order_count FROM orders WHERE customer_id = ?');
-        $orderCheck->execute([$id]);
-        $orderCount = (int)$orderCheck->fetch(PDO::FETCH_ASSOC)['order_count'];
-        
-        if ($orderCount > 0) {
-            handleError('Cannot delete customer with existing orders');
-        }
-        
-        $stmt = $pdo->prepare('DELETE FROM customers WHERE id = ?');
-        $stmt->execute([$id]);
-        
-        echo json_encode([
-            'success' => true,
-            'message' => 'Customer deleted successfully'
-        ]);
-    } catch (PDOException $e) {
-        error_log("Database error in delete_customer: " . $e->getMessage());
-        handleError('Database error while deleting customer');
-    }
-}
+// ✅ REMOVED: delete_customer() function completely
 ?>

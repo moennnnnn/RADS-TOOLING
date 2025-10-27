@@ -322,3 +322,37 @@ This is an automated message, please do not reply to this email.";
         }
     }
 }
+
+// ==================== WRAPPER FUNCTIONS ====================
+// These functions allow auth.php to call sendVerificationEmail() 
+// without needing to instantiate the Mailer class directly
+
+/**
+ * Send verification email wrapper function
+ * This is called by auth.php during registration
+ */
+function sendVerificationEmail(string $email, string $fullName, string $verificationCode): bool
+{
+    try {
+        $mailer = new Mailer();
+        return $mailer->sendVerificationCode($email, $fullName, $verificationCode);
+    } catch (Throwable $e) {
+        error_log('[sendVerificationEmail] Error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Send password reset email wrapper function
+ * This can be called by password.php or other files
+ */
+function sendPasswordResetEmail(string $email, string $fullName, string $resetCode): bool
+{
+    try {
+        $mailer = new Mailer();
+        return $mailer->sendPasswordResetCode($email, $fullName, $resetCode);
+    } catch (Throwable $e) {
+        error_log('[sendPasswordResetEmail] Error: ' . $e->getMessage());
+        return false;
+    }
+}

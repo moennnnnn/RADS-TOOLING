@@ -1,11 +1,10 @@
 <?php
 // Account management API with role-based permissions
+// ✅ FIXED: Delete replaced with Active/Inactive Toggle
 declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {
-    if (session_status() === PHP_SESSION_NONE) {
     session_start();
-}
 }
 
 header('Content-Type: application/json');
@@ -99,46 +98,33 @@ class AdminAccountsAPI
     {
         $action = $_GET['action'] ?? '';
 
-        switch ($action) {
-            case 'list':
-                $this->listUsers();
-                break;
-            case 'create':
-                $this->createUser();
-                break;
-            case 'update':
-                $this->updateUser();
-                break;
-            case 'delete':
-                $this->deleteUser();
-                break;
-            case 'reset_password':
-                $this->resetPassword();
-                break;
-            default:
-                $this->send(false, 'Invalid action');
-        }
+        match ($action) {
+            'list' => $this->listUsers(),
+            'create' => $this->createUser(),
+            'update' => $this->updateUser(),
+            'toggle_status' => $this->toggleUserStatus(),  // ✅ NEW: Replace delete with toggle
+            'reset_password' => $this->resetPassword(),
+            'view' => $this->viewUser(),
+            default => $this->send(false, 'Invalid action')
+        };
     }
 
     private function listUsers(): void
     {
         try {
-            // Determine what users this role can see
+            $search = trim($_GET['search'] ?? '');
+            
             $whereClause = '';
             $params = [];
 
-            if ($this->currentRole === 'Secretary') {
-                // Secretary can only see other secretaries and their own account
-                $whereClause = 'WHERE role = ? OR id = ?';
-                $params = ['Secretary', $this->currentUser['id']];
-            } elseif ($this->currentRole === 'Admin') {
-                // Admin can see Admins and Secretaries, but NOT Owners
-                $whereClause = 'WHERE role IN (?, ?)';
-                $params = ['Admin', 'Secretary'];
+            if ($search) {
+                $whereClause = 'WHERE (username LIKE ? OR full_name LIKE ?)';
+                $searchTerm = '%' . $search . '%';
+                $params = [$searchTerm, $searchTerm];
             }
-            // Owner can see all users (no WHERE clause needed)
 
-            $sql = "SELECT id, username, full_name, role, created_at, 
+            // ✅ FIXED: Added status column
+            $sql = "SELECT id, username, full_name, role, status, created_at, 
                            CASE WHEN id = ? THEN 0 ELSE 1 END as can_modify
                     FROM admin_users $whereClause
                     ORDER BY 
@@ -159,10 +145,10 @@ class AdminAccountsAPI
 
             $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Add permission flags for frontend
+            // ✅ FIXED: Changed can_delete to can_toggle
             foreach ($users as &$user) {
                 $user['can_edit'] = $this->canModifyUser($user);
-                $user['can_delete'] = $this->canDeleteUser($user);
+                $user['can_toggle'] = $this->canToggleStatus($user);  // Changed from can_delete
                 $user['can_modify'] = (bool)$user['can_modify'];
             }
 
@@ -201,21 +187,16 @@ class AdminAccountsAPI
             return;
         }
 
-        // Check if user has permission to create this role
+        // Validate role
+        $validRoles = ['Owner', 'Admin', 'Secretary'];
+        if (!in_array($role, $validRoles, true)) {
+            $this->send(false, 'Invalid role specified');
+            return;
+        }
+
+        // Check permission to create role
         if (!$this->canCreateRole($role)) {
             $this->send(false, 'You do not have permission to create this role');
-            return;
-        }
-
-        // Validate role
-        if (!in_array($role, ['Owner', 'Admin', 'Secretary'])) {
-            $this->send(false, 'Invalid role');
-            return;
-        }
-
-        // Validate username
-        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
-            $this->send(false, 'Username must be 3-20 characters (letters, numbers, underscore only)');
             return;
         }
 
@@ -226,7 +207,7 @@ class AdminAccountsAPI
         }
 
         try {
-            // Check if username already exists
+            // Check if username exists
             $stmt = $this->conn->prepare('SELECT id FROM admin_users WHERE username = ? LIMIT 1');
             $stmt->execute([$username]);
             if ($stmt->fetch()) {
@@ -234,35 +215,60 @@ class AdminAccountsAPI
                 return;
             }
 
-            // Create user
+            // Hash password
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $this->conn->prepare('
-                INSERT INTO admin_users (username, password, full_name, role, created_at) 
-                VALUES (?, ?, ?, ?, NOW())
-            ');
-            $stmt->execute([$username, $hashedPassword, $fullName, $role]);
 
-            $userId = $this->conn->lastInsertId();
+            // ✅ FIXED: Default status is 'active'
+            $stmt = $this->conn->prepare(
+                'INSERT INTO admin_users (username, full_name, role, password, status, created_at, updated_at) 
+                 VALUES (?, ?, ?, ?, "active", NOW(), NOW())'
+            );
+            $stmt->execute([$username, $fullName, $role, $hashedPassword]);
 
-            $this->send(true, 'User created successfully', [
-                'user_id' => (int)$userId,
-                'username' => $username,
-                'full_name' => $fullName,
-                'role' => $role
-            ]);
+            $this->send(true, 'User created successfully', ['id' => (int)$this->conn->lastInsertId()]);
         } catch (Throwable $e) {
             error_log("Create user error: " . $e->getMessage());
-            if (isset($e->errorInfo) && $e->errorInfo[1] === 1062) {
-                $this->send(false, 'Username already exists');
-            } else {
-                $this->send(false, 'Failed to create user');
+            $this->send(false, 'Failed to create user');
+        }
+    }
+
+    private function viewUser(): void
+    {
+        $userId = (int)($_GET['id'] ?? 0);
+        if (!$userId) {
+            $this->send(false, 'User ID is required');
+            return;
+        }
+
+        try {
+            // ✅ FIXED: Added status column
+            $stmt = $this->conn->prepare(
+                'SELECT id, username, full_name, role, status, created_at, updated_at 
+                 FROM admin_users 
+                 WHERE id = ? 
+                 LIMIT 1'
+            );
+            $stmt->execute([$userId]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) {
+                $this->send(false, 'User not found');
+                return;
             }
+
+            $user['can_edit'] = $this->canModifyUser($user);
+            $user['can_toggle'] = $this->canToggleStatus($user);
+
+            $this->send(true, 'User retrieved successfully', ['user' => $user]);
+        } catch (Throwable $e) {
+            error_log("View user error: " . $e->getMessage());
+            $this->send(false, 'Failed to retrieve user details');
         }
     }
 
     private function updateUser(): void
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->send(false, 'Method not allowed');
             return;
         }
@@ -274,9 +280,6 @@ class AdminAccountsAPI
         }
 
         $userId = (int)$input['id'];
-        $username = trim((string)($input['username'] ?? ''));
-        $fullName = trim((string)($input['full_name'] ?? ''));
-        $role = trim((string)($input['role'] ?? ''));
 
         // Get target user
         $stmt = $this->conn->prepare('SELECT * FROM admin_users WHERE id = ? LIMIT 1');
@@ -290,63 +293,60 @@ class AdminAccountsAPI
 
         // Check permissions
         if (!$this->canModifyUser($targetUser)) {
-            $this->send(false, 'You do not have permission to modify this user');
+            $this->send(false, 'You do not have permission to edit this user');
             return;
         }
 
-        if (!empty($role) && $role !== $targetUser['role'] && !$this->canChangeRole($targetUser['role'], $role)) {
-            $this->send(false, 'You do not have permission to change this user\'s role');
+        $updateFields = [];
+        $params = [];
+
+        // Update username
+        if (isset($input['username']) && trim($input['username']) !== '') {
+            $newUsername = trim($input['username']);
+            // Check if username is taken by another user
+            $stmt = $this->conn->prepare('SELECT id FROM admin_users WHERE username = ? AND id != ? LIMIT 1');
+            $stmt->execute([$newUsername, $userId]);
+            if ($stmt->fetch()) {
+                $this->send(false, 'Username already exists');
+                return;
+            }
+            $updateFields[] = 'username = ?';
+            $params[] = $newUsername;
+        }
+
+        // Update full name
+        if (isset($input['full_name']) && trim($input['full_name']) !== '') {
+            $updateFields[] = 'full_name = ?';
+            $params[] = trim($input['full_name']);
+        }
+
+        // Update role
+        if (isset($input['role']) && trim($input['role']) !== '') {
+            $newRole = trim($input['role']);
+            // Validate role
+            if (!in_array($newRole, ['Owner', 'Admin', 'Secretary'], true)) {
+                $this->send(false, 'Invalid role specified');
+                return;
+            }
+            // Check permission to assign role
+            if (!$this->canCreateRole($newRole)) {
+                $this->send(false, 'You do not have permission to assign this role');
+                return;
+            }
+            $updateFields[] = 'role = ?';
+            $params[] = $newRole;
+        }
+
+        if (empty($updateFields)) {
+            $this->send(false, 'No fields to update');
             return;
         }
 
         try {
-            // Build update query dynamically
-            $updates = [];
-            $params = [];
-
-            if (!empty($username) && $username !== $targetUser['username']) {
-                // Check if username is taken
-                $stmt = $this->conn->prepare('SELECT id FROM admin_users WHERE username = ? AND id != ? LIMIT 1');
-                $stmt->execute([$username, $userId]);
-                if ($stmt->fetch()) {
-                    $this->send(false, 'Username already exists');
-                    return;
-                }
-                $updates[] = 'username = ?';
-                $params[] = $username;
-            }
-
-            if (!empty($fullName) && $fullName !== $targetUser['full_name']) {
-                $updates[] = 'full_name = ?';
-                $params[] = $fullName;
-            }
-
-            if (!empty($role) && $role !== $targetUser['role']) {
-                $updates[] = 'role = ?';
-                $params[] = $role;
-            }
-
-            if (empty($updates)) {
-                $this->send(false, 'No changes to update');
-                return;
-            }
-
-            $updates[] = 'updated_at = NOW()';
             $params[] = $userId;
-
-            $sql = 'UPDATE admin_users SET ' . implode(', ', $updates) . ' WHERE id = ?';
+            $sql = 'UPDATE admin_users SET ' . implode(', ', $updateFields) . ', updated_at = NOW() WHERE id = ?';
             $stmt = $this->conn->prepare($sql);
             $stmt->execute($params);
-
-            // Update session if user updated their own account
-            if ($userId === $this->currentUser['id']) {
-                if (!empty($username)) $_SESSION['staff']['username'] = $username;
-                if (!empty($fullName)) {
-                    $_SESSION['staff']['full_name'] = $fullName;
-                    $_SESSION['admin_name'] = $fullName;
-                }
-                if (!empty($role)) $_SESSION['staff']['role'] = $role;
-            }
 
             $this->send(true, 'User updated successfully');
         } catch (Throwable $e) {
@@ -355,7 +355,8 @@ class AdminAccountsAPI
         }
     }
 
-    private function deleteUser(): void
+    // ✅ NEW FUNCTION: Toggle user status (active/inactive)
+    private function toggleUserStatus(): void
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->send(false, 'Method not allowed');
@@ -370,9 +371,9 @@ class AdminAccountsAPI
 
         $userId = (int)$input['id'];
 
-        // Can't delete self
+        // Can't toggle own status
         if ($userId === $this->currentUser['id']) {
-            $this->send(false, 'You cannot delete your own account');
+            $this->send(false, 'You cannot change your own account status');
             return;
         }
 
@@ -387,20 +388,21 @@ class AdminAccountsAPI
         }
 
         // Check permissions
-        if (!$this->canDeleteUser($targetUser)) {
-            $this->send(false, 'You do not have permission to delete this user');
+        if (!$this->canToggleStatus($targetUser)) {
+            $this->send(false, 'You do not have permission to change this user\'s status');
             return;
         }
 
         try {
-            // Delete user
-            $stmt = $this->conn->prepare('DELETE FROM admin_users WHERE id = ?');
-            $stmt->execute([$userId]);
+            // Toggle status
+            $newStatus = $targetUser['status'] === 'active' ? 'inactive' : 'active';
+            $stmt = $this->conn->prepare('UPDATE admin_users SET status = ?, updated_at = NOW() WHERE id = ?');
+            $stmt->execute([$newStatus, $userId]);
 
-            $this->send(true, 'User deleted successfully');
+            $this->send(true, 'User status updated to ' . $newStatus, ['new_status' => $newStatus]);
         } catch (Throwable $e) {
-            error_log("Delete user error: " . $e->getMessage());
-            $this->send(false, 'Failed to delete user');
+            error_log("Toggle user status error: " . $e->getMessage());
+            $this->send(false, 'Failed to update user status');
         }
     }
 
@@ -409,9 +411,9 @@ class AdminAccountsAPI
     {
         switch ($this->currentRole) {
             case 'Owner':
-                return true; // Owner can create any role
+                return true; // Owner can create all roles
             case 'Admin':
-                return in_array($role, ['Admin', 'Secretary']); // Admin can create Admin or Secretary
+                return $role === 'Secretary'; // Admin can only create Secretary
             case 'Secretary':
                 return false; // Secretary cannot create users
             default:
@@ -421,74 +423,56 @@ class AdminAccountsAPI
 
     private function canModifyUser(array $targetUser): bool
     {
-        $targetRole = $targetUser['role'];
-        $targetId = (int)$targetUser['id'];
-
-        // Can always modify self (limited fields)
-        if ($targetId === $this->currentUser['id']) {
-            return true;
-        }
-
-        switch ($this->currentRole) {
-            case 'Owner':
-                return true; // Owner can modify anyone
-            case 'Admin':
-                return in_array($targetRole, ['Admin', 'Secretary']); // Admin can modify Admin or Secretary
-            case 'Secretary':
-                return false; // Secretary can only modify self (handled above)
-            default:
-                return false;
-        }
-    }
-
-    private function canDeleteUser(array $targetUser): bool
-    {
-        $targetRole = $targetUser['role'];
-        $targetId = (int)$targetUser['id'];
-
-        // Cannot delete self
-        if ($targetId === $this->currentUser['id']) {
+        // Cannot modify self
+        if ($targetUser['id'] === $this->currentUser['id']) {
             return false;
         }
 
+        $targetRole = $targetUser['role'];
+
         switch ($this->currentRole) {
             case 'Owner':
-                // Owner can delete anyone except themselves, but check if deleting another owner would leave system without owners
-                if ($targetRole === 'Owner') {
-                    return !$this->isLastOwner();
+                return true; // Owner can modify anyone except themselves
+            case 'Admin':
+                return $targetRole === 'Secretary'; // Admin can only modify Secretary
+            case 'Secretary':
+                return false; // Secretary cannot modify users
+            default:
+                return false;
+        }
+    }
+
+    // ✅ NEW FUNCTION: Permission check for toggling status
+    private function canToggleStatus(array $targetUser): bool
+    {
+        // Cannot toggle self
+        if ($targetUser['id'] === $this->currentUser['id']) {
+            return false;
+        }
+
+        $targetRole = $targetUser['role'];
+
+        switch ($this->currentRole) {
+            case 'Owner':
+                // Owner can toggle anyone except if they're toggling another owner 
+                // and it would leave no active owners
+                if ($targetRole === 'Owner' && $targetUser['status'] === 'active') {
+                    // Check if there are other active owners
+                    $stmt = $this->conn->prepare(
+                        'SELECT COUNT(*) as count FROM admin_users 
+                         WHERE role = "Owner" AND status = "active" AND id != ?'
+                    );
+                    $stmt->execute([$targetUser['id']]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    return $result['count'] > 0; // Can only toggle if there are other active owners
                 }
                 return true;
             case 'Admin':
-                return $targetRole === 'Secretary'; // Admin can only delete Secretary
+                return $targetRole === 'Secretary'; // Admin can only toggle Secretary
             case 'Secretary':
-                return false; // Secretary cannot delete users
+                return false; // Secretary cannot toggle users
             default:
                 return false;
-        }
-    }
-
-    private function canChangeRole(string $fromRole, string $toRole): bool
-    {
-        switch ($this->currentRole) {
-            case 'Owner':
-                return true; // Owner can change any role
-            case 'Admin':
-                return $fromRole !== 'Owner' && $toRole !== 'Owner'; // Admin cannot touch Owner role
-            case 'Secretary':
-                return false; // Secretary cannot change roles
-            default:
-                return false;
-        }
-    }
-
-    private function isLastOwner(): bool
-    {
-        try {
-            $stmt = $this->conn->prepare('SELECT COUNT(*) FROM admin_users WHERE role = ?');
-            $stmt->execute(['Owner']);
-            return $stmt->fetchColumn() <= 1;
-        } catch (Throwable $e) {
-            return true; // Err on the side of caution
         }
     }
 
@@ -496,19 +480,16 @@ class AdminAccountsAPI
     {
         return [
             'can_create_owner' => $this->currentRole === 'Owner',
-            'can_create_admin' => in_array($this->currentRole, ['Owner', 'Admin']),
-            'can_create_secretary' => in_array($this->currentRole, ['Owner', 'Admin']),
-            'can_modify_others' => $this->currentRole !== 'Secretary',
-            'can_delete_users' => $this->currentRole !== 'Secretary'
+            'can_create_admin' => in_array($this->currentRole, ['Owner', 'Admin'], true),
+            'can_create_secretary' => $this->currentRole !== 'Secretary',
+            'can_toggle_users' => $this->currentRole !== 'Secretary'  // ✅ Changed from can_delete_users
         ];
     }
 
-    private function send(bool $success, string $message, array|object|null $data = null, ?int $code = null): void
+    private function send(bool $success, string $message, ?array $data = null, int $statusCode = 200): never
     {
-        if ($code !== null) {
-            http_response_code($code);
-        }
-
+        http_response_code($success ? $statusCode : ($statusCode === 200 ? 400 : $statusCode));
+        
         $response = [
             'success' => $success,
             'message' => $message
@@ -518,10 +499,20 @@ class AdminAccountsAPI
             $response['data'] = $data;
         }
 
-        echo json_encode($response, JSON_UNESCAPED_UNICODE);
+        echo json_encode($response);
         exit;
     }
 }
 
-$api = new AdminAccountsAPI();
-$api->handleRequest();
+// Initialize and handle request
+try {
+    $api = new AdminAccountsAPI();
+    $api->handleRequest();
+} catch (Throwable $e) {
+    error_log("Admin Accounts API error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'An unexpected error occurred'
+    ]);
+}

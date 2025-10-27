@@ -377,26 +377,35 @@ function displayUsers(users) {
     }
 
     tbody.innerHTML = users.map(user => `
-        <tr data-user-id="${user.id}">
-            <td>${user.id}</td>
-            <td>${escapeHtml(user.username)}</td>
-            <td>${escapeHtml(user.full_name)}</td>
-            <td><span class="badge badge-${user.role.toLowerCase()}">${user.role}</span></td>
-            <td>
-                ${(currentUserRole === 'Owner') ? `
-                    <button class="btn-action btn-reset-password" data-user-id="${user.id}" title="Reset Password">
-                        <span class="material-symbols-rounded">key</span>
-                    </button>
-                ` : ''}
-                ${user.can_delete ? `
-                    <button class="btn-action btn-delete-user" data-user-id="${user.id}" title="Delete">
-                        <span class="material-symbols-rounded">delete</span>
-                    </button>
-                ` : ''}
-                ${!user.can_delete && currentUserRole !== 'Owner' ? '<span style="color: #999;">No actions</span>' : ''}
-            </td>
-        </tr>
-    `).join('');
+    <tr data-user-id="${user.id}">
+        <td>${user.id}</td>
+        <td>${escapeHtml(user.username)}</td>
+        <td>${escapeHtml(user.full_name)}</td>
+        <td><span class="badge badge-${user.role.toLowerCase()}">${user.role}</span></td>
+        <td>
+            <span class="badge badge-${user.status === 'active' ? 'active' : 'inactive'}">
+                ${user.status === 'active' ? 'Active' : 'Inactive'}
+            </span>
+        </td>
+        <td>
+            ${(currentUserRole === 'Owner') ? `
+                <button class="btn-action btn-reset-password" data-user-id="${user.id}" title="Reset Password">
+                    <span class="material-symbols-rounded">key</span>
+                </button>
+            ` : ''}
+            ${user.can_toggle ? `
+                <button class="btn-action btn-toggle" data-user-id="${user.id}" 
+                        data-current-status="${user.status}" 
+                        title="Toggle Status (${user.status === 'active' ? 'Deactivate' : 'Activate'})">
+                    <span class="material-symbols-rounded">
+                        ${user.status === 'active' ? 'toggle_on' : 'toggle_off'}
+                    </span>
+                </button>
+            ` : ''}
+            ${!user.can_toggle && currentUserRole !== 'Owner' ? '<span style="color: #999;">No actions</span>' : ''}
+        </td>
+    </tr>
+`).join('');
 }
 
 function updateAddUserButton(permissions) {
@@ -631,24 +640,20 @@ function displayCustomers(customers) {
     }
 
     tbody.innerHTML = customers.map(customer => `
-        <tr data-customer-id="${customer.id}">
-            <td>${customer.id}</td>
-            <td>${escapeHtml(customer.username || 'N/A')}</td>
-            <td>${escapeHtml(customer.full_name || 'N/A')}</td>
-            <td>${escapeHtml(customer.email || 'N/A')}</td>
-            <td>${escapeHtml(customer.phone || 'N/A')}</td>
-            <td>
-                <button class="btn-action btn-view-customer" data-customer-id="${customer.id}" title="View Details">
-                    <span class="material-symbols-rounded">visibility</span>
-                </button>
-                ${(['Owner', 'Admin'].includes(currentUserRole)) ? `
-                    <button class="btn-action btn-delete-customer" data-customer-id="${customer.id}" title="Delete">
-                        <span class="material-symbols-rounded">delete</span>
-                    </button>
-                ` : ''}
-            </td>
-        </tr>
-    `).join('');
+    <tr data-customer-id="${customer.id}">
+        <td>${customer.id}</td>
+        <td>${escapeHtml(customer.username || 'N/A')}</td>
+        <td>${escapeHtml(customer.full_name || 'N/A')}</td>
+        <td>${escapeHtml(customer.email || 'N/A')}</td>
+        <td>${escapeHtml(customer.phone || 'N/A')}</td>
+        <td>${customer.formatted_date || customer.created_at || 'N/A'}</td>
+        <td>
+            <button class="btn-action btn-view-customer" data-customer-id="${customer.id}" title="View Details">
+                <span class="material-symbols-rounded">visibility</span>
+            </button>
+        </td>
+    </tr>
+`).join('');
 }
 
 async function viewCustomer(id) {
@@ -1017,7 +1022,6 @@ function displayOrders(orders) {
             <td>₱${parseFloat(order.total_amount || 0).toLocaleString()}</td>
             <td><span class="badge badge-${getPaymentBadgeClass(order.payment_status)}">${order.payment_status || 'With Balance'}</span></td>
 <td><span class="badge badge-${getStatusBadgeClass(order.status)}">${order.status || 'Pending'}</span></td>
-<td>${formatDate(order.order_date)}</td>
 
             <td>
                 <button class="btn-action btn-view" onclick="viewAdminOrderDetails(${order.id})" title="View Details">
@@ -1564,10 +1568,20 @@ function initializeModals() {
     };
 
     document.addEventListener('click', (e) => {
-        if (e.target.classList && e.target.classList.contains('modal')) {
-            const id = e.target.id;
-            if (id) closeModal(id);
+        // FIXED: Only close modal when clicking the backdrop itself, not any content inside
+        const target = e.target;
+        
+        // Check if the target is a modal element
+        if (target.classList && target.classList.contains('modal')) {
+            // Make sure we're NOT clicking on the modal-content or anything inside it
+            const modalContent = target.querySelector('.modal-content');
+            if (modalContent && !modalContent.contains(e.target) && e.target === target) {
+                const id = target.id;
+                if (id) closeModal(id);
+            }
         }
+        
+        // Close button handlers
         if (e.target.closest('.modal-close') || e.target.closest('[data-modal-close]')) {
             const modal = e.target.closest('.modal');
             if (modal && modal.id) closeModal(modal.id);
@@ -1582,48 +1596,50 @@ function initializeModals() {
 }
 
 function initializeActionBindings() {
-    // Delete user handler
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-delete-user');
-        if (!btn) return;
-        e.preventDefault();
+    // Toggle user status handler
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-toggle');
+    if (!btn) return;
+    e.preventDefault();
 
-        const userId = btn.getAttribute('data-user-id');
-        const row = btn.closest('tr');
-        const userName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this user';
+    const userId = btn.getAttribute('data-user-id');
+    const currentStatus = btn.getAttribute('data-current-status');
+    const row = btn.closest('tr');
+    const userName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this user';
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
 
-        showConfirm({
-            title: 'Delete User',
-            message: `Are you sure you want to delete <b>${userName}</b>? This action cannot be undone.`,
-            okText: 'Delete',
-            onConfirm: async () => {
-                try {
-                    const response = await fetch('/RADS-TOOLING/backend/api/admin_accounts.php?action=delete', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ id: parseInt(userId) })
-                    });
+    showConfirm({
+        title: `${newStatus === 'active' ? 'Activate' : 'Deactivate'} User`,
+        message: `Are you sure you want to ${newStatus === 'active' ? 'activate' : 'deactivate'} <b>${userName}</b>?`,
+        okText: newStatus === 'active' ? 'Activate' : 'Deactivate',
+        onConfirm: async () => {
+            try {
+                const response = await fetch('/RADS-TOOLING/backend/api/admin_accounts.php?action=toggle_status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ id: parseInt(userId) })
+                });
 
-                    const result = await response.json();
+                const result = await response.json();
 
-                    if (!result.success) {
-                        throw new Error(result.message || 'Failed to delete user');
-                    }
-
-                    showNotification('User deleted successfully', 'success');
-                    loadUsers();
-
-                } catch (error) {
-                    console.error('Error deleting user:', error);
-                    showNotification('Failed to delete user: ' + error.message, 'error');
+                if (!result.success) {
+                    throw new Error(result.message || 'Failed to toggle user status');
                 }
+
+                showNotification(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`, 'success');
+                loadUsers();
+
+            } catch (error) {
+                console.error('Error toggling user status:', error);
+                showNotification('Failed to toggle user status: ' + error.message, 'error');
             }
-        });
+        }
     });
+});
 
     // Reset password handler
     document.addEventListener('click', (e) => {
@@ -1643,48 +1659,6 @@ function initializeActionBindings() {
             const customerId = btn.getAttribute('data-customer-id');
             viewCustomer(parseInt(customerId));
         }
-    });
-
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-delete-customer');
-        if (!btn) return;
-        e.preventDefault();
-
-        const customerId = btn.getAttribute('data-customer-id');
-        const row = btn.closest('tr');
-        const customerName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this customer';
-
-        showConfirm({
-            title: 'Delete Customer',
-            message: `Are you sure you want to delete <b>${customerName}</b>? This action cannot be undone.`,
-            okText: 'Delete',
-            onConfirm: async () => {
-                try {
-                    const response = await fetch('/RADS-TOOLING/backend/api/admin_customers.php?action=delete', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        credentials: 'same-origin',
-                        body: JSON.stringify({ id: parseInt(customerId) })
-                    });
-
-                    const result = await response.json();
-
-                    if (!result.success) {
-                        throw new Error(result.message || 'Failed to delete customer');
-                    }
-
-                    showNotification('Customer deleted successfully', 'success');
-                    loadCustomers();
-
-                } catch (error) {
-                    console.error('Error deleting customer:', error);
-                    showNotification('Failed to delete customer: ' + error.message, 'error');
-                }
-            }
-        });
     });
 
     // Order verify handler

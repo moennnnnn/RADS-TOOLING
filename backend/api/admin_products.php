@@ -215,11 +215,14 @@ function viewProduct(PDO $conn): void
         $stmt->execute([$productId]);
         $sizeConfig = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Get assigned textures
-        $sql = "SELECT pt.*, t.texture_name, t.texture_code, t.texture_image, t.base_price as texture_base_price
+        // Get assigned textures WITH their allowed parts
+        $sql = "SELECT pt.*, t.texture_name, t.texture_code, t.texture_image, t.base_price as texture_base_price,
+                       GROUP_CONCAT(DISTINCT ptp.part_key) as allowed_parts
                 FROM product_textures pt
                 JOIN textures t ON pt.texture_id = t.id
+                LEFT JOIN product_texture_parts ptp ON ptp.texture_id = t.id AND ptp.product_id = pt.product_id
                 WHERE pt.product_id = ?
+                GROUP BY pt.texture_id, pt.id
                 ORDER BY pt.display_order, t.texture_name";
         $stmt = $conn->prepare($sql);
         $stmt->execute([$productId]);
@@ -265,31 +268,58 @@ function viewProduct(PDO $conn): void
             ];
         }
 
-        // 2) allowed options – naka-assign lang sa product na ’to (already joined/filtered sa queries mo)
-        //    Map to clean, front-end friendly fields
+        // ✅ NEW: Build allowed options based on actual part assignments
         $allowed = [
-            'door'   => ['textures' => [], 'colors' => []],
-            'body'   => ['textures' => [], 'colors' => []],
-            'inside' => ['textures' => [], 'colors' => []],
-            'handle' => ['handles'  => []],
+            'door'     => ['textures' => [], 'colors' => []],
+            'body'     => ['textures' => [], 'colors' => []],
+            'interior' => ['textures' => [], 'colors' => []],  // Note: interior not inside
+            'handle'   => ['handles'  => []],
         ];
 
-        // NOTE: Walang part column sa textures/colors/handles join mo,
-        // so ilalagay muna natin sila sa generic buckets (puwede mong hatiin per part kung may mapping ka).
-        $TEXTURE_DIR = '/RADS-TOOLING/uploads/textures/';
+        // Process textures by their allowed parts
         foreach ($textures as $t) {
-            $allowed['door']['textures'][]   = ['id' => (int)$t['texture_id'], 'name' => $t['texture_name'], 'file' => $t['texture_image']];
-            $allowed['body']['textures'][]   = ['id' => (int)$t['texture_id'], 'name' => $t['texture_name'], 'file' => $t['texture_image']];
-            $allowed['inside']['textures'][] = ['id' => (int)$t['texture_id'], 'name' => $t['texture_name'], 'file' => $t['texture_image']];
+            $textureData = [
+                'id' => (int)$t['texture_id'], 
+                'name' => $t['texture_name'], 
+                'file' => $t['texture_image']
+            ];
+            
+            // Get allowed parts for this texture (comma-separated from GROUP_CONCAT)
+            $allowedParts = !empty($t['allowed_parts']) ? explode(',', $t['allowed_parts']) : [];
+            
+            // If no specific parts assigned, texture is available for all parts (backward compatibility)
+            if (empty($allowedParts)) {
+                $allowed['door']['textures'][] = $textureData;
+                $allowed['body']['textures'][] = $textureData;
+                $allowed['interior']['textures'][] = $textureData;
+            } else {
+                // Only add to allowed parts
+                foreach ($allowedParts as $part) {
+                    $part = trim($part);
+                    if ($part === 'door') {
+                        $allowed['door']['textures'][] = $textureData;
+                    } elseif ($part === 'body') {
+                        $allowed['body']['textures'][] = $textureData;
+                    } elseif ($part === 'interior') {
+                        $allowed['interior']['textures'][] = $textureData;
+                    }
+                }
+            }
         }
 
+        // Colors remain available for all parts (no part-specific logic yet)
         foreach ($colors as $c) {
-            $allowed['door']['colors'][]   = ['id' => (int)$c['color_id'], 'name' => $c['color_name'], 'hex' => $c['hex_value']];
-            $allowed['body']['colors'][]   = ['id' => (int)$c['color_id'], 'name' => $c['color_name'], 'hex' => $c['hex_value']];
-            $allowed['inside']['colors'][] = ['id' => (int)$c['color_id'], 'name' => $c['color_name'], 'hex' => $c['hex_value']];
+            $colorData = [
+                'id' => (int)$c['color_id'], 
+                'name' => $c['color_name'], 
+                'hex' => $c['hex_value']
+            ];
+            $allowed['door']['colors'][] = $colorData;
+            $allowed['body']['colors'][] = $colorData;
+            $allowed['interior']['colors'][] = $colorData;
         }
 
-        $HANDLE_DIR = '/RADS-TOOLING/uploads/handles/';
+        // Handles
         foreach ($handles as $h) {
             $allowed['handle']['handles'][] = [
                 'id'      => (int)$h['handle_id'],
@@ -299,12 +329,9 @@ function viewProduct(PDO $conn): void
         }
 
         // 3) pricing maps
-        //    - base_price: direktang galing sa products.price (string ok; ipa-parse ng frontend)
-        //    - per_cm: bubuuin natin from size_confs price_per_unit per dimension
-        //    - surcharges: puwedeng gamitin yung base_price columns ng textures/colors/handles as add-ons
         $basePrice = $product['price'] ?? 0;
 
-        // Derive per_cm (₱ per cm) mula sa size_config
+        // Derive per_cm (₱ per cm) from size_config
         $perCm = ['w' => 0, 'h' => 0, 'd' => 0];
         foreach ($sizeConfs as $sc) {
             $rate = (float)$sc['price_per_unit'];
@@ -313,7 +340,7 @@ function viewProduct(PDO $conn): void
             if ($sc['dimension'] === 'depth')  $perCm['d'] = $rate;
         }
 
-        // Build surcharge maps (by ID). If gusto mo 0 muna, ok din.
+        // Build surcharge maps (by ID)
         $textureMap = [];
         foreach ($textures as $t) {
             $textureMap[(string)$t['texture_id']] = (float)($t['texture_base_price'] ?? 0);
@@ -335,7 +362,7 @@ function viewProduct(PDO $conn): void
             'handles'    => $handleMap,
         ];
 
-        // Attach normalized fields para ready si frontend
+        // Attach normalized fields for frontend
         $product['size_confs'] = $sizeConfs;
         $product['allowed']    = $allowed;
         $product['pricing']    = $pricing;
@@ -361,6 +388,14 @@ function addProduct(PDO $conn): void
 
     try {
         $conn->beginTransaction();
+
+        // ✅ NEW: Check for duplicate product name
+        $checkStmt = $conn->prepare("SELECT id FROM products WHERE LOWER(name) = LOWER(?) LIMIT 1");
+        $checkStmt->execute([$input['name']]);
+        if ($checkStmt->fetch()) {
+            $conn->rollBack();
+            sendJSON(false, 'A product with this name already exists. Please use a different name.', null, 409);
+        }
 
         // Get current user ID
         $createdBy = $_SESSION['staff']['id'] ?? $_SESSION['user']['id'] ?? 1;

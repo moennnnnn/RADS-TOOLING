@@ -400,6 +400,52 @@
   white-space:nowrap;
 }
 
+/* ========================================
+   ✅ FIX: Product Table Badge Visibility
+   ======================================== */
+
+/* Override global .badge white text for product table */
+.pm-table .badge,
+.pm-table td .badge,
+.product-table .badge {
+  background: #3498db !important;  /* Blue background */
+  color: white !important;         /* White text on blue */
+  padding: 5px 14px !important;
+  border-radius: 14px !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  display: inline-block !important;
+}
+
+/* Specific fix for Type column badges */
+.pm-table td:nth-child(3) .badge,
+.product-table td:nth-child(3) .badge,
+.pm-table td:nth-child(3) span {
+  background: #3498db !important;
+  color: white !important;
+  padding: 5px 14px !important;
+}
+
+/* Ensure regular table cell text is dark and visible */
+.pm-table td,
+.product-table td {
+  color: #333 !important;
+}
+
+/* Customizable column text visibility */
+.pm-table td:nth-child(6),
+.product-table td:nth-child(6) {
+  color: #333 !important;
+  font-weight: 500 !important;
+}
+
+/* Status badges (green for released) */
+.pm-table .badge-released,
+.product-table .badge-released {
+  background: #27ae60 !important;
+  color: white !important;
+}
+
 /* table */
 .pm-table{
   width:100%;
@@ -586,4 +632,3 @@
 /* ======== Misc spacing fixes ======== */
 .pm-header-actions{ display:flex; gap:12px; justify-content:flex-end; }
 .pm-top-buttons{ display:flex; gap:12px; }
-

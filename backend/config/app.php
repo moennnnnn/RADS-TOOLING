@@ -29,24 +29,16 @@ require_once __DIR__ . '/database.php';
 
 // Create global PDO connection
 try {
-    $db = new Database();
-    $pdo = $db->getConnection();
-    
-    // Verify connection
-    if (!$pdo) {
-        throw new Exception("Failed to establish database connection");
-    }
-    
+    $dbInstance = Database::getInstance();
+    $pdo = $dbInstance->getConnection();
+    if (!$pdo) throw new Exception("Failed to establish database connection");
 } catch (Exception $e) {
-    // Log error
     error_log("FATAL: Database connection failed - " . $e->getMessage());
-    
-    // Show user-friendly error
     http_response_code(500);
     die(json_encode([
         'success' => false,
-        'message' => 'Database connection failed. Please contact support.',
-        'error' => $e->getMessage()
+        'message' => 'Database connection failed. Contact admin.',
+        'error' => (defined('DEBUG') && DEBUG) ? $e->getMessage() : 'Internal error'
     ]));
 }
 

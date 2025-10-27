@@ -284,7 +284,12 @@ body {
     font-size: 15px;
 }
 
-.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:600;font-size:.85rem;line-height:1;color:#fff}
+.badge{display:inline-block;
+    padding:4px 10px;
+    border-radius:999px;
+    font-weight:600;
+    font-size:.85rem;
+    line-height:1;color:#012e5c}
 .badge-pending{background:#f7b731}
 .badge-processing{background:#3da0ff}
 .badge-completed{background:#3db36b}
@@ -922,4 +927,95 @@ body {
     background: var(--brand);
     color: white;
     border-color: var(--brand);
+}
+
+/* Add/Replace these styles in style.css */
+
+body {
+    font-family: "Poppins", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    margin: 0;
+    /* ✅ NEW: Enable proper positioning for fixed sidebar */
+    position: relative;
+}
+
+/* ✅ FIXED SIDEBAR: Make it sticky */
+.sidebar {
+    width: 250px;
+    background: #fff;
+    box-shadow: 2px 0 16px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 1.2rem 1.2rem 1.2rem;
+    
+    /* ✅ NEW: Fixed positioning */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    overflow-y: auto; /* Allow scroll if content is too long */
+    overflow-x: hidden;
+    z-index: 1000;
+}
+
+/* ✅ Custom scrollbar for sidebar */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--brand);
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-dark);
+}
+
+/* ✅ FIXED MAIN CONTENT: Add left margin to account for fixed sidebar */
+.main-content {
+    flex: 1;
+    padding: 2rem;
+    background: var(--bg);
+    /* ✅ NEW: Offset by sidebar width */
+    margin-left: 250px;
+    min-height: 100vh;
+    width: calc(100% - 250px);
+}
+
+/* ✅ Responsive: Stack sidebar on mobile */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 200px;
+    }
+    
+    .main-content {
+        margin-left: 200px;
+        width: calc(100% - 200px);
+    }
+}
+
+@media (max-width: 576px) {
+    .sidebar {
+        position: fixed;
+        left: -250px; /* Hide by default on mobile */
+        transition: left 0.3s ease;
+    }
+    
+    .sidebar.mobile-open {
+        left: 0;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+    }
 }

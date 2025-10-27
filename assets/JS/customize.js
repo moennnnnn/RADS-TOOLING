@@ -32,10 +32,10 @@
     const UNIT_TO_CM = { cm: 1, mm: 0.1, inch: 2.54, ft: 30.48, meter: 100 };
 
     const MATERIAL_MAP = {
-        body: 'mat_body',
-        door: 'mat_doors',
-        inside: 'mat_inside',
-        handle: 'mat_handle'
+        body: 'FRAME',
+        door: 'Door1',
+        interior: 'Light',
+        handle: 'Handle'
     };
 
     // --- precision helpers ---
@@ -205,6 +205,140 @@
         return Number(v.replace(/[₱,\s]/g, '')) || 0;
     }
 
+    // ADD after line 150
+async function loadTexturesForPart(partName) {
+    // prefer the top-level texList constant, fallback to DOM lookup
+    const listEl = (typeof texList !== 'undefined' && texList) ? texList : document.getElementById('textures');
+    if (!listEl) {
+        console.warn('loadTexturesForPart: textures container not found for part:', partName);
+        return;
+    }
+
+    listEl.innerHTML = '<div style="padding:10px;color:#666">Loading textures…</div>';
+
+    try {
+        // use PID (declared earlier) not PRODUCT_ID
+        const resp = await fetch(`/RADS-TOOLING/backend/api/get_part_textures.php?product_id=${PID}&part=${encodeURIComponent(partName)}`, { credentials: 'same-origin' });
+        const txt = await resp.text();
+
+        let data;
+        try {
+            data = JSON.parse(txt);
+        } catch (err) {
+            console.error('get_part_textures returned non-JSON:', txt);
+            listEl.innerHTML = '<div style="padding:10px;color:#e11">Error loading textures (invalid response)</div>';
+            return;
+        }
+
+        if (!data || data.success !== true || !Array.isArray(data.textures)) {
+            const msg = (data && data.message) ? data.message : 'No textures available';
+            listEl.innerHTML = `<div style="padding:10px;color:#e11">${msg}</div>`;
+            return;
+        }
+
+        // reuse your existing displayTextures() renderer
+        displayTextures(data.textures, partName);
+
+    } catch (err) {
+        console.error('loadTexturesForPart failed:', err);
+        listEl.innerHTML = '<div style="padding:10px;color:#e11">Error loading textures</div>';
+    }
+}
+
+
+function displayTextures(textures, partName) {
+    const texList = document.getElementById('textures');
+    if (!texList) return;
+    
+    texList.innerHTML = '';
+    
+    if (textures.length === 0) {
+        texList.innerHTML = '<div style="padding: 10px; color: #999;">No textures available</div>';
+        return;
+    }
+    
+    textures.forEach(tex => {
+        const div = document.createElement('div');
+        div.className = 'cz-swatch texture-option';
+        div.dataset.textureId = tex.id;
+        
+        // Check if this texture is currently selected
+        if (chosen[partName]?.mode === 'texture' && chosen[partName]?.id == tex.id) {
+            div.classList.add('active');
+        }
+        
+        div.innerHTML = `
+            <img src="${tex.image_url}" 
+                 alt="${tex.texture_name}"
+                 title="${tex.texture_name} - ₱${tex.base_price || 0}"
+                 style="width: 60px; height: 60px; object-fit: cover; cursor: pointer; border-radius: 4px; border: 2px solid transparent;">
+            <span style="display: block; font-size: 10px; text-align: center; margin-top: 4px;">${tex.texture_name}</span>
+        `;
+        
+        div.onclick = () => {
+            // Remove active from others
+            texList.querySelectorAll('.texture-option').forEach(opt => opt.classList.remove('active'));
+            div.classList.add('active');
+            
+            // Apply texture
+            applyTextureToPartEnhanced(partName, tex);
+        };
+        
+        texList.appendChild(div);
+    });
+}
+
+async function applyTextureToPartEnhanced(partName, texture) {
+    const mv = getMV();
+    if (!mv || !mv.model) return;
+    
+    try {
+        // Get the correct material based on part
+        const materialName = MATERIAL_MAP[partName];
+        const material = getMaterial(mv, materialName);
+        
+        if (!material) {
+            console.error(`Material not found for part: ${partName} (${materialName})`);
+            
+            // Fallback: try by index if Door1/Door2
+            if (partName === 'door') {
+                // Apply to both doors if they exist
+                const door1 = getMaterial(mv, 'Door1');
+                const door2 = getMaterial(mv, 'Door2');
+                
+                const tex = await mv.createTexture(texture.image_url);
+                
+                if (door1) {
+                    door1.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+                    door1.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+                }
+                if (door2) {
+                    door2.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+                    door2.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+                }
+            }
+            return;
+        }
+        
+        // Create and apply texture
+        const tex = await mv.createTexture(texture.image_url);
+        material.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+        material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]); // Reset color to white
+        
+        // Store selection
+        chosen[partName] = { 
+            mode: 'texture', 
+            id: texture.id,
+            price: parseFloat(texture.base_price) || 0
+        };
+        
+        refreshPrice();
+        
+    } catch (error) {
+        console.error('Error applying texture:', error);
+    }
+}
+
     // ======= Viewer =======
     function renderModel(modelURL) {
         mediaBox.innerHTML = `
@@ -229,12 +363,30 @@
         return mats.find(m => m.name === name) || null;
     }
     function highlightPart(partKey) {
-        const mv = getMV();
-        if (!mv?.model?.materials) return;
-        mv.model.materials.forEach(m => m.setEmissiveFactor([0, 0, 0]));
-        const mat = getMaterial(mv, MATERIAL_MAP[partKey]);
-        if (mat) mat.setEmissiveFactor([0.10, 0.25, 0.6]);
+    const mv = getMV();
+    if (!mv?.model?.materials) return;
+    
+    // Reset all emissive
+    mv.model.materials.forEach(m => {
+        if (m.setEmissiveFactor) {
+            m.setEmissiveFactor([0, 0, 0]);
+        }
+    });
+    
+    // Highlight selected part(s)
+    const materialName = MATERIAL_MAP[partKey];
+    
+    if (partKey === 'door') {
+        // Highlight both doors
+        const door1 = getMaterial(mv, 'Door1');
+        const door2 = getMaterial(mv, 'Door2');
+        if (door1) door1.setEmissiveFactor([0.1, 0.3, 0.6]);
+        if (door2) door2.setEmissiveFactor([0.1, 0.3, 0.6]);
+    } else {
+        const mat = getMaterial(mv, materialName);
+        if (mat) mat.setEmissiveFactor([0.1, 0.3, 0.6]);
     }
+}
 
     // ======= Size / Scale =======
     const DEF_DIM = { min: 40, max: 300, default: 80, step: 1, price_per_unit: 0, unit: 'cm' };
@@ -374,17 +526,36 @@
     }
 
     // ======= Tabs / Active Part =======
-    function bindPartTabs(sel) {
-        const tabs = document.querySelector(sel);
-        if (!tabs) return;
-        tabs.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-part]');
-            if (!btn) return;
-            tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            setActivePart(btn.getAttribute('data-part'));
-        });
+   function bindPartTabs(sel) {
+    const tabs = document.querySelector(sel);
+    if (!tabs) return;
+    
+    // Load textures for initial active tab
+    const activeBtn = tabs.querySelector('button.active');
+    if (activeBtn && sel.includes('textures')) {
+        const initialPart = activeBtn.getAttribute('data-part');
+        loadTexturesForPart(initialPart);
     }
+    
+    tabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-part]');
+        if (!btn) return;
+        
+        tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        const partName = btn.getAttribute('data-part');
+        setActivePart(partName);
+        
+        // Load textures for this part if in texture section
+        if (sel.includes('textures')) {
+            loadTexturesForPart(partName);
+        }
+        
+        // Highlight the 3D part
+        highlightPart(partName);
+    });
+}
     function setActivePart(k) { activePart = k; highlightPart(k); }
 
     // ======= Apply Texture / Color =======

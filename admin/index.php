@@ -166,7 +166,10 @@ if (!$isLoggedIn) {
             width: 100%;
             max-height: 90vh;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .modal-header {
@@ -195,9 +198,10 @@ if (!$isLoggedIn) {
             justify-content: flex-end;
             padding: 16px;
             border-top: 1px solid #eaeaea;
-            position: sticky;
-            bottom: 0;
+            position: relative;
+            bottom: auto;
             background: #fff;
+            z-index: 10;
         }
 
         .btn-primary {
@@ -207,6 +211,9 @@ if (!$isLoggedIn) {
             border-radius: 8px;
             border: 0;
             cursor: pointer;
+            position: relative;
+            z-index: 10;
+            pointer-events: auto;
         }
 
         .btn-secondary {
@@ -448,6 +455,7 @@ if (!$isLoggedIn) {
                             <th>Username</th>
                             <th>Full Name</th>
                             <th>Role</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -475,12 +483,13 @@ if (!$isLoggedIn) {
                             <th>Full Name</th>
                             <th>Email</th>
                             <th>Phone</th>
+                            <th>Created At</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="customerTableBody">
                         <tr>
-                            <td colspan="6" style="text-align:center">Loading customers...</td>
+                            <td colspan="7" style="text-align:center">Loading customers...</td>
                         </tr>
                     </tbody>
                 </table>

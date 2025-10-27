@@ -66,3 +66,13 @@ class Database
         }
     }
 }
+
+try {
+    $dbInstance = Database::getInstance();
+    $conn = $dbInstance->getConnection();
+    $pdo = $conn; // ensure $pdo available for legacy code
+} catch (Exception $e) {
+    error_log('database.php: failed to create $conn/$pdo - ' . $e->getMessage());
+    $conn = null;
+    $pdo = null;
+}
