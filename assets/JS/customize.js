@@ -32,10 +32,11 @@
     const UNIT_TO_CM = { cm: 1, mm: 0.1, inch: 2.54, ft: 30.48, meter: 100 };
 
     const MATERIAL_MAP = {
-        body: 'FRAME',
-        door: 'Door1',
-        interior: 'Light',
-        handle: 'Handle'
+        body: 'Material.009',
+        door: 'Metal branco',
+        interior: 'Material.003',
+        //interior:'Material.002',
+        handle: 'Material.010'
     };
 
     // --- precision helpers ---
@@ -97,6 +98,134 @@
         // Viewer
         renderModel(productData.model_url);
         await waitForModelViewer();
+
+        const mv = getMV();
+        window.mv = mv;
+        await detectModelNodes(mv);
+
+        // ====== START: mesh-prefix -> dynamic material mapping (PASTE AFTER `await detectModelNodes(mv);`) ======
+        /**
+         * Configuration: what prefixes to look for (can change later)
+         * Prefix matching is case-insensitive and checks the start of node.name
+         */
+        const MESH_PREFIXES = {
+            body: 'body',
+            door: 'door',
+            interior: 'interior',
+            handle: 'handle'
+        };
+
+        /**
+         * Build dynamicMaterialsByPart: { body: Set(materialName,..), door: Set(...), ... }
+         * Uses the same traversal logic as detectModelNodes but collects node.materials when node name matches prefix.
+         */
+        function buildDynamicMaterialsByPart(mv) {
+            const out = {};
+            Object.keys(MESH_PREFIXES).forEach(k => out[k] = new Set());
+
+            // helper walker (similar to detectModelNodes.walk)
+            function walk(node) {
+                if (!node) return;
+                // check node name for prefix
+                if (typeof node.name === 'string' && node.name.trim()) {
+                    const n = node.name.trim().toLowerCase();
+                    for (const [part, prefix] of Object.entries(MESH_PREFIXES)) {
+                        if (prefix && n.startsWith(prefix.toLowerCase())) {
+                            // collect materials referenced by this node (if any)
+                            const mats = node.materials || node.material || node._materials || [];
+                            if (Array.isArray(mats)) {
+                                mats.forEach(m => {
+                                    if (m && m.name) out[part].add(m.name);
+                                });
+                            } else if (mats && mats.name) {
+                                out[part].add(mats.name);
+                            }
+                            break; // a node assigned to first-matching prefix
+                        }
+                    }
+                }
+
+                // traverse children (array or object)
+                if (Array.isArray(node.children)) node.children.forEach(walk);
+                else if (node.children && typeof node.children === 'object') Object.values(node.children).forEach(walk);
+                if (node._children && Array.isArray(node._children)) node._children.forEach(walk);
+            }
+
+            // gather candidate arrays from model (same approach used by detectModelNodes)
+            const symbols = Object.getOwnPropertySymbols(mv.model || {});
+            const normalValues = Object.values(mv.model || {});
+            const symbolValues = symbols.map(s => mv.model[s]);
+            const allProps = [...symbolValues, ...normalValues];
+
+            let nodeArray = null;
+            for (const p of allProps) {
+                if (!Array.isArray(p) || p.length === 0) continue;
+                const first = p[0];
+                if (!first) continue;
+                if (Array.isArray(first.children) || first.children || first.materials || typeof first.name === 'string') {
+                    nodeArray = p;
+                    break;
+                }
+            }
+            // if found a node array, walk it; else try fallback (some viewers expose scene or model.scene)
+            if (nodeArray) {
+                nodeArray.forEach(walk);
+            } else {
+                // fallback: try mv.model.scene or mv.model
+                const root = (mv.model && mv.model.scene) ? mv.model.scene : mv.model;
+                if (root) {
+                    walk(root);
+                    if (Array.isArray(root.children)) root.children.forEach(walk);
+                }
+            }
+
+            // convert Sets -> arrays and expose globally for debugging
+            const res = {};
+            Object.entries(out).forEach(([k, s]) => res[k] = Array.from(s));
+            window.dynamicMaterialsByPart = res;
+            console.log('🔎 dynamicMaterialsByPart (built from mesh prefixes):', res);
+            return res;
+        }
+
+        /**
+         * Helper: get material objects for part (array). Prefer dynamicMaterialsByPart; fallback to MATERIAL_MAP single name.
+         */
+        function getMaterialsForPart(mv, part) {
+            const dyn = window.dynamicMaterialsByPart || {};
+            const names = (dyn && dyn[part] && dyn[part].length) ? dyn[part] : [];
+            const mats = mv?.model?.materials || [];
+
+            // return actual material objects (not just names)
+            const found = [];
+            if (names.length) {
+                names.forEach(n => {
+                    const m = mats.find(x => x.name === n);
+                    if (m) found.push(m);
+                });
+            }
+
+            // fallback: if nothing found via mesh -> try original MATERIAL_MAP lookup (single material name)
+            if (!found.length) {
+                const fallbackName = MATERIAL_MAP[part];
+                if (fallbackName) {
+                    const m = mats.find(x => x.name === fallbackName);
+                    if (m) found.push(m);
+                }
+            }
+
+            return found; // may be empty array
+        }
+        // build dynamic material map based on mesh prefixes (runs now and again on mv.load)
+        buildDynamicMaterialsByPart(mv);
+        mv?.addEventListener?.('load', () => buildDynamicMaterialsByPart(getMV()), { once: false });
+
+
+        /**
+         * Replace calls that used getMaterial(...) to use getMaterialsForPart(...) where we need to apply textures.
+         * We'll not overwrite your existing functions here; instead we expose a helper to use inside applyTextureToPartEnhanced.
+         * (Later in the file we will call buildDynamicMaterialsByPart(mv) once model is ready.)
+         */
+        // ====== END: mesh-prefix -> dynamic material mapping ======
 
         // Size
         applySizeConfs(productData.size_confs);
@@ -206,138 +335,138 @@
     }
 
     // ADD after line 150
-async function loadTexturesForPart(partName) {
-    // prefer the top-level texList constant, fallback to DOM lookup
-    const listEl = (typeof texList !== 'undefined' && texList) ? texList : document.getElementById('textures');
-    if (!listEl) {
-        console.warn('loadTexturesForPart: textures container not found for part:', partName);
-        return;
-    }
+    async function loadTexturesForPart(partName) {
+        // prefer the top-level texList constant, fallback to DOM lookup
+        const listEl = (typeof texList !== 'undefined' && texList) ? texList : document.getElementById('textures');
+        if (!listEl) {
+            console.warn('loadTexturesForPart: textures container not found for part:', partName);
+            return;
+        }
 
-    listEl.innerHTML = '<div style="padding:10px;color:#666">Loading textures…</div>';
+        listEl.innerHTML = '<div style="padding:10px;color:#666">Loading textures…</div>';
 
-    try {
-        // use PID (declared earlier) not PRODUCT_ID
-        const resp = await fetch(`/RADS-TOOLING/backend/api/get_part_textures.php?product_id=${PID}&part=${encodeURIComponent(partName)}`, { credentials: 'same-origin' });
-        const txt = await resp.text();
-
-        let data;
         try {
-            data = JSON.parse(txt);
+            // use PID (declared earlier) not PRODUCT_ID
+            const resp = await fetch(`/RADS-TOOLING/backend/api/get_part_textures.php?product_id=${PID}&part=${encodeURIComponent(partName)}`, { credentials: 'same-origin' });
+            const txt = await resp.text();
+
+            let data;
+            try {
+                data = JSON.parse(txt);
+            } catch (err) {
+                console.error('get_part_textures returned non-JSON:', txt);
+                listEl.innerHTML = '<div style="padding:10px;color:#e11">Error loading textures (invalid response)</div>';
+                return;
+            }
+
+            if (!data || data.success !== true || !Array.isArray(data.textures)) {
+                const msg = (data && data.message) ? data.message : 'No textures available';
+                listEl.innerHTML = `<div style="padding:10px;color:#e11">${msg}</div>`;
+                return;
+            }
+
+            // reuse your existing displayTextures() renderer
+            displayTextures(data.textures, partName);
+
         } catch (err) {
-            console.error('get_part_textures returned non-JSON:', txt);
-            listEl.innerHTML = '<div style="padding:10px;color:#e11">Error loading textures (invalid response)</div>';
+            console.error('loadTexturesForPart failed:', err);
+            listEl.innerHTML = '<div style="padding:10px;color:#e11">Error loading textures</div>';
+        }
+    }
+
+
+    function displayTextures(textures, partName) {
+        const texList = document.getElementById('textures');
+        if (!texList) return;
+
+        texList.innerHTML = '';
+
+        if (textures.length === 0) {
+            texList.innerHTML = '<div style="padding: 10px; color: #999;">No textures available</div>';
             return;
         }
 
-        if (!data || data.success !== true || !Array.isArray(data.textures)) {
-            const msg = (data && data.message) ? data.message : 'No textures available';
-            listEl.innerHTML = `<div style="padding:10px;color:#e11">${msg}</div>`;
-            return;
-        }
+        textures.forEach(tex => {
+            const div = document.createElement('div');
+            div.className = 'cz-swatch texture-option';
+            div.dataset.textureId = tex.id;
 
-        // reuse your existing displayTextures() renderer
-        displayTextures(data.textures, partName);
+            // Check if this texture is currently selected
+            if (chosen[partName]?.mode === 'texture' && chosen[partName]?.id == tex.id) {
+                div.classList.add('active');
+            }
 
-    } catch (err) {
-        console.error('loadTexturesForPart failed:', err);
-        listEl.innerHTML = '<div style="padding:10px;color:#e11">Error loading textures</div>';
-    }
-}
-
-
-function displayTextures(textures, partName) {
-    const texList = document.getElementById('textures');
-    if (!texList) return;
-    
-    texList.innerHTML = '';
-    
-    if (textures.length === 0) {
-        texList.innerHTML = '<div style="padding: 10px; color: #999;">No textures available</div>';
-        return;
-    }
-    
-    textures.forEach(tex => {
-        const div = document.createElement('div');
-        div.className = 'cz-swatch texture-option';
-        div.dataset.textureId = tex.id;
-        
-        // Check if this texture is currently selected
-        if (chosen[partName]?.mode === 'texture' && chosen[partName]?.id == tex.id) {
-            div.classList.add('active');
-        }
-        
-        div.innerHTML = `
+            div.innerHTML = `
             <img src="${tex.image_url}" 
                  alt="${tex.texture_name}"
                  title="${tex.texture_name} - ₱${tex.base_price || 0}"
                  style="width: 60px; height: 60px; object-fit: cover; cursor: pointer; border-radius: 4px; border: 2px solid transparent;">
             <span style="display: block; font-size: 10px; text-align: center; margin-top: 4px;">${tex.texture_name}</span>
         `;
-        
-        div.onclick = () => {
-            // Remove active from others
-            texList.querySelectorAll('.texture-option').forEach(opt => opt.classList.remove('active'));
-            div.classList.add('active');
-            
-            // Apply texture
-            applyTextureToPartEnhanced(partName, tex);
-        };
-        
-        texList.appendChild(div);
-    });
-}
 
-async function applyTextureToPartEnhanced(partName, texture) {
-    const mv = getMV();
-    if (!mv || !mv.model) return;
-    
-    try {
-        // Get the correct material based on part
-        const materialName = MATERIAL_MAP[partName];
-        const material = getMaterial(mv, materialName);
-        
-        if (!material) {
-            console.error(`Material not found for part: ${partName} (${materialName})`);
-            
-            // Fallback: try by index if Door1/Door2
-            if (partName === 'door') {
-                // Apply to both doors if they exist
-                const door1 = getMaterial(mv, 'Door1');
-                const door2 = getMaterial(mv, 'Door2');
-                
-                const tex = await mv.createTexture(texture.image_url);
-                
-                if (door1) {
-                    door1.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
-                    door1.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
-                }
-                if (door2) {
-                    door2.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
-                    door2.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
-                }
-            }
-            return;
-        }
-        
-        // Create and apply texture
-        const tex = await mv.createTexture(texture.image_url);
-        material.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
-        material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]); // Reset color to white
-        
-        // Store selection
-        chosen[partName] = { 
-            mode: 'texture', 
-            id: texture.id,
-            price: parseFloat(texture.base_price) || 0
-        };
-        
-        refreshPrice();
-        
-    } catch (error) {
-        console.error('Error applying texture:', error);
+            div.onclick = () => {
+                // Remove active from others
+                texList.querySelectorAll('.texture-option').forEach(opt => opt.classList.remove('active'));
+                div.classList.add('active');
+
+                // Apply texture
+                applyTextureToPartEnhanced(partName, tex);
+            };
+
+            texList.appendChild(div);
+        });
     }
-}
+
+    async function applyTextureToPartEnhanced(partName, texture) {
+        const mv = getMV();
+        if (!mv || !mv.model) return;
+
+        try {
+            // Get the correct material based on part
+            const materialName = MATERIAL_MAP[partName];
+            const material = getMaterial(mv, materialName);
+
+            if (!material) {
+                console.error(`Material not found for part: ${partName} (${materialName})`);
+
+                // Fallback: try by index if Door1/Door2
+                if (partName === 'door') {
+                    // Apply to both doors if they exist
+                    const door1 = getMaterial(mv, 'Door1');
+                    const door2 = getMaterial(mv, 'Door2');
+
+                    const tex = await mv.createTexture(texture.image_url);
+
+                    if (door1) {
+                        door1.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+                        door1.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+                    }
+                    if (door2) {
+                        door2.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+                        door2.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+                    }
+                }
+                return;
+            }
+
+            // Create and apply texture
+            const tex = await mv.createTexture(texture.image_url);
+            material.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
+            material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]); // Reset color to white
+
+            // Store selection
+            chosen[partName] = {
+                mode: 'texture',
+                id: texture.id,
+                price: parseFloat(texture.base_price) || 0
+            };
+
+            refreshPrice();
+
+        } catch (error) {
+            console.error('Error applying texture:', error);
+        }
+    }
 
     // ======= Viewer =======
     function renderModel(modelURL) {
@@ -363,30 +492,30 @@ async function applyTextureToPartEnhanced(partName, texture) {
         return mats.find(m => m.name === name) || null;
     }
     function highlightPart(partKey) {
-    const mv = getMV();
-    if (!mv?.model?.materials) return;
-    
-    // Reset all emissive
-    mv.model.materials.forEach(m => {
-        if (m.setEmissiveFactor) {
-            m.setEmissiveFactor([0, 0, 0]);
+        const mv = getMV();
+        if (!mv?.model?.materials) return;
+
+        // Reset all emissive
+        mv.model.materials.forEach(m => {
+            if (m.setEmissiveFactor) {
+                m.setEmissiveFactor([0, 0, 0]);
+            }
+        });
+
+        // Highlight selected part(s)
+        const materialName = MATERIAL_MAP[partKey];
+
+        if (partKey === 'door') {
+            // Highlight both doors
+            const door1 = getMaterial(mv, 'Door1');
+            const door2 = getMaterial(mv, 'Door2');
+            if (door1) door1.setEmissiveFactor([0.1, 0.3, 0.6]);
+            if (door2) door2.setEmissiveFactor([0.1, 0.3, 0.6]);
+        } else {
+            const mat = getMaterial(mv, materialName);
+            if (mat) mat.setEmissiveFactor([0.1, 0.3, 0.6]);
         }
-    });
-    
-    // Highlight selected part(s)
-    const materialName = MATERIAL_MAP[partKey];
-    
-    if (partKey === 'door') {
-        // Highlight both doors
-        const door1 = getMaterial(mv, 'Door1');
-        const door2 = getMaterial(mv, 'Door2');
-        if (door1) door1.setEmissiveFactor([0.1, 0.3, 0.6]);
-        if (door2) door2.setEmissiveFactor([0.1, 0.3, 0.6]);
-    } else {
-        const mat = getMaterial(mv, materialName);
-        if (mat) mat.setEmissiveFactor([0.1, 0.3, 0.6]);
     }
-}
 
     // ======= Size / Scale =======
     const DEF_DIM = { min: 40, max: 300, default: 80, step: 1, price_per_unit: 0, unit: 'cm' };
@@ -526,36 +655,36 @@ async function applyTextureToPartEnhanced(partName, texture) {
     }
 
     // ======= Tabs / Active Part =======
-   function bindPartTabs(sel) {
-    const tabs = document.querySelector(sel);
-    if (!tabs) return;
-    
-    // Load textures for initial active tab
-    const activeBtn = tabs.querySelector('button.active');
-    if (activeBtn && sel.includes('textures')) {
-        const initialPart = activeBtn.getAttribute('data-part');
-        loadTexturesForPart(initialPart);
-    }
-    
-    tabs.addEventListener('click', (e) => {
-        const btn = e.target.closest('button[data-part]');
-        if (!btn) return;
-        
-        tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        const partName = btn.getAttribute('data-part');
-        setActivePart(partName);
-        
-        // Load textures for this part if in texture section
-        if (sel.includes('textures')) {
-            loadTexturesForPart(partName);
+    function bindPartTabs(sel) {
+        const tabs = document.querySelector(sel);
+        if (!tabs) return;
+
+        // Load textures for initial active tab
+        const activeBtn = tabs.querySelector('button.active');
+        if (activeBtn && sel.includes('textures')) {
+            const initialPart = activeBtn.getAttribute('data-part');
+            loadTexturesForPart(initialPart);
         }
-        
-        // Highlight the 3D part
-        highlightPart(partName);
-    });
-}
+
+        tabs.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-part]');
+            if (!btn) return;
+
+            tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const partName = btn.getAttribute('data-part');
+            setActivePart(partName);
+
+            // Load textures for this part if in texture section
+            if (sel.includes('textures')) {
+                loadTexturesForPart(partName);
+            }
+
+            // Highlight the 3D part
+            highlightPart(partName);
+        });
+    }
     function setActivePart(k) { activePart = k; highlightPart(k); }
 
     // ======= Apply Texture / Color =======

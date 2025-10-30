@@ -115,10 +115,127 @@ a{color:inherit;text-decoration:none}
 
 .rt-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
 
-.rt-qrwrap{display:flex;justify-content:center;margin:10px 0}
+/* 🔥 UPDATED: Mas malaki na yung QR wrapper at QR box */
+.rt-qrwrap{display:flex;justify-content:center;margin:16px 0;padding:12px 0}
 .rt-qr{
-  width:180px;height:180px;border:1px dashed #d1d5db;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;color:#6b7280;background:#f9fafb;
+  width:320px;
+  height:320px;
+  border:2px solid #d1d5db;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#6b7280;
+  background:#fff;
+  cursor:pointer;
+  transition:all .2s ease;
+  position:relative;
+  overflow:hidden;
+}
+
+/* 🔥 NEW: Hover effect para alam na clickable */
+.rt-qr:hover{
+  border-color:#3b82f6;
+  box-shadow:0 0 0 3px rgba(59,130,246,.15);
+  transform:scale(1.02);
+}
+
+.rt-qr img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  padding:8px;
+}
+
+/* 🔥 NEW: Zoom icon sa corner ng QR */
+.rt-qr::after{
+  content:'🔍';
+  position:absolute;
+  bottom:8px;
+  right:8px;
+  font-size:16px;
+  background:rgba(255,255,255,.9);
+  padding:4px 8px;
+  border-radius:6px;
+  opacity:0;
+  transition:opacity .2s;
+}
+.rt-qr:hover::after{
+  opacity:1;
+}
+
+/* 🔥 NEW: Fullscreen QR Modal */
+#qrZoomModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.85);
+  z-index:999999; /* Changed from 99999 to 999999 */
+  display:none;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter:blur(8px);
+  animation:fadeIn .25s ease;
+}
+#qrZoomModal.show{
+  display:flex;
+}
+
+#qrZoomModal .zoom-container{
+  position:relative;
+  max-width:90vw;
+  max-height:90vh;
+  background:#fff;
+  border-radius:16px;
+  padding:24px;
+  box-shadow:0 25px 80px rgba(0,0,0,.4);
+  animation:zoomIn .3s ease;
+}
+
+#qrZoomModal .zoom-qr{
+  width:min(600px, 80vw);
+  height:min(600px, 80vw);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#qrZoomModal .zoom-qr img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+#qrZoomModal .zoom-close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:40px;
+  height:40px;
+  border:none;
+  background:#111827;
+  color:#fff;
+  font-size:24px;
+  border-radius:50%;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.15s;
+  z-index:1;
+}
+#qrZoomModal .zoom-close:hover{
+  background:#1f2937;
+  transform:rotate(90deg);
+}
+
+@keyframes fadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+@keyframes zoomIn{
+  from{opacity:0;transform:scale(.9)}
+  to{opacity:1;transform:scale(1)}
 }
 
 .rt-form label{display:block;margin-bottom:10px;font-size:14px;color:#111827;font-weight:600}
@@ -153,4 +270,15 @@ a{color:inherit;text-decoration:none}
   #rtModal .rt-card{margin:60px auto;padding:16px}
   .rt-chips{flex-direction:column}
   .rt-chip{min-width:100%}
+  
+  /* Mobile: Smaller QR */
+  .rt-qr{
+    width:280px;
+    height:280px;
+  }
+  
+  #qrZoomModal .zoom-qr{
+    width:min(500px, 85vw);
+    height:min(500px, 85vw);
+  }
 }

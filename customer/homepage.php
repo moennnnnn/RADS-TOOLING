@@ -270,7 +270,7 @@ if ($img) {
       <section class="quick-actions-section">
         <h2 class="section-title">Quick Actions</h2>
         <div class="actions-grid">
-          <a href="/RADS-TOOLING/customer/customize.php" class="action-card">
+          <a href="/RADS-TOOLING/customer/customization.php" class="action-card">
             <div class="action-icon">
               <span class="material-symbols-rounded">view_in_ar</span>
             </div>
@@ -278,7 +278,7 @@ if ($img) {
             <p>Create custom 3D designs</p>
           </a>
 
-          <a href="/RADS-TOOLING/public/products.php" class="action-card">
+          <a href="/RADS-TOOLING/customer/products.php" class="action-card">
             <div class="action-icon">
               <span class="material-symbols-rounded">storefront</span>
             </div>
@@ -294,7 +294,7 @@ if ($img) {
             <p>View order status</p>
           </a>
 
-          <a href="/RADS-TOOLING/cart.php" class="action-card">
+          <a href="/RADS-TOOLING/customer/cart.php" class="action-card">
             <div class="action-icon">
               <span class="material-symbols-rounded">shopping_cart</span>
             </div>

@@ -149,12 +149,15 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
         }
 
         if (!res.ok || !j.success) {
-          __modal({
-            title: 'Login failed',
-            html: j.message || 'Login failed.'
-          });
-          throw new Error(j.message || 'Login failed');
-        }
+  const msg = j.message || j.msg || 'Invalid username or password';
+  if (errorDiv) {
+    errorDiv.textContent = msg;
+    errorDiv.style.display = 'block';
+  } else {
+    __modal({ title: 'Login failed', html: msg }); // fallback if missing
+  }
+  throw new Error(msg);
+}
 
         // If backend says verification is required, go to verify page instead
         if (j.data && j.data.verify_required) {

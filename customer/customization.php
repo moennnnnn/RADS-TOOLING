@@ -9,7 +9,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 // Accept ?pid= or ?id=
 $pid = (int)($_GET['pid'] ?? ($_GET['id'] ?? 0));
 if ($pid <= 0) {
-    header('Location: /RADS-TOOLING/backend/customer/products.php');
+    header('Location: /RADS-TOOLING /customer/products.php');
     exit;
 }
 

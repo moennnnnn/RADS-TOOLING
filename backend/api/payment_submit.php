@@ -1,117 +1,189 @@
 <?php
-require_once __DIR__ . '/_bootstrap.php';
-require_once __DIR__ . '/../lib/payments.php';
+// backend/api/payment_submit.php
+declare(strict_types=1);
+
+session_start();
+header('Content-Type: application/json; charset=utf-8');
+
+// Basic logging helper
+function local_log(string $msg): void {
+    $logDir = __DIR__ . '/../logs';
+    if (!is_dir($logDir)) @mkdir($logDir, 0775, true);
+    @file_put_contents($logDir . '/payment_submit_errors.log', date('[Y-m-d H:i:s] ') . $msg . PHP_EOL, FILE_APPEND);
+}
+
+// minimal response helpers
+function ok($data = []){
+    echo json_encode(array_merge(['success' => true], is_array($data) ? $data : ['data' => $data]));
+    exit;
+}
+function fail($msg = 'Error', $code = 400){
+    http_response_code($code);
+    echo json_encode(['success' => false, 'message' => $msg]);
+    exit;
+}
+
+// get current customer id from session (adjust keys if your app uses different)
+function require_customer_id(): int {
+    if (!empty($_SESSION['customer']['id'])) return (int)$_SESSION['customer']['id'];
+    if (!empty($_SESSION['user']['id']) && ($_SESSION['user']['role'] ?? '') === 'customer') return (int)$_SESSION['user']['id'];
+    fail('Unauthorized', 401);
+}
+
+// DB connection via Database class (project likely has this)
+require_once __DIR__ . '/../config/database.php';
+
+try {
+    $db = new Database();
+    $pdo = $db->getConnection();
+} catch (Throwable $e) {
+    local_log("DB connect error: " . $e->getMessage());
+    fail('Server error (db)', 500);
+}
+
+// fetch inputs (FormData POST)
 $uid = require_customer_id();
 
-$order_id        = (int)($_POST['order_id'] ?? 0);
+$order_id        = (int)($_POST['order_id'] ?? ($_GET['order_id'] ?? 0));
 $account_name    = trim((string)($_POST['account_name'] ?? ''));
 $account_number  = trim((string)($_POST['account_number'] ?? ''));
 $reference       = trim((string)($_POST['reference_number'] ?? ''));
-$amount_paid     = (float)($_POST['amount_paid'] ?? 0);
+$amount_paid     = (float)($_POST['amount_paid'] ?? 0.0);
 
 if (!$order_id) fail('Missing order_id.');
-if (!$account_name || !$reference || $amount_paid <= 0) fail('Incomplete verification data.');
+if (!$account_name) fail('Account name is required.');
+if ($amount_paid <= 0) fail('Amount paid must be greater than zero.');
+if (!$reference) fail('Reference number is required.');
 
-$pdo = db();
-$stmt = $pdo->prepare("SELECT o.customer_id, IFNULL(p.method,'gcash') AS method
-                       FROM orders o
-                       LEFT JOIN payments p ON p.order_id=o.id
-                       WHERE o.id=:id");
-$stmt->execute([':id' => $order_id]);
-$row = $stmt->fetch();
-if (!$row || (int)$row['customer_id'] !== $uid) fail('Order not found.', 404);
+// verify order ownership
+try {
+    $st = $pdo->prepare("SELECT id, customer_id FROM orders WHERE id = :id LIMIT 1");
+    $st->execute([':id' => $order_id]);
+    $ord = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$ord) fail('Order not found.', 404);
+    if ((int)$ord['customer_id'] !== $uid) fail('Order does not belong to you.', 403);
+} catch (Throwable $e) {
+    local_log("Order lookup error: " . $e->getMessage());
+    fail('Server error', 500);
+}
 
-$method = (string)$row['method'] ?: 'gcash';
-
+// handle screenshot upload
 $upload_dir = __DIR__ . '/../../uploads/payments';
 if (!is_dir($upload_dir)) {
-  if (!@mkdir($upload_dir, 0775, true) && !is_dir($upload_dir)) {
-    fail('Cannot create payments upload folder.');
-  }
+    if (!@mkdir($upload_dir, 0775, true) && !is_dir($upload_dir)) {
+        local_log("Cannot create payments dir: {$upload_dir}");
+        fail('Server error (upload folder)', 500);
+    }
 }
 
-$shot_path = null;
+$screenshot_path = null;
 if (!empty($_FILES['screenshot']['tmp_name'])) {
-  $orig = $_FILES['screenshot']['name'] ?? 'proof.jpg';
-  $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION) ?: 'jpg');
-  if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) $ext = 'jpg';
-  $fname = 'proof_' . $order_id . '_' . time() . '.' . $ext;
-  $dest  = rtrim($upload_dir, '/') . '/' . $fname;
-  if (!move_uploaded_file($_FILES['screenshot']['tmp_name'], $dest)) {
-    fail('Failed to save screenshot.');
-  }
-  $shot_path = 'uploads/payments/' . $fname;
+    $tmp = $_FILES['screenshot']['tmp_name'];
+    $orig = $_FILES['screenshot']['name'] ?? 'proof.jpg';
+    $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION) ?: 'jpg');
+    if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) $ext = 'jpg';
+    $fname = 'proof_' . $order_id . '_' . time() . '.' . $ext;
+    $dest = rtrim($upload_dir, '/') . '/' . $fname;
+
+    if (!@move_uploaded_file($tmp, $dest)) {
+        // fallback copy
+        if (!@copy($tmp, $dest)) {
+            local_log("Failed to save screenshot for order {$order_id} tmp={$tmp} dest={$dest}");
+            fail('Failed to save screenshot.', 500);
+        } else {
+            @unlink($tmp);
+        }
+    }
+    $screenshot_path = 'uploads/payments/' . $fname; // path used by other code
 }
 
-// ---- ENFORCE MINIMUM AMOUNTS ----
-// Get order total & sum of VERIFIED payments
-$st = $pdo->prepare("SELECT total_amount AS total FROM orders WHERE id=:id");
-$st->execute([':id' => $order_id]);
-$ord = $st->fetch(PDO::FETCH_ASSOC);
-if (!$ord) fail('Order not found.', 404);
-
-$total = (float)($ord['total'] ?? 0);
-
-// Sum of VERIFIED payments
-$st = $pdo->prepare("SELECT COALESCE(SUM(amount_paid),0) AS paid FROM payments WHERE order_id=:id AND UPPER(status)='VERIFIED'");
-$st->execute([':id' => $order_id]);
-$paid = (float)($st->fetch(PDO::FETCH_ASSOC)['paid'] ?? 0);
-
-$remaining = max(0.0, round($total - $paid, 2));
-if ($remaining <= 0) fail('Order is already fully paid.');
-
-// If first payment, enforce chosen deposit_rate (from `payments`)
-$st = $pdo->prepare("SELECT COALESCE(deposit_rate,0) AS deposit_rate FROM payments WHERE order_id=:id");
-$st->execute([':id' => $order_id]);
-$depRow = $st->fetch(PDO::FETCH_ASSOC);
-$chosenRate = (int)($depRow['deposit_rate'] ?? 0);
-
-// Determine minimum allowed this time
-$minThisPayment = 0.0;
-
-if ($paid <= 0 && in_array($chosenRate, [30, 50, 100], true)) {
-  // First payment must meet chosen deposit
-  $minThisPayment = round($total * ($chosenRate / 100), 2);
-} else {
-  // Subsequent payments must be >= 30% of remaining (except if paying full remaining)
-  $minThisPayment = round($remaining * 0.30, 2);
-}
-
-// Allow paying the full remaining even if it's < minThisPayment (e.g., last few pesos)
-$payingFull = abs($amount_paid - $remaining) < 0.01;
-
-if (!$payingFull && $amount_paid + 0.001 < $minThisPayment) {
-  fail('Minimum payment is ₱' . number_format($minThisPayment, 2) . '. Your remaining balance is ₱' . number_format($remaining, 2) . '.');
-}
-
-$pdo->beginTransaction();
+// Validation: enforce minimum payment rules (same logic as earlier)
 try {
-  // Insert verification row
-  $stmt = $pdo->prepare("INSERT INTO payment_verifications
-    (order_id, method, account_name, account_number, reference_number, amount_reported, screenshot_path, status)
-    VALUES (:oid, :m, :an, :ac, :ref, :amt, :img, 'PENDING')");
-  $stmt->execute([
-    ':oid' => $order_id,
-    ':m' => $method,
-    ':an' => $account_name,
-    ':ac' => $account_number ?: null,
-    ':ref' => $reference,
-    ':amt' => $amount_paid,
-    ':img' => $shot_path
-  ]);
+    $st = $pdo->prepare("SELECT total_amount FROM orders WHERE id = :id LIMIT 1");
+    $st->execute([':id' => $order_id]);
+    $ordRow = $st->fetch(PDO::FETCH_ASSOC);
+    if (!$ordRow) fail('Order not found.', 404);
+    $total = (float)($ordRow['total_amount'] ?? 0);
 
-  // Ensure payments row exists, but DO NOT add to amount_paid here.
-  // amount_paid will be added ONLY on admin APPROVE to avoid double counting.
-  $pdo->prepare("
-  INSERT INTO payments (order_id, method, deposit_rate, amount_due, amount_paid, status)
-  VALUES (:oid, :m, 0, 0, 0, 'PENDING')
-  ON DUPLICATE KEY UPDATE method=VALUES(method), status='PENDING'
-")->execute([':oid' => $order_id, ':m' => $method]);
+    $st = $pdo->prepare("SELECT COALESCE(SUM(amount_paid),0) AS paid FROM payments WHERE order_id = :id AND UPPER(COALESCE(status,'')) IN ('VERIFIED','APPROVED')");
+    $st->execute([':id' => $order_id]);
+    $paid = (float)($st->fetch(PDO::FETCH_ASSOC)['paid'] ?? 0);
 
+    $remaining = max(0.0, round($total - $paid, 2));
+    if ($remaining <= 0) fail('Order already fully paid.', 400);
 
-  $pdo->commit();
-  ok(['message' => 'Payment submitted for verification.']);
+    // chosen deposit_rate if any (from payments table)
+    $st = $pdo->prepare("SELECT COALESCE(deposit_rate,0) AS deposit_rate FROM payments WHERE order_id = :id LIMIT 1");
+    $st->execute([':id' => $order_id]);
+    $depRow = $st->fetch(PDO::FETCH_ASSOC);
+    $chosenRate = (int)($depRow['deposit_rate'] ?? 0);
+
+    $minThisPayment = 0.0;
+    if ($paid <= 0 && in_array($chosenRate, [30,50,100], true)) {
+        $minThisPayment = round($total * ($chosenRate / 100.0), 2);
+    } else {
+        $minThisPayment = round($remaining * 0.30, 2);
+    }
+
+    $payingFull = abs($amount_paid - $remaining) < 0.01;
+    if (!$payingFull && ($amount_paid + 0.0001) < $minThisPayment) {
+        fail('Minimum payment is ₱' . number_format($minThisPayment,2) . '. Remaining ₱' . number_format($remaining,2), 400);
+    }
 } catch (Throwable $e) {
-  $pdo->rollBack();
-  fail('DB error: ' . $e->getMessage(), 500);
+    local_log("Payment validation error: " . $e->getMessage());
+    fail('Server validation error', 500);
+}
+
+// insert verification and ensure payments row exists (but do NOT add to amount_paid here)
+try {
+    $pdo->beginTransaction();
+
+    $ins = $pdo->prepare("INSERT INTO payment_verifications
+        (order_id, method, account_name, account_number, reference_number, screenshot_path, amount_reported, status, created_at)
+        VALUES (:oid, :method, :accname, :accnum, :ref, :img, :amt, 'PENDING', NOW())");
+    // method: try to infer from existing payments row else default 'gcash'
+    $st = $pdo->prepare("SELECT method FROM payments WHERE order_id = :oid LIMIT 1");
+    $st->execute([':oid' => $order_id]);
+    $pRow = $st->fetch(PDO::FETCH_ASSOC);
+    $method = $pRow['method'] ?? 'gcash';
+
+    $ins->execute([
+        ':oid' => $order_id,
+        ':method' => $method,
+        ':accname' => $account_name,
+        ':accnum' => $account_number ?: null,
+        ':ref' => $reference,
+        ':img' => $screenshot_path,
+        ':amt' => $amount_paid
+    ]);
+    $pv_id = (int)$pdo->lastInsertId();
+
+    // ensure a payments row exists (do not change amount_paid)
+    $sel = $pdo->prepare("SELECT id FROM payments WHERE order_id = :oid LIMIT 1");
+    $sel->execute([':oid' => $order_id]);
+    $exists = $sel->fetchColumn();
+    if (!$exists) {
+        $insPay = $pdo->prepare("INSERT INTO payments (order_id, method, deposit_rate, amount_due, amount_paid, status, created_at) VALUES (:oid, :m, 0, 0, 0, 'PENDING', NOW())");
+        $insPay->execute([':oid' => $order_id, ':m' => $method]);
+    } else {
+        // ensure status is PENDING
+        $pdo->prepare("UPDATE payments SET status = 'PENDING' WHERE order_id = :oid")->execute([':oid' => $order_id]);
+    }
+
+    // Notify admin -> optional: insert into notifications table if you have it
+    try {
+        $notStmt = $pdo->prepare("INSERT INTO admin_notifications (type, payload, created_at) VALUES (:type, :payload, NOW())");
+        $notStmt->execute([':type' => 'payment_verification', ':payload' => json_encode(['order_id' => $order_id, 'pv_id' => $pv_id])]);
+    } catch (Throwable $e) {
+        // don't fail user if notifications table missing - just log
+        local_log("Notification insert skipped or failed: " . $e->getMessage());
+    }
+
+    $pdo->commit();
+
+    ok(['message' => 'Payment submitted for verification.', 'order_id' => $order_id, 'pv_id' => $pv_id]);
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    local_log("DB error on payment_submit: " . $e->getMessage());
+    fail('Database error while submitting payment.', 500);
 }

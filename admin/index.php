@@ -593,13 +593,108 @@ if (!$isLoggedIn) {
                 <button class="cm-tab active" data-page="home_public"><span class="material-symbols-rounded">home</span> Homepage</button>
                 <button class="cm-tab" data-page="about"><span class="material-symbols-rounded">info</span> About Us</button>
                 <button class="cm-tab" data-page="privacy"><span class="material-symbols-rounded">shield</span> Privacy Policy</button>
+                <button class="cm-tab" data-page="payment"><span class="material-symbols-rounded">qr_code</span> Payment Process Info</button>
                 <button class="cm-tab" data-page="terms"><span class="material-symbols-rounded">gavel</span> Terms & Conditions</button>
             </div>
             <div class="cm-preview-container">
                 <div class="cm-preview-card" id="previewCard"><iframe id="previewIframe" style="width:100%; height:600px; border:1px solid #e3edfb; border-radius:8px;"></iframe></div>
             </div>
-        </section>
 
+            <!-- Payment QR Settings Section -->
+            <div id="paymentSettingsSection" style="display: none; padding: 20px;">
+                <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 8px 0; color: #2f5b88; display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-rounded">qr_code_2</span>
+                        Payment QR Codes Management
+                    </h3>
+                    
+                    <p style="color: #666; margin: 0 0 24px 0; font-size: 14px;">
+                        Upload and manage QR codes for GCash and BPI payments. These QR codes will be displayed to customers during checkout.
+                    </p>
+
+                    <!-- GCash QR Code Section -->
+                    <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 16px 0; color: #2f5b88; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+                            <span class="material-symbols-rounded">account_balance_wallet</span>
+                            GCash QR Code
+                        </h4>
+
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: #333;">Current QR Code:</label>
+                            <div id="gcashQRPreview" style="
+                                background: white;
+                                border: 2px dashed #ddd;
+                                border-radius: 8px;
+                                padding: 20px;
+                                min-height: 200px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: #999;
+                                font-size: 14px;
+                            ">
+                                No QR code uploaded yet
+                            </div>
+                        </div>
+
+                        <input type="file" id="gcashQRUpload" accept="image/*" style="display: none;">
+                        <button type="button" id="btnGCashUpload" class="btn-upload" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #2f5b88; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                            <span class="material-symbols-rounded" style="font-size: 18px;">upload</span>
+                            Upload GCash QR
+                        </button>
+                        <p style="font-size: 12px; color: #666; margin-top: 8px; margin-bottom: 0;">
+                            Accepted formats: JPG, PNG, GIF, WEBP (Max 5MB)
+                        </p>
+                    </div>
+
+                    <!-- BPI QR Code Section -->
+                    <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px;">
+                        <h4 style="margin: 0 0 16px 0; color: #2f5b88; display: flex; align-items: center; gap: 8px; font-size: 16px;">
+                            <span class="material-symbols-rounded">account_balance</span>
+                            BPI QR Code
+                        </h4>
+
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: #333;">Current QR Code:</label>
+                            <div id="bpiQRPreview" style="
+                                background: white;
+                                border: 2px dashed #ddd;
+                                border-radius: 8px;
+                                padding: 20px;
+                                min-height: 200px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: #999;
+                                font-size: 14px;
+                            ">
+                                No QR code uploaded yet
+                            </div>
+                        </div>
+
+                        <input type="file" id="bpiQRUpload" accept="image/*" style="display: none;">
+                        <button type="button" id="btnBPIUpload" class="btn-upload" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: #2f5b88; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                            <span class="material-symbols-rounded" style="font-size: 18px;">upload</span>
+                            Upload BPI QR
+                        </button>
+                        <p style="font-size: 12px; color: #666; margin-top: 8px; margin-bottom: 0;">
+                            Accepted formats: JPG, PNG, GIF, WEBP (Max 5MB)
+                        </p>
+                    </div>
+
+                    <!-- Info Note -->
+                    <div style="margin-top: 20px; padding: 12px 16px; background: #cfe2ff; border: 1px solid #b6d4fe; border-radius: 6px; display: flex; align-items: flex-start; gap: 10px;">
+                        <span class="material-symbols-rounded" style="font-size: 20px; color: #084298;">info</span>
+                        <p style="margin: 0; font-size: 14px; color: #084298; line-height: 1.5;">
+                            <strong>Note:</strong> After uploading new QR codes, they will be immediately available in the customer checkout process. 
+                            Make sure the QR codes are clear and scannable before uploading.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!-- 👆 END OF PAYMENT SECTION 👆 -->
+
+        </section>
         <!-- REPORTS -->
         <section class="main-section" data-section="reports">
             <div class="section-header">

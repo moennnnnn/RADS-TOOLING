@@ -236,20 +236,6 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
     </div>
   </main>
 
-  <!-- Reusable App Modal -->
-  <div id="appModal" class="rt-modal">
-  <div id="appModalDialog" class="rt-modal__box rt-modal--info">
-    <div class="rt-modal__head">
-      <span id="appModalTitle" class="rt-modal__title">Notice</span>
-      <button type="button" class="modal-close" data-appmodal-close aria-label="Close">×</button>
-    </div>
-    <div id="appModalBody" class="rt-modal__body"></div>
-    <div id="appModalFooter" class="rt-modal__actions">
-      <button type="button" class="rt-btn rt-btn--primary" data-appmodal-close>OK</button>
-    </div>
-  </div>
-</div>
-
   <style>
     .app-modal {
       position: fixed;

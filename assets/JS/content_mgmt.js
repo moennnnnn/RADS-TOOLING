@@ -30,6 +30,12 @@ const CM = {
 
         console.log('Preview iframe found:', previewIframe);
 
+        // Hide payment section initially
+        const paymentSection = document.getElementById('paymentSettingsSection');
+        if (paymentSection) {
+            paymentSection.style.display = 'none';
+        }
+
         this.setupEventListeners();
         this.loadPreview();
         console.log('CMS initialized successfully');
@@ -95,6 +101,53 @@ const CM = {
     switchTab(page) {
         console.log(`Switching to: ${page}`);
         this.currentPage = this.normalizePageKey(page);
+
+        // Special handling for payment tab
+        if (page === 'payment') {
+            // Hide preview section
+            const previewCard = document.getElementById('previewCard');
+            if (previewCard) {
+                previewCard.style.display = 'none';
+            }
+
+            // Hide Edit Content button
+            const btnEdit = document.getElementById('btnEditContent');
+            if (btnEdit) {
+                btnEdit.style.display = 'none';
+            }
+
+            // Show payment settings section
+            const paymentSection = document.getElementById('paymentSettingsSection');
+            if (paymentSection) {
+                paymentSection.style.display = 'block';
+            }
+
+            // Update active tab
+            this.updateActiveTab();
+
+            // Load payment QR data
+            if (CM.Payment) {
+                CM.Payment.loadPaymentQR();
+            }
+
+            return; // Don't load preview for payment tab
+        }
+
+        // For other tabs, show preview and hide payment section
+        const previewCard = document.getElementById('previewCard');
+        if (previewCard) {
+            previewCard.style.display = 'block';
+        }
+
+        const btnEdit = document.getElementById('btnEditContent');
+        if (btnEdit) {
+            btnEdit.style.display = 'block';
+        }
+
+        const paymentSection = document.getElementById('paymentSettingsSection');
+        if (paymentSection) {
+            paymentSection.style.display = 'none';
+        }
 
         // Update dropdown if switching to homepage
         const typeSelect = document.getElementById('homepageType');
@@ -1079,6 +1132,583 @@ document.addEventListener('DOMContentLoaded', function () {
                     CM.init();
                 }, 300);
             }
+            
         });
+        
     });
+    CM.Payment = {
+    currentQRData: {},
+    apiUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
+
+    init() {
+        console.log('Payment QR Management initialized');
+        this.setupEventListeners();
+        this.loadPaymentQR();
+    },
+
+    setupEventListeners() {
+    const gcashUpload = document.getElementById('gcashQRUpload');
+    if (gcashUpload) {
+        gcashUpload.addEventListener('change', (e) => {
+            this.handleQRUpload('gcash', e.target.files[0]);
+        });
+    } else {
+        console.warn('gcashQRUpload element not found');
+    }
+
+    const bpiUpload = document.getElementById('bpiQRUpload');
+    if (bpiUpload) {
+        bpiUpload.addEventListener('change', (e) => {
+            this.handleQRUpload('bpi', e.target.files[0]);
+        });
+    } else {
+        console.warn('bpiQRUpload element not found');
+    }
+
+    const btnGCashUpload = document.getElementById('btnGCashUpload');
+    if (btnGCashUpload && gcashUpload) {
+        btnGCashUpload.addEventListener('click', () => gcashUpload.click());
+    }
+
+    const btnBPIUpload = document.getElementById('btnBPIUpload');
+    if (btnBPIUpload && bpiUpload) {
+        btnBPIUpload.addEventListener('click', () => bpiUpload.click());
+    }
+},
+
+
+    async loadPaymentQR() {
+    try {
+        const response = await fetch(`${this.apiUrl}?action=get_payment_qr`);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const result = await response.json();
+
+        if (result && result.success && result.data) {
+            this.currentQRData = result.data;
+            this.displayQRCodes();
+        } else {
+            console.warn('Unexpected QR response:', result);
+            this.currentQRData = {};
+            this.displayQRCodes();
+        }
+    } catch (err) {
+        console.error('Error loading payment QR:', err);
+        this.showToast('Failed to load QR codes', 'error');
+    }
+},
+
+
+    // ═══════════════════════════════════════════════════════════════
+// FIXED: displayQRCodes() function with better error handling
+// Replace lines 1201-1226 in your content_mgmt.js with this:
+// ═══════════════════════════════════════════════════════════════
+
+displayQRCodes() {
+    console.log('📸 displayQRCodes called, currentQRData:', this.currentQRData);
+    
+    const buildPath = (path) => {
+        console.log('🔧 buildPath input:', path);
+        
+        if (!path) {
+            console.warn('⚠️  Empty path provided');
+            return '';
+        }
+        
+        // If already a full URL, return as-is
+        if (/^https?:\/\//i.test(path)) {
+            console.log('✅ Full URL detected:', path);
+            return path;
+        }
+        
+        // Remove leading slashes
+        const trimmed = path.replace(/^\/+/, '');
+        console.log('🔄 Trimmed path:', trimmed);
+        
+        // If already starts with RADS-TOOLING, just add leading slash
+        if (/^RADS-TOOLING\//.test(trimmed)) {
+            const result = '/' + trimmed;
+            console.log('✅ Path with RADS-TOOLING prefix:', result);
+            return result;
+        }
+        
+        // Otherwise, prepend /RADS-TOOLING/
+        const result = '/RADS-TOOLING/' + trimmed;
+        console.log('✅ Built final path:', result);
+        return result;
+    };
+
+    const gcashPreview = document.getElementById('gcashQRPreview');
+    const bpiPreview = document.getElementById('bpiQRPreview');
+
+    // ═══ GCASH QR ═══
+    console.log('💳 Processing GCash QR...');
+    if (this.currentQRData.gcash?.image_path) {
+        console.log('✅ GCash data found:', this.currentQRData.gcash);
+        const imgPath = buildPath(this.currentQRData.gcash.image_path);
+        
+        if (gcashPreview) {
+            gcashPreview.innerHTML = `<img 
+                src="${imgPath}" 
+                alt="GCash QR" 
+                style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;"
+                onerror="console.error('❌ Failed to load GCash QR:', this.src); this.parentElement.innerHTML='<div class=\\'qr-placeholder\\' style=\\'color:red;\\'>Failed to load QR image</div>';"
+                onload="console.log('✅ GCash QR loaded successfully:', this.src);">`;
+            console.log('✅ GCash QR HTML set, path:', imgPath);
+        } else {
+            console.error('❌ gcashQRPreview element not found!');
+        }
+    } else {
+        console.warn('⚠️  No GCash QR data available');
+        if (gcashPreview) {
+            gcashPreview.innerHTML = `<div class="qr-placeholder">No GCash QR uploaded</div>`;
+        }
+    }
+
+    // ═══ BPI QR ═══
+    console.log('🏦 Processing BPI QR...');
+    if (this.currentQRData.bpi?.image_path) {
+        console.log('✅ BPI data found:', this.currentQRData.bpi);
+        const imgPath = buildPath(this.currentQRData.bpi.image_path);
+        
+        if (bpiPreview) {
+            bpiPreview.innerHTML = `<img 
+                src="${imgPath}" 
+                alt="BPI QR" 
+                style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;"
+                onerror="console.error('❌ Failed to load BPI QR:', this.src); this.parentElement.innerHTML='<div class=\\'qr-placeholder\\' style=\\'color:red;\\'>Failed to load QR image</div>';"
+                onload="console.log('✅ BPI QR loaded successfully:', this.src);">`;
+            console.log('✅ BPI QR HTML set, path:', imgPath);
+        } else {
+            console.error('❌ bpiQRPreview element not found!');
+        }
+    } else {
+        console.warn('⚠️  No BPI QR data available');
+        if (bpiPreview) {
+            bpiPreview.innerHTML = `<div class="qr-placeholder">No BPI QR uploaded</div>`;
+        }
+    }
+    
+    console.log('📸 displayQRCodes completed');
+},
+
+    async handleQRUpload(method, file) {
+        if (!file) {
+            this.showToast('Please select a file', 'error');
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            this.showToast('Invalid file type. Please upload JPG, PNG, GIF, or WEBP', 'error');
+            return;
+        }
+
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            this.showToast('File too large. Maximum size is 5MB', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('action', 'update_payment_qr');
+        formData.append('method', method);
+        formData.append('qr_image', file);
+
+        try {
+            // Show loading state
+            const uploadBtn = method === 'gcash' ? 
+                document.getElementById('btnGCashUpload') : 
+                document.getElementById('btnBPIUpload');
+            
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> Uploading...';
+            }
+
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showToast(`${method.toUpperCase()} QR code updated successfully!`, 'success');
+                
+                // Reload QR codes to show new one
+                await this.loadPaymentQR();
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Error uploading QR:', error);
+            this.showToast('Failed to upload QR code: ' + error.message, 'error');
+        } finally {
+            // Reset button state
+            const uploadBtn = method === 'gcash' ? 
+                document.getElementById('btnGCashUpload') : 
+                document.getElementById('btnBPIUpload');
+            
+            if (uploadBtn) {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<span class="material-symbols-rounded">upload</span> Upload QR';
+            }
+        }
+    },
+
+    showPaymentSettings() {
+        // Hide all editor sections
+        document.querySelectorAll('.editor-section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Show payment section
+        const paymentSection = document.getElementById('paymentSettingsSection');
+        if (paymentSection) {
+            paymentSection.style.display = 'block';
+        }
+
+        // Update active tab
+        document.querySelectorAll('.cm-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector('.cm-tab[data-page="payment"]')?.classList.add('active');
+
+        // Load payment QR data
+        this.loadPaymentQR();
+    },
+
+    showToast(message, type = 'info') {
+        // Create toast container if it doesn't exist
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        // Create toast
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type} show`;
+        toast.textContent = message;
+
+        container.appendChild(toast);
+
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+};
+
+// Initialize payment module when CM initializes
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof CM !== 'undefined' && CM.Payment) {
+        CM.Payment.init();
+    }
 });
+    
+});
+
+(function() {
+    'use strict';
+
+    console.log('💳 Payment QR Management initialized');
+
+    // ========== 1. TAB SWITCHING ==========
+    // Handle payment tab click
+    function initPaymentTab() {
+        const tabs = document.querySelectorAll('.cm-tab');
+        const paymentSection = document.getElementById('paymentSettingsSection');
+        const previewCard = document.getElementById('previewCard');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const page = this.getAttribute('data-page');
+                
+                // Remove active from all tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+
+                console.log('📑 Tab clicked:', page);
+
+                if (page === 'payment') {
+                    // Show payment QR section, hide preview
+                    if (paymentSection) paymentSection.style.display = 'block';
+                    if (previewCard) previewCard.style.display = 'none';
+                    
+                    // Load current QR codes
+                    loadPaymentQRCodes();
+                } else {
+                    // Hide payment section, show preview
+                    if (paymentSection) paymentSection.style.display = 'none';
+                    if (previewCard) previewCard.style.display = 'block';
+                }
+            });
+        });
+    }
+
+    // ========== 2. LOAD CURRENT QR CODES ==========
+    async function loadPaymentQRCodes() {
+        console.log('🔄 Loading payment QR codes...');
+
+        try {
+            const response = await fetch('/RADS-TOOLING/backend/api/content_mgmt.php?action=get_payment_qr', {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            console.log('📡 Response status:', response.status);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('📦 QR data received:', data);
+
+            if (data.success) {
+                // Display GCash QR
+                displayQRCode('gcash', data.data.gcash);
+                // Display BPI QR
+                displayQRCode('bpi', data.data.bpi);
+            } else {
+                console.error('❌ Failed to load QR codes:', data.message);
+                showToast('error', 'Failed to load QR codes');
+            }
+
+        } catch (error) {
+            console.error('💥 Error loading QR codes:', error);
+            showToast('error', 'Network error loading QR codes');
+        }
+    }
+
+    // Display QR code in preview area
+    function displayQRCode(method, qrData) {
+        const previewId = method === 'gcash' ? 'gcashQRPreview' : 'bpiQRPreview';
+        const preview = document.getElementById(previewId);
+        
+        if (!preview) {
+            console.error(`Preview element not found: ${previewId}`);
+            return;
+        }
+
+        if (qrData && qrData.image_path) {
+            // Build full URL with /RADS-TOOLING/ prefix
+            const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
+            
+            console.log(`✅ ${method.toUpperCase()} QR found:`, imageUrl);
+            
+            // Create image element
+            preview.innerHTML = `
+                <img 
+                    src="${imageUrl}?v=${Date.now()}" 
+                    alt="${method.toUpperCase()} QR Code" 
+                    style="max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px;"
+                    onerror="this.parentElement.innerHTML='<span style=\\'color: #e74c3c;\\'>❌ Failed to load QR image</span>'"
+                />
+            `;
+        } else {
+            console.log(`ℹ️ No ${method.toUpperCase()} QR uploaded yet`);
+            preview.innerHTML = '<span style="color: #999;">No QR code uploaded yet</span>';
+        }
+    }
+
+    // ========== 3. UPLOAD HANDLERS ==========
+    function initUploadHandlers() {
+        // GCash Upload
+        const btnGCash = document.getElementById('btnGCashUpload');
+        const inputGCash = document.getElementById('gcashQRUpload');
+
+        if (btnGCash && inputGCash) {
+            btnGCash.addEventListener('click', () => {
+                inputGCash.click();
+            });
+
+            inputGCash.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    uploadQRCode('gcash', e.target.files[0]);
+                }
+            });
+        }
+
+        // BPI Upload
+        const btnBPI = document.getElementById('btnBPIUpload');
+        const inputBPI = document.getElementById('bpiQRUpload');
+
+        if (btnBPI && inputBPI) {
+            btnBPI.addEventListener('click', () => {
+                inputBPI.click();
+            });
+
+            inputBPI.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    uploadQRCode('bpi', e.target.files[0]);
+                }
+            });
+        }
+
+        console.log('📤 Upload handlers initialized');
+    }
+
+    // ========== 4. UPLOAD QR CODE TO BACKEND ==========
+    async function uploadQRCode(method, file) {
+        // Validate file size (max 5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+            showToast('error', 'File too large! Maximum size is 5MB.');
+            return;
+        }
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            showToast('error', 'Invalid file type! Only JPG, PNG, GIF, and WEBP are allowed.');
+            return;
+        }
+
+        console.log(`📤 Uploading ${method.toUpperCase()} QR:`, file.name);
+        showToast('info', `Uploading ${method.toUpperCase()} QR code...`);
+
+        const formData = new FormData();
+        formData.append('method', method);
+        formData.append('qr_image', file);
+        formData.append('action', 'update_payment_qr');
+
+        try {
+            const response = await fetch('/RADS-TOOLING/backend/api/content_mgmt.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            });
+
+            console.log('📡 Upload response status:', response.status);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('📦 Upload result:', data);
+
+            if (data.success) {
+                showToast('success', `${method.toUpperCase()} QR code uploaded successfully!`);
+                
+                // Refresh QR codes display
+                await loadPaymentQRCodes();
+                
+                // Clear file input
+                const inputId = method === 'gcash' ? 'gcashQRUpload' : 'bpiQRUpload';
+                const input = document.getElementById(inputId);
+                if (input) input.value = '';
+                
+            } else {
+                showToast('error', data.message || 'Upload failed');
+            }
+
+        } catch (error) {
+            console.error('💥 Upload error:', error);
+            showToast('error', 'Failed to upload QR code. Please try again.');
+        }
+    }
+
+    // ========== 5. NOTIFICATION HELPER ==========
+    function showToast(type, message) {
+        console.log(`🔔 Toast [${type}]:`, message);
+
+        // Try to use existing notification system
+        if (typeof showNotification === 'function') {
+            showNotification(type, message);
+            return;
+        }
+
+        // Fallback: create simple toast
+        const container = document.getElementById('toastContainer') || createToastContainer();
+        
+        const toast = document.createElement('div');
+        toast.className = `toast show toast-${type}`;
+        toast.textContent = message;
+        
+        // Color based on type
+        const colors = {
+            success: '#28a745',
+            error: '#dc3545',
+            info: '#0dcaf0',
+            warning: '#ffc107'
+        };
+        toast.style.cssText = `
+            background: ${colors[type] || colors.info};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        container.appendChild(toast);
+        
+        // Auto remove after 3.5 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-20px)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        `;
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // ========== 6. INITIALIZE ON PAGE LOAD ==========
+    function init() {
+        console.log('🚀 Initializing Payment QR Management...');
+        
+        // Initialize tab switching
+        initPaymentTab();
+        
+        // Initialize upload button handlers
+        initUploadHandlers();
+        
+        // Load QR codes if payment tab is active
+        const activeTab = document.querySelector('.cm-tab.active');
+        if (activeTab && activeTab.getAttribute('data-page') === 'payment') {
+            loadPaymentQRCodes();
+        }
+
+        console.log('✅ Payment QR Management ready!');
+    }
+
+    // Run init when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+
+// ============================================
+// END OF PAYMENT QR MANAGEMENT CODE
+// ============================================
+
+console.log('💳 Payment QR script loaded!');

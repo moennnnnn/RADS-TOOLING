@@ -59,17 +59,19 @@ try {
     // STEP 2: CREATE ORDER
     // ==========================================
     $stmt = $pdo->prepare("INSERT INTO orders
-        (order_code, customer_id, mode, status, subtotal, vat, total_amount)
-        VALUES (CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
-                :cid, :mode, 'PENDING_PAYMENT', :sub, :vat, :tot)");
+    (order_code, customer_id, mode, status, payment_status, subtotal, vat, total_amount, order_date)
+    VALUES (
+      CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
+      :cid, :mode, 'Pending', 'Pending', :sub, :vat, :tot, NOW()
+    )");
 
-    $stmt->execute([
-        ':cid' => $uid,
-        ':mode' => $mode,
-        ':sub' => $subtotal,
-        ':vat' => $vat,
-        ':tot' => $total
-    ]);
+$stmt->execute([
+    ':cid'  => $uid,      // <-- ensure $uid is the same var used in this file
+    ':mode' => $mode,
+    ':sub'  => $subtotal,
+    ':vat'  => $vat,
+    ':tot'  => $total
+]);
 
     $order_id = (int)$pdo->lastInsertId();
 

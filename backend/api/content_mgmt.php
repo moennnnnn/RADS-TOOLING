@@ -8,7 +8,14 @@ ob_start();
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../../includes/guard.php';
 
-guard_require_staff();
+// Get action early
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// Only require staff authentication for non-public actions
+$publicActions = ['get_payment_qr'];
+if (!in_array($action, $publicActions)) {
+    guard_require_staff();
+}
 
 /** @var \PDO|null $pdo */
 global $pdo;
@@ -32,8 +39,6 @@ ini_set('log_errors', 1);
 // Clean any output buffer
 if (ob_get_level()) ob_end_clean();
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
-
 try {
   if ($action === 'get') {
     getContent();
@@ -45,6 +50,10 @@ try {
     discardDraft();
   } elseif ($action === 'upload_image') {
     uploadImage();
+  } elseif ($action === 'get_payment_qr') {
+    getPaymentQR();
+  } elseif ($action === 'update_payment_qr') {
+    updatePaymentQR();
   } else {
     throw new Exception('Invalid action');
   }
@@ -283,6 +292,122 @@ function getDefaultContent($page)
   return $defaults[$page] ?? [];
 }
 
+function getPaymentQR()
+{
+  global $pdo;
+
+  try {
+    $stmt = $pdo->prepare("SELECT id, method, image_path, is_active FROM payment_qr WHERE is_active = 1 ORDER BY method");
+    $stmt->execute();
+    $qrCodes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $data = [
+      'gcash' => null,
+      'bpi' => null
+    ];
+
+    foreach ($qrCodes as $qr) {
+      $data[$qr['method']] = $qr;
+    }
+
+    echo json_encode([
+      'success' => true,
+      'data' => $data
+    ]);
+  } catch (Exception $e) {
+    error_log('getPaymentQR Error: ' . $e->getMessage());
+    throw $e;
+  }
+}
+
+function updatePaymentQR()
+{
+  global $pdo;
+
+  try {
+    $method = $_POST['method'] ?? '';
+    
+    if (!in_array($method, ['gcash', 'bpi'])) {
+      throw new Exception('Invalid payment method');
+    }
+
+    if (!isset($_FILES['qr_image'])) {
+      throw new Exception('No QR image uploaded');
+    }
+
+    $file = $_FILES['qr_image'];
+
+    // Validate file
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $fileType = mime_content_type($file['tmp_name']);
+    
+    if (!in_array($fileType, $allowedTypes)) {
+      throw new Exception('Invalid file type. Only JPG, PNG, GIF, and WEBP are allowed.');
+    }
+
+    if ($file['size'] > 5 * 1024 * 1024) { // 5MB max
+      throw new Exception('File too large. Maximum size is 5MB.');
+    }
+
+    // Create uploads/qrs directory if it doesn't exist
+    $uploadDir = __DIR__ . '/../../uploads/qrs';
+    if (!file_exists($uploadDir)) {
+      mkdir($uploadDir, 0755, true);
+    }
+
+    // Generate unique filename
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = $method . '_' . time() . '.' . $extension;
+    $uploadPath = $uploadDir . '/' . $filename;
+
+    // Move uploaded file
+    if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+      throw new Exception('Failed to save uploaded file');
+    }
+
+    // Update or insert into database
+    $relativePath = 'uploads/qrs/' . $filename;
+    
+    // Check if record exists
+    $stmt = $pdo->prepare("SELECT id, image_path FROM payment_qr WHERE method = ?");
+    $stmt->execute([$method]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existing) {
+      // Delete old image file
+      $oldImagePath = __DIR__ . '/../../' . $existing['image_path'];
+      if (file_exists($oldImagePath)) {
+        unlink($oldImagePath);
+      }
+
+      // Update record
+      $stmt = $pdo->prepare("UPDATE payment_qr SET image_path = ?, is_active = 1 WHERE method = ?");
+      $stmt->execute([$relativePath, $method]);
+    } else {
+      // Insert new record
+      $stmt = $pdo->prepare("INSERT INTO payment_qr (method, image_path, is_active) VALUES (?, ?, 1)");
+      $stmt->execute([$method, $relativePath]);
+    }
+
+    echo json_encode([
+      'success' => true,
+      'message' => ucfirst($method) . ' QR code updated successfully',
+      'data' => [
+        'method' => $method,
+        'image_path' => $relativePath,
+        'filename' => $filename
+      ]
+    ]);
+  } catch (Exception $e) {
+    error_log('updatePaymentQR Error: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+      'success' => false,
+      'message' => $e->getMessage()
+    ]);
+  }
+}
+
 function uploadImage()
 {
   try {
@@ -321,6 +446,6 @@ function uploadImage()
       'message' => $e->getMessage(),
       'file' => __FILE__,
       'line' => __LINE__
-    ]);
+    ]);  
   }
 }

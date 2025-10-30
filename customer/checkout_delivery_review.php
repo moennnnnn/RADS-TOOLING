@@ -64,6 +64,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
   <link rel="stylesheet" href="../assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="../assets/CSS/about.css">
   <link rel="stylesheet" href="../assets/CSS/checkout.css">
+  <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
   <style>
     .review-wrap{max-width:1100px;margin:24px auto;padding:0 16px}
     .checkout-title{font-size:28px;margin-bottom:20px;font-weight:700}
@@ -155,100 +156,118 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
     </div>
   </main>
 
-  <!-- PAYMENT WIZARD MODALS -->
-  <div class="rt-modal" id="rtModal" hidden>
-    <div class="rt-modal__backdrop"></div>
-
-    <!-- STEP 1: Payment Method -->
-    <div class="rt-card rt-step" id="methodModal" hidden>
-      <h3>Select Payment Method</h3>
-      <div class="rt-list">
-        <button class="rt-list__item pay-chip" data-pay="gcash">GCash <span class="rt-arrow">→</span></button>
-        <button class="rt-list__item pay-chip" data-pay="bpi">BPI <span class="rt-arrow">→</span></button>
-      </div>
-      <div class="rt-actions">
-        <button class="rt-btn ghost" data-close>Close</button>
-        <button class="rt-btn main" id="btnChooseDeposit" disabled>Next</button>
-      </div>
+  <footer class="footer">
+    <div class="footer-bottom">
+      <p>© 2025 RADS TOOLING INC.</p>
     </div>
+  </footer>
+</div><!-- /.page-wrapper -->
 
-    <!-- STEP 2: Deposit Amount -->
-    <div class="rt-card rt-step" id="depositModal" hidden>
-      <h3>Select Payment Amount</h3>
-      <div class="rt-sub">Total Amount: <b id="totalLabel">₱<?= number_format($total,2) ?></b></div>
+<!-- ============================================ -->
+<!-- PAYMENT WIZARD MODALS -->
+<!-- ============================================ -->
+<div class="rt-modal" id="rtModal" hidden>
+  <div class="rt-modal__backdrop"></div>
 
-      <div class="rt-chips">
-        <button class="rt-chip pay-chip" data-dep="30">30%<small id="amt30">₱<?= number_format($total * 0.30,2) ?></small></button>
-        <button class="rt-chip pay-chip" data-dep="50">50%<small id="amt50">₱<?= number_format($total * 0.50,2) ?></small></button>
-        <button class="rt-chip pay-chip" data-dep="100">100%<small id="amt100">₱<?= number_format($total,2) ?></small></button>
-      </div>
-
-      <div class="rt-actions">
-        <button class="rt-btn ghost" data-back="#methodModal">Back</button>
-        <button class="rt-btn main" id="btnPayNow" disabled>Proceed to Pay</button>
-      </div>
+  <!-- STEP 1: Payment Method -->
+  <div class="rt-card rt-step" id="methodModal" hidden>
+    <h3>Select Payment Method</h3>
+    <div class="rt-list">
+      <button class="rt-list__item pay-chip" data-pay="gcash">GCash <span class="rt-arrow">→</span></button>
+      <button class="rt-list__item pay-chip" data-pay="bpi">BPI <span class="rt-arrow">→</span></button>
     </div>
-
-    <!-- STEP 3: QR Code -->
-    <div class="rt-card rt-step" id="qrModal" hidden>
-      <h3>Scan QR Code to Pay</h3>
-      <div class="rt-qrwrap">
-        <div id="qrBox" class="rt-qr">QR Code</div>
-      </div>
-      <div class="rt-sub">Amount to pay: <b id="amountDueLabel">₱0.00</b></div>
-      <div class="rt-small">Scan with your selected app</div>
-
-      <div class="rt-actions">
-        <button class="rt-btn ghost" data-back="#depositModal">Back</button>
-        <button class="rt-btn main" id="btnIpaid">I've Completed Payment</button>
-      </div>
-    </div>
-
-    <!-- STEP 4: Verify Payment -->
-    <div class="rt-card rt-step" id="verifyModal" hidden>
-      <h3>Verify Your Payment</h3>
-      <div class="rt-form">
-        <label>Account Name
-          <input type="text" id="vpName" placeholder="Enter your account name" required>
-        </label>
-        <label>Account Number
-          <input type="text" id="vpNum" placeholder="Enter your account number" required>
-        </label>
-        <label>Reference Number
-          <input type="text" id="vpRef" placeholder="Enter transaction reference number" required>
-        </label>
-        <label>Amount Paid
-          <input type="number" id="vpAmt" step="0.01" placeholder="0.00" required>
-        </label>
-        <label>Payment Screenshot
-          <input type="file" id="vpShot" accept="image/*" required>
-        </label>
-      </div>
-      <div class="rt-actions">
-        <button class="rt-btn ghost" data-back="#qrModal">Back</button>
-        <button class="rt-btn main" id="btnVerify">Submit Verification</button>
-      </div>
-    </div>
-
-    <!-- STEP 5: Success -->
-    <div class="rt-card rt-step" id="finalNotice" hidden>
-      <h3>Payment Submitted</h3>
-      <p class="rt-sub">
-        Your payment is <b>under verification</b>. Please check your Profile → Orders to see if it's approved.
-      </p>
-      <div class="rt-actions">
-        <button class="rt-btn main" id="btnGoOrders">Go to My Orders</button>
-        <button class="rt-btn ghost" data-close>Close</button>
-      </div>
+    <div class="rt-actions">
+      <button class="rt-btn ghost" data-close>Close</button>
+      <button class="rt-btn main" id="btnChooseDeposit" disabled>Next</button>
     </div>
   </div>
 
-  <!-- Hidden fields for JS -->
-  <input type="hidden" id="paymentMethod">
-  <input type="hidden" id="depositRate">
+  <!-- STEP 2: Deposit Amount -->
+  <div class="rt-card rt-step" id="depositModal" hidden>
+    <h3>Select Payment Amount</h3>
+    <div class="rt-sub">Total Amount: <b id="totalLabel">₱<?= number_format($total,2) ?></b></div>
 
-  <footer class="footer"><div class="footer-bottom"><p>© 2025 RADS TOOLING INC.</p></div></footer>
+    <div class="rt-chips">
+      <button class="rt-chip pay-chip" data-dep="30">30%<small id="amt30">₱<?= number_format($total * 0.30,2) ?></small></button>
+      <button class="rt-chip pay-chip" data-dep="50">50%<small id="amt50">₱<?= number_format($total * 0.50,2) ?></small></button>
+      <button class="rt-chip pay-chip" data-dep="100">100%<small id="amt100">₱<?= number_format($total,2) ?></small></button>
+    </div>
+
+    <div class="rt-actions">
+      <button class="rt-btn ghost" data-back="#methodModal">Back</button>
+      <button class="rt-btn main" id="btnPayNow" disabled>Proceed to Pay</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: QR Code -->
+  <div class="rt-card rt-step" id="qrModal" hidden>
+    <h3>Scan QR Code to Pay</h3>
+    <div class="rt-qrwrap">
+      <div id="qrBox" class="rt-qr">QR Code</div>
+    </div>
+    <div class="rt-sub">Amount to pay: <b id="amountDueLabel">₱0.00</b></div>
+    <div class="rt-small">Scan with your selected app</div>
+
+    <div class="rt-actions">
+      <button class="rt-btn ghost" data-back="#depositModal">Back</button>
+      <button class="rt-btn main" id="btnIpaid">I've Completed Payment</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Verify Payment -->
+  <div class="rt-card rt-step" id="verifyModal" hidden>
+    <h3>Verify Your Payment</h3>
+    <div class="rt-form">
+      <label>Account Name
+        <input type="text" id="vpName" placeholder="Enter your account name" required>
+      </label>
+      <label>Account Number
+        <input type="text" id="vpNum" placeholder="Enter your account number" required>
+      </label>
+      <label>Reference Number
+        <input type="text" id="vpRef" placeholder="Enter transaction reference number" required>
+      </label>
+      <label>Amount Paid
+        <input type="number" id="vpAmt" step="0.01" placeholder="0.00" required>
+      </label>
+      <label>Payment Screenshot
+        <input type="file" id="vpShot" accept="image/*" required>
+      </label>
+    </div>
+    <div class="rt-actions">
+      <button class="rt-btn ghost" data-back="#qrModal">Back</button>
+      <button class="rt-btn main" id="btnVerify">Submit Verification</button>
+    </div>
+  </div>
+
+  <!-- STEP 5: Success -->
+  <div class="rt-card rt-step" id="finalNotice" hidden>
+    <h3>Payment Submitted</h3>
+    <p class="rt-sub">
+      Your payment is <b>under verification</b>. Please check your Profile → Orders to see if it's approved.
+    </p>
+    <div class="rt-actions">
+      <button class="rt-btn main" id="btnGoOrders">Go to My Orders</button>
+      <button class="rt-btn ghost" data-close>Close</button>
+    </div>
+  </div>
+</div><!-- END #rtModal -->
+
+<!-- ============================================ -->
+<!-- 🔥 QR ZOOM MODAL (OUTSIDE rtModal!) -->
+<!-- ============================================ -->
+<div id="qrZoomModal">
+  <div class="zoom-container">
+    <button class="zoom-close" onclick="closeQrZoom()">×</button>
+    <div class="zoom-qr">
+      <img id="zoomQrImage" src="" alt="QR Code">
+    </div>
+  </div>
 </div>
+
+<!-- Hidden fields for JS -->
+<input type="hidden" id="paymentMethod">
+<input type="hidden" id="depositRate">
 
 <!-- Bootstrap order data for JS -->
 <script>
@@ -262,8 +281,8 @@ window.RT_ORDER = <?= json_encode([
   'info'     => (($mode ?? 'delivery') === 'delivery')
     ? [
         'delivery' => [
-          'first_name' => $first_name ?? '',
-          'last_name'  => $last_name  ?? '',
+          'first_name' => $first ?? '',
+          'last_name'  => $last  ?? '',
           'email'      => $email      ?? '',
           'phone'      => $phone      ?? '',
           'province'   => $province   ?? '',
@@ -275,13 +294,13 @@ window.RT_ORDER = <?= json_encode([
       ]
     : [
         'pickup' => [
-          'first_name' => $first_name ?? '',
-          'last_name'  => $last_name  ?? '',
+          'first_name' => $first ?? '',
+          'last_name'  => $last  ?? '',
           'phone'      => $phone      ?? '',
         ]
       ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-console.log('RT_ORDER:', window.RT_ORDER); // quick check
+console.log('RT_ORDER:', window.RT_ORDER);
 </script>
 <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
 </body>

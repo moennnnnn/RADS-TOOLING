@@ -244,83 +244,85 @@
       brgySel.disabled = false;
     });
 
-    // Mirror barangay select
-    brgySel?.addEventListener('change', () => {
-      if (bVal) bVal.value = brgySel.value || '';
+    brgySel.addEventListener('change', () => {
+      if (bVal) bVal.value = brgySel.value;
     });
   }
 
-  // ===== Form Validation & Continue =====
+  // ===== Continue Button =====
   function wireContinue() {
-    const continueBtn = $('#btnContinue');
-    if (!continueBtn) return;
+    const btn = $('#btnContinue');
+    if (!btn) return;
 
-    continueBtn.addEventListener('click', () => {
-      const form = continueBtn.closest('form');
+    btn.addEventListener('click', () => {
+      const form = $('#deliveryForm') || $('#pickupForm');
       if (!form) return;
 
-      let ok = true;
-      $$('input[required], select[required]', form).forEach(el => {
-        const valid = !!el.value;
-        el.style.borderColor = valid ? '' : '#ef4444';
-        if (!valid) ok = false;
+      const invalids = [];
+      Array.from(form.elements).forEach(el => {
+        if (el.hasAttribute('required') && !el.disabled && !el.value) {
+          el.style.borderColor = '#ef4444';
+          invalids.push(el);
+        } else if (el.style.borderColor === 'rgb(239, 68, 68)') {
+          el.style.borderColor = '';
+        }
       });
 
-      if (!ok) {
+      if (invalids.length) {
         openModal('#invalidModal');
         return;
       }
+
       form.submit();
     });
   }
 
+  // ===== Clear Button =====
   function wireClear() {
-    const clear = $('#btnClear');
-    if (!clear) return;
-    clear.addEventListener('click', () => {
-      const form = clear.closest('form');
-      form && form.reset();
-      $$('input,select', form).forEach(el => el.style.borderColor = '');
+    const btn = $('#btnClear');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const form = $('#deliveryForm') || $('#pickupForm');
+      if (form) form.reset();
+      $$('input,select').forEach(el => el.style.borderColor = '');
     });
   }
 
-  // ===== PAYMENT WIZARD =====
+  // ===== Payment Workflow =====
   function wirePayment() {
-    const methodInput = $('#paymentMethod');
-    const depositRate = $('#depositRate');
-
     let ORDER_ID = null;
     let ORDER_CODE = null;
     let AMOUNT_DUE = 0;
 
-    // Open payment modal
-    const inlineBtn = $('#inlineBuyBtn');
-    inlineBtn?.addEventListener('click', () => {
+    const methodInput = $('#paymentMethod');
+    const depositRate = $('#depositRate');
+
+    // Step 1: Open payment modal
+    $('#inlineBuyBtn')?.addEventListener('click', () => {
       openModal('#rtModal');
       showStep('#methodModal');
     });
 
-    // Step 1: Payment Method Selection
+    // Step 2: Select Payment Method
     $$('.pay-chip[data-pay]').forEach(chip => {
       chip.addEventListener('click', () => {
         $$('.pay-chip[data-pay]').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        if (methodInput) methodInput.value = chip.dataset.pay || '';
+        if (methodInput) methodInput.value = chip.dataset.pay;
         $('#btnChooseDeposit')?.removeAttribute('disabled');
       });
     });
 
-    // Go to deposit selection
     $('#btnChooseDeposit')?.addEventListener('click', () => {
       showStep('#depositModal');
     });
 
-    // Step 2: Deposit Amount Selection
-    $$('#depositModal .pay-chip[data-dep]').forEach(chip => {
+    // Select Deposit Rate
+    $$('.pay-chip[data-dep]').forEach(chip => {
       chip.addEventListener('click', () => {
-        $$('#depositModal .pay-chip[data-dep]').forEach(c => c.classList.remove('active'));
+        $$('.pay-chip[data-dep]').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        depositRate && (depositRate.value = chip.dataset.dep || '');
+        if (depositRate) depositRate.value = chip.dataset.dep;
         if (methodInput?.value && depositRate?.value) {
           $('#btnPayNow')?.removeAttribute('disabled');
         }
@@ -352,14 +354,12 @@
         }
 
         try {
-          // ⚠️ Force absolute URL para walang base-path confusion
           const url = `${location.origin}/RADS-TOOLING/backend/api/order_create.php`;
 
           const r1 = await fetch(url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              // helps some guards distinguish ajax
               'X-Requested-With': 'XMLHttpRequest',
               'Accept': 'application/json'
             },
@@ -396,7 +396,7 @@
             return;
           }
           ORDER_ID = id;
-          ORDER_CODE = code; // ok lang kung null
+          ORDER_CODE = code;
 
         } catch (err) {
           console.error('[order_create] fetch error:', err);
@@ -423,7 +423,6 @@
         if (!r2.ok) { alert(`HTTP ${r2.status}: ${raw2.slice(0, 300)}`); return; }
         const result2 = JSON.parse(raw2);
 
-
         if (!result2 || !result2.success) {
           alert(result2?.message || 'Could not set payment terms.');
           return;
@@ -434,30 +433,53 @@
         return;
       }
 
-      // 3) Fetch QR code
+      // 3) Fetch QR code from content_mgmt API
       try {
-        const url3 = `${location.origin}/RADS-TOOLING/backend/api/payment_qr.php?method=${encodeURIComponent(method)}`;
+        const url3 = `${location.origin}/RADS-TOOLING/backend/api/content_mgmt.php`;
         const r3 = await fetch(url3, {
+          method: 'POST',
           headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
           },
-          credentials: 'same-origin'
+          credentials: 'same-origin',
+          body: 'action=get_payment_qr'
         });
         const raw3 = await r3.text();
-        console.debug('[payment_qr]', r3.status, raw3);
-        let result3; try { result3 = JSON.parse(raw3); } catch { result3 = null; }
-
+        console.debug('[get_payment_qr]', r3.status, raw3);
+        let result3; 
+        try { result3 = JSON.parse(raw3); } catch { result3 = null; }
 
         const qrBox = $('#qrBox');
         if (qrBox) {
-          if (result3 && result3.success && result3.data && result3.data.qr_url) {
-            qrBox.innerHTML = `<img src="${result3.data.qr_url}" alt="${method.toUpperCase()} QR" style="max-width:100%;height:200px;object-fit:contain">`;
+          if (result3 && result3.success && result3.data) {
+            const qrData = method === 'gcash' ? result3.data.gcash : result3.data.bpi;
+            
+            if (qrData && qrData.image_path) {
+              const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
+              console.log(`✅ Displaying ${method.toUpperCase()} QR:`, imageUrl);
+              
+              // 🔥 NEW: Create QR with zoom capability
+              qrBox.innerHTML = `
+                <img 
+                  src="${imageUrl}?v=${Date.now()}" 
+                  alt="${method.toUpperCase()} QR" 
+                  style="width:100%;height:100%;object-fit:contain;cursor:pointer;padding:8px;" 
+                  onclick="window.openQrZoom('${imageUrl}')"
+                  onerror="this.parentElement.innerHTML='<span style=\\'color:#e74c3c;\\'>❌ Failed to load QR image</span>'"
+                >`;
+            } else {
+              console.warn(`⚠️ No ${method.toUpperCase()} QR found in database`);
+              qrBox.innerHTML = '<span style="color:#999">No QR configured.</span>';
+            }
           } else {
+            console.error('❌ Invalid API response:', result3);
             qrBox.innerHTML = '<span style="color:#999">No QR configured.</span>';
           }
         }
       } catch (err) {
+        console.error('💥 QR fetch error:', err);
         const qrBox = $('#qrBox');
         if (qrBox) qrBox.innerHTML = '<span style="color:#999">Failed to load QR</span>';
       }
@@ -529,6 +551,50 @@
     });
   }
 
+  // 🔥 NEW: QR Zoom Functions
+  window.openQrZoom = function(qrUrl) {
+    const modal = $('#qrZoomModal');
+    const img = $('#zoomQrImage');
+    
+    if (!modal || !img) {
+      console.warn('⚠️ QR Zoom modal elements not found');
+      return;
+    }
+    
+    img.src = qrUrl;
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    
+    // Close on backdrop click
+    const handleBackdropClick = (e) => {
+      if (e.target === modal) {
+        window.closeQrZoom();
+      }
+    };
+    modal.addEventListener('click', handleBackdropClick);
+    
+    console.log('🔍 QR Zoom opened:', qrUrl);
+  };
+
+  window.closeQrZoom = function() {
+    const modal = $('#qrZoomModal');
+    if (!modal) return;
+    
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    console.log('✅ QR Zoom closed');
+  };
+
+  // ESC key to close zoom
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const zoomModal = $('#qrZoomModal');
+      if (zoomModal && zoomModal.classList.contains('show')) {
+        window.closeQrZoom();
+      }
+    }
+  });
+
   // ===== Initialize Everything =====
   document.addEventListener('DOMContentLoaded', () => {
     wirePhone();
@@ -536,6 +602,7 @@
     wireContinue();
     wireClear();
     wirePayment();
+    
+    console.log('✅ Checkout.js loaded with QR Zoom feature');
   });
 })();
-
