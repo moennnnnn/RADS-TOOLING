@@ -33,10 +33,8 @@
 
     const MATERIAL_MAP = {
         body: 'Material.009',
-        door: 'Metal branco',
-        interior: 'Material.003',
-        //interior:'Material.002',
-        handle: 'Material.010'
+        door: 'Material_Door',
+        interior: 'Material_Interior'
     };
 
     // --- precision helpers ---
@@ -82,6 +80,12 @@
 
         if (stepPrev) stepPrev.disabled = stepIndex === 0;
         if (stepNext) stepNext.disabled = stepIndex === STEPS.length - 1;
+
+        if (stepIndex === 1) { // Step 2 - Textures
+            setTimeout(() => highlightPart('door', 1500), 300);
+        } else if (stepIndex === 2) { // Step 3 - Colors
+            setTimeout(() => highlightPart('door', 1500), 300);
+        }
     }
     stepPrev?.addEventListener('click', () => { if (stepIndex > 0) { stepIndex--; syncStepUI(); } });
     stepNext?.addEventListener('click', () => { if (stepIndex < STEPS.length - 1) { stepIndex++; syncStepUI(); } });
@@ -101,7 +105,6 @@
 
         const mv = getMV();
         window.mv = mv;
-        await detectModelNodes(mv);
 
         // ====== START: mesh-prefix -> dynamic material mapping (PASTE AFTER `await detectModelNodes(mv);`) ======
         /**
@@ -109,10 +112,9 @@
          * Prefix matching is case-insensitive and checks the start of node.name
          */
         const MESH_PREFIXES = {
-            body: 'body',
-            door: 'door',
-            interior: 'interior',
-            handle: 'handle'
+            body: 'Material.009',
+            door: 'Material_Door',
+            interior: 'Material_Interior',
         };
 
         /**
@@ -446,13 +448,34 @@
                         door2.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
                     }
                 }
+
+                // ADD THIS: Try THREE.js direct access as last resort
+                console.log('⚠️ Trying THREE.js direct access...');
+                const threeMat = getThreeMaterial(mv, materialName);
+                if (threeMat) {
+                    const loader = new THREE.TextureLoader();
+                    loader.load(texture.image_url, (tex) => {
+                        threeMat.map = tex;
+                        threeMat.color.setRGB(1, 1, 1);
+                        threeMat.needsUpdate = true;
+                        console.log(`✅ Applied via THREE.js to "${materialName}"`);
+
+                        chosen[partName] = {
+                            mode: 'texture',
+                            id: texture.id,
+                            price: parseFloat(texture.base_price) || 0
+                        };
+                        refreshPrice();
+                    });
+                }
+
                 return;
             }
 
-            // Create and apply texture
+            // Create and apply texture (original code)
             const tex = await mv.createTexture(texture.image_url);
             material.pbrMetallicRoughness.baseColorTexture.setTexture(tex);
-            material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]); // Reset color to white
+            material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
 
             // Store selection
             chosen[partName] = {
@@ -478,7 +501,11 @@
         environment-image="neutral" shadow-intensity="1" exposure="1">
       </model-viewer>`;
     }
-    function getMV() { return document.getElementById('mv'); }
+
+    function getMV() {
+        return document.getElementById('mv');
+    }
+
     function waitForModelViewer() {
         return new Promise(res => {
             const mv = getMV();
@@ -487,10 +514,32 @@
             mv.addEventListener('load', () => res(mv), { once: true });
         });
     }
+
     function getMaterial(mv, name) {
         const mats = mv?.model?.materials || [];
         return mats.find(m => m.name === name) || null;
     }
+
+    function getThreeMaterial(mv, materialName) {
+        if (!mv?.model?.scene) return null;
+
+        let foundMat = null;
+
+        mv.model.scene.traverse((child) => {
+            if (child.isMesh && child.material) {
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+                materials.forEach((mat) => {
+                    if (mat.name === materialName) {
+                        foundMat = mat;
+                    }
+                });
+            }
+        });
+
+        return foundMat;
+    }
+
     function highlightPart(partKey) {
         const mv = getMV();
         if (!mv?.model?.materials) return;
@@ -514,6 +563,19 @@
         } else {
             const mat = getMaterial(mv, materialName);
             if (mat) mat.setEmissiveFactor([0.1, 0.3, 0.6]);
+        }
+
+        // ADD THIS FALLBACK (if model-viewer API failed, use THREE.js directly)
+        if (!mv.model.materials || mv.model.materials.length === 0) {
+            console.log('⚠️ Fallback: Using THREE.js direct access');
+            const threeMat = getThreeMaterial(mv, materialName);
+            if (threeMat && threeMat.emissive) {
+                if (!threeMat._origEmissive) {
+                    threeMat._origEmissive = threeMat.emissive.clone();
+                }
+                threeMat.emissive.setRGB(0.1, 0.3, 0.6);
+                threeMat.needsUpdate = true;
+            }
         }
     }
 

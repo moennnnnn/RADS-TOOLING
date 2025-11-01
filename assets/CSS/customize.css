@@ -491,3 +491,8 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
+
+.texture-option.active {
+    border: 3px solid #007bff !important;
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
+}

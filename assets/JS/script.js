@@ -826,8 +826,6 @@ async function viewAdminOrderDetails(orderId) {
                                 <h3 style="color: var(--brand); margin-bottom: 0.5rem;">Order Information</h3>
                                 <p><strong>Order Date:</strong> ${formatDate(order.order_date)}</p>
                                 <p><strong>Delivery Mode:</strong> ${escapeHtml(order.mode)}</p>
-                                <p><strong>Status:</strong> <span class="badge badge-${getStatusBadgeClass(order.status)}">${escapeHtml(order.status)}</span></p>
-                                <p><strong>Payment Status:</strong> <span class="badge badge-${getPaymentBadgeClass(order.payment_status)}">${escapeHtml(order.payment_status)}</span></p>
                             </div>
                         </div>
 
@@ -1687,22 +1685,30 @@ document.addEventListener('click', (e) => {
 
     // View order handler
     document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-view');
-        if (!btn) return;
-        e.preventDefault();
+  const btn = e.target.closest('.btn-view');
+  if (!btn) return;
+  e.preventDefault();
 
-        const row = btn.closest('tr');
-        if (!row) return;
+  const row = btn.closest('tr');
+  if (!row) return;
 
-        document.getElementById('vo-code').textContent = row.children[0]?.textContent?.trim() || '—';
-        document.getElementById('vo-customer').textContent = row.children[2]?.textContent?.trim() || '—';
-        document.getElementById('vo-date').textContent = row.children[3]?.textContent?.trim() || '—';
-        document.getElementById('vo-total').textContent = row.children[4]?.textContent?.trim() || '₱0';
-        document.getElementById('vo-status').textContent = row.children[6]?.textContent?.trim() || '—';
-        document.getElementById('vo-payment').textContent = row.children[5]?.textContent?.trim() || '—';
+  // safe helper
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value;
+  };
 
-        openModal('viewOrderModal');
-    });
+  // use optional chaining to read children text safely
+  setText('vo-code', row.children[0]?.textContent?.trim() || '—');
+  setText('vo-customer', row.children[2]?.textContent?.trim() || '—');
+  setText('vo-date', row.children[3]?.textContent?.trim() || '—');
+  setText('vo-total', row.children[4]?.textContent?.trim() || '₱0');
+  setText('vo-status', row.children[6]?.textContent?.trim() || '—');
+  setText('vo-payment', row.children[5]?.textContent?.trim() || '—');
+
+  openModal('viewOrderModal');
+});
 }
 
 function setupLogout() {
@@ -2156,143 +2162,280 @@ function displayPaymentVerifications(verifications) {
 }
 
 async function viewPaymentDetails(verificationId) {
+  // --- helpers (local) ---
+  const money = v => '₱' + (Number(v || 0)).toLocaleString();
+  const pct = v => (v === null || v === undefined || v === '') ? 'N/A' : (Number(v) + '%');
+  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const text = v => (v === null || v === undefined || v === '') ? 'N/A' : escapeHtml(String(v));
+  const formatDate = d => {
     try {
-        const response = await fetch(`/RADS-TOOLING/backend/api/payment_verification.php?action=details&id=${verificationId}`, {
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        });
+      const dt = new Date(d);
+      if (Number.isNaN(dt.getTime())) return text(d);
+      return dt.toLocaleString();
+    } catch (e) { return text(d); }
+  };
 
-        const result = await response.json();
+  try {
+    // fetch
+    const response = await fetch(`/RADS-TOOLING/backend/api/payment_verification.php?action=details&id=${verificationId}`, {
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    });
 
-        if (!result.success) {
-            throw new Error(result.message || 'Failed to load payment details');
-        }
-
-        const payment = result.data;
-
-        const content = document.getElementById('paymentDetailsContent');
-        content.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div>
-                    <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Order Information</h3>
-                    <p><strong>Order Code:</strong> ${escapeHtml(payment.order_code)}</p>
-                    <p><strong>Order Date:</strong> ${formatDate(payment.order_date)}</p>
-                    <p><strong>Total Amount:</strong> ₱${parseFloat(payment.total_amount).toLocaleString()}</p>
-                    <p><strong>Items:</strong> ${escapeHtml(payment.items || 'N/A')}</p>
-                    <p><strong>Delivery Mode:</strong> ${escapeHtml(payment.delivery_mode)}</p>
-                </div>
-
-                <div>
-                    <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Customer Information</h3>
-                    <p><strong>Name:</strong> ${escapeHtml(payment.customer_name)}</p>
-                    <p><strong>Email:</strong> ${escapeHtml(payment.customer_email)}</p>
-                    <p><strong>Phone:</strong> ${escapeHtml(payment.customer_phone || 'N/A')}</p>
-                    ${payment.delivery_mode === 'delivery' ? `
-                        <p><strong>Address:</strong> ${escapeHtml(payment.street || '')}, ${escapeHtml(payment.barangay || '')}, ${escapeHtml(payment.city || '')}, ${escapeHtml(payment.province || '')}</p>
-                    ` : ''}
-                </div>
-            </div>
-
-            <div style="background: #f7fafc; padding: 1rem; border-radius: 8px;">
-                <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Payment Details</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    <p><strong>Payment Method:</strong> ${escapeHtml(payment.method.toUpperCase())}</p>
-                    <p><strong>Account Name:</strong> ${escapeHtml(payment.account_name)}</p>
-                    <p><strong>Account Number:</strong> ${escapeHtml(payment.account_number || 'N/A')}</p>
-                    <p><strong>Reference Number:</strong> ${escapeHtml(payment.reference_number)}</p>
-                    <p><strong>Amount Paid:</strong> ₱${parseFloat(payment.amount_reported).toLocaleString()}</p>
-                    <p><strong>Deposit Rate:</strong> ${payment.deposit_rate}%</p>
-                    <p><strong>Amount Due:</strong> ₱${parseFloat(payment.amount_due).toLocaleString()}</p>
-                    <p><strong>Status:</strong> <span class="badge badge-${payment.status === 'PENDING' ? 'pending' : payment.status === 'APPROVED' ? 'completed' : 'cancelled'}">${payment.status}</span></p>
-                </div>
-            </div>
-
-            ${payment.screenshot_path ? `
-                <div>
-                    <h3 style="margin-bottom: 0.5rem; color: var(--brand);">Payment Proof</h3>
-                    <img src="/RADS-TOOLING/${escapeHtml(payment.screenshot_path)}" 
-                         alt="Payment Screenshot" 
-                         style="max-width: 100%; border-radius: 8px; border: 1px solid #e3edfb; cursor: pointer;"
-                         onclick="window.open(this.src, '_blank')" />
-                </div>
-            ` : ''}
-        `;
-
-        // Store verification ID for approve/reject actions
-        document.getElementById('btnApprovePayment').dataset.verificationId = verificationId;
-        document.getElementById('btnRejectPayment').dataset.verificationId = verificationId;
-
-        // Hide approve/reject buttons if already processed
-        if (payment.status !== 'PENDING') {
-            document.getElementById('btnApprovePayment').style.display = 'none';
-            document.getElementById('btnRejectPayment').style.display = 'none';
-        } else {
-            document.getElementById('btnApprovePayment').style.display = 'inline-block';
-            document.getElementById('btnRejectPayment').style.display = 'inline-block';
-        }
-
-        openModal('paymentDetailsModal');
-
-    } catch (error) {
-        console.error('Error viewing payment details:', error);
-        showNotification('Failed to load payment details: ' + error.message, 'error');
+    // read text first so we can show meaningful errors
+    const raw = await response.text();
+    if (!response.ok) {
+      let bodyMsg = raw;
+      try { const parsed = JSON.parse(raw); bodyMsg = parsed.message || JSON.stringify(parsed); } catch (e) {}
+      throw new Error(`Server returned ${response.status}: ${bodyMsg}`);
     }
+
+    let result;
+    try { result = JSON.parse(raw); } catch (e) { throw new Error('Invalid JSON response from server'); }
+    if (!result.success) throw new Error(result.message || 'Failed to load payment details');
+
+    const payment = result.data || {};
+    const content = document.getElementById('paymentDetailsContent');
+    if (!content) throw new Error('Modal content container not found');
+
+    // --- normalize proof src (make absolute if relative) ---
+    let proofSrc = payment.screenshot_path || payment.proof_path || payment.image || '';
+    if (proofSrc) {
+      if (!/^https?:\/\//i.test(proofSrc) && !proofSrc.startsWith('/')) {
+        // prefix with project base - change '/RADS-TOOLING/' if different
+        proofSrc = window.location.origin + '/RADS-TOOLING/' + proofSrc.replace(/^(\.\/|\/)+/, '');
+      } else if (proofSrc.startsWith('/')) {
+        proofSrc = window.location.origin + proofSrc;
+      }
+    }
+
+    // --- build full address HTML (ordered, labeled, de-duplicated) ---
+    const addressCandidates = [
+      // order shipping variants (common aliases)
+      payment.order_shipping_street, payment.order_shipping_barangay, payment.order_shipping_city, payment.order_shipping_province, payment.order_shipping_postal_code,
+      payment.shipping_street, payment.shipping_barangay, payment.shipping_city, payment.shipping_province, payment.shipping_postal_code,
+
+      // order address common
+      payment.order_street, payment.order_barangay, payment.order_city, payment.order_province, payment.order_postal_code,
+      payment.street, payment.barangay, payment.city, payment.province, payment.postal_code, payment.zip,
+
+      // customer address fallback fields
+      payment.customer_street, payment.customer_barangay, payment.customer_city, payment.customer_province, payment.customer_postal_code,
+      payment.customer_address, payment.address
+    ];
+
+    // Friendly labeled mapping when possible (key names may not be present in all responses)
+    // We'll create labeled lines for the first occurrences of street/barangay/city/province/postal in that order
+    const labelOrder = [
+      { keys: ['order_shipping_street','shipping_street','order_street','street','customer_street'], label: 'Street' },
+      { keys: ['order_shipping_barangay','shipping_barangay','order_barangay','barangay','customer_barangay'], label: 'Barangay' },
+      { keys: ['order_shipping_city','shipping_city','order_city','city','customer_city'], label: 'City' },
+      { keys: ['order_shipping_province','shipping_province','order_province','province','customer_province'], label: 'Province' },
+      { keys: ['order_shipping_postal_code','shipping_postal_code','order_postal_code','postal_code','zip','customer_postal_code'], label: 'Postal' }
+    ];
+
+    // Build lines: prefer specific fields if present in payment object; also collect any combined address fallback
+    const seen = new Set();
+    const addrLines = [];
+
+    // add labeled lines by scanning labelOrder keys for the first non-empty value
+    for (const item of labelOrder) {
+      for (const k of item.keys) {
+        if (Object.prototype.hasOwnProperty.call(payment, k) && payment[k]) {
+          const val = String(payment[k]).trim();
+          if (val && !seen.has(val)) {
+            seen.add(val);
+            addrLines.push(`${item.label}: ${escapeHtml(val)}`);
+            break;
+          }
+        }
+      }
+    }
+
+    // also include any combined address string if present and not duplicate
+    const combinedCandidates = [payment.address, payment.customer_address];
+    for (const c of combinedCandidates) {
+      if (c) {
+        const s = String(c).trim();
+        if (s && !seen.has(s)) {
+          seen.add(s);
+          addrLines.push(escapeHtml(s)); // no label - combined line
+        }
+      }
+    }
+
+    const addressHtml = addrLines.length ? addrLines.join('<br>') : 'N/A';
+
+    // --- build image html with onerror fallback ---
+    const imgHtml = proofSrc
+      ? `<img id="pv-proof-img" src="${escapeHtml(proofSrc)}" alt="payment proof" style="max-width:100%;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08);" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<div style=\\'color:#6b7280;\\'>Payment proof not available</div>');">`
+      : `<div style="color:#6b7280;">Payment proof not available</div>`;
+
+    // --- render content (safe; addressHtml already escaped) ---
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <h3 style="margin-bottom:.5rem;color:var(--brand);">Order Information</h3>
+          <p><strong>Order Code:</strong> ${text(payment.order_code || payment.order_code)}</p>
+          <p><strong>Order Date:</strong> ${payment.order_date ? formatDate(payment.order_date) : 'N/A'}</p>
+          <p><strong>Total Amount:</strong> ${money(payment.total_amount)}</p>
+          <p><strong>Items:</strong> ${escapeHtml(payment.items || payment.order_name || 'N/A')}</p>
+          <p><strong>Delivery Mode:</strong> ${escapeHtml(payment.delivery_mode || 'N/A')}</p>
+        </div>
+        <div>
+          <h3 style="margin-bottom:.5rem;color:var(--brand);">Customer Information</h3>
+          <p><strong>Name:</strong> ${text(payment.customer_name || payment.full_name || payment.name)}</p>
+          <p><strong>Email:</strong> ${text(payment.customer_email || payment.email)}</p>
+          <p><strong>Phone:</strong> ${text(payment.customer_phone || payment.phone)}</p>
+          <p><strong>Address:</strong><br>${addressHtml}</p>
+        </div>
+      </div>
+
+      <div style="background:#f7fafc;padding:1rem;border-radius:8px;margin-top:1rem;">
+        <h4 style="margin:0 0 .5rem 0;color:var(--brand);">Payment Details</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+          <p><strong>Payment Method:</strong> ${text((payment.method||'').toUpperCase())}</p>
+          <p><strong>Account Name:</strong> ${text(payment.account_name)}</p>
+          <p><strong>Account Number:</strong> ${text(payment.account_number)}</p>
+          <p><strong>Reference Number:</strong> ${text(payment.reference_number)}</p>
+          <p><strong>Amount Paid:</strong> ${money(payment.amount_reported || payment.amount_paid)}</p>
+          <p><strong>Deposit Rate:</strong> ${pct(payment.deposit_rate)}</p>
+          <p><strong>Amount Due:</strong> ${money(payment.amount_due ?? (payment.total_amount - (payment.amount_paid || 0)))}</p>
+          <p><strong>Status:</strong> <span class="badge badge-${(payment.status||'PENDING').toLowerCase()}">${escapeHtml(payment.status || 'PENDING')}</span></p>
+        </div>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <h4 style="margin:0 0 .5rem 0;color:var(--brand);">Payment Proof</h4>
+        ${imgHtml}
+      </div>
+    `;
+
+    // add click-to-open for proof image if present
+    setTimeout(() => {
+      const proofImg = document.getElementById('pv-proof-img');
+      if (proofImg) {
+        proofImg.style.cursor = 'zoom-in';
+        proofImg.addEventListener('click', () => {
+          try { window.open(proofImg.src, '_blank'); } catch (e) {}
+        });
+      }
+    }, 50);
+
+    // --- approve/reject button wiring + labels ---
+    const approveBtn = document.getElementById('btnApprovePayment');
+    const rejectBtn = document.getElementById('btnRejectPayment');
+    if (approveBtn) approveBtn.dataset.verificationId = verificationId;
+    if (rejectBtn) rejectBtn.dataset.verificationId = verificationId;
+
+    const status = (payment.status || '').toUpperCase();
+    if (approveBtn && rejectBtn) {
+      if (status === 'APPROVED') {
+        approveBtn.textContent = 'Re-approve';
+        rejectBtn.textContent = 'Reject (change)';
+      } else if (status === 'REJECTED') {
+        approveBtn.textContent = 'Approve (change)';
+        rejectBtn.textContent = 'Re-reject';
+      } else {
+        approveBtn.textContent = 'Approve';
+        rejectBtn.textContent = 'Reject';
+      }
+      approveBtn.style.display = 'inline-block';
+      rejectBtn.style.display = 'inline-block';
+      if (status === 'APPROVED') approveBtn.classList.add('muted'); else approveBtn.classList.remove('muted');
+      if (status === 'REJECTED') rejectBtn.classList.add('muted'); else rejectBtn.classList.remove('muted');
+    }
+
+    openModal('paymentDetailsModal');
+  } catch (error) {
+    console.error('Error viewing payment details:', error);
+    showNotification('Failed to load payment details: ' + (error.message || error), 'error');
+  }
 }
 
+
+
+// Approve payment (robust fetch + error handling)
 async function approvePayment(verificationId) {
-    try {
-        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=approve', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ id: verificationId })
-        });
+  try {
+    const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=approve', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ id: verificationId })
+    });
 
-        const result = await response.json();
-
-        if (result.success) {
-            showNotification('Payment approved successfully!', 'success');
-            closeModal('paymentDetailsModal');
-            loadPaymentVerifications();
-        } else {
-            showNotification(result.message || 'Failed to approve payment', 'error');
-        }
-    } catch (error) {
-        console.error('Error approving payment:', error);
-        showNotification('Failed to approve payment', 'error');
+    const text = await response.text(); // always read raw text first
+    if (!response.ok) {
+      // show raw server message when status != 2xx (helps debug 500)
+      throw new Error(`Server returned ${response.status}: ${text || response.statusText}`);
     }
+
+    // try parse JSON, else throw
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Invalid JSON response from server: ' + text.slice(0, 300));
+    }
+
+    if (result.success) {
+      showNotification(result.message || 'Payment approved successfully!', 'success');
+      closeModal('paymentDetailsModal');
+      loadPaymentVerifications();
+    } else {
+      showNotification(result.message || 'Failed to approve payment', 'error');
+    }
+
+  } catch (error) {
+    console.error('Error approving payment:', error);
+    showNotification('Failed to approve payment: ' + error.message, 'error');
+  }
 }
 
+// Reject payment (with reason) — robust fetch + error handling
 async function rejectPayment(verificationId, reason) {
-    try {
-        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=reject', {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ id: verificationId, reason: reason })
-        });
+  try {
+    const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=reject', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ id: verificationId, reason })
+    });
 
-        const result = await response.json();
+    const text = await response.text();
 
-        if (result.success) {
-            showNotification('Payment rejected', 'success');
-            closeModal('rejectReasonModal');
-            closeModal('paymentDetailsModal');
-            loadPaymentVerifications();
-        } else {
-            showNotification(result.message || 'Failed to reject payment', 'error');
-        }
-    } catch (error) {
-        console.error('Error rejecting payment:', error);
-        showNotification('Failed to reject payment', 'error');
+    if (!response.ok) {
+      // Throw with server body so catch displays meaningful message
+      throw new Error(`Server returned ${response.status}: ${text || response.statusText}`);
     }
+
+    let result;
+    try { result = JSON.parse(text); }
+    catch (e) { throw new Error('Invalid JSON response from server: ' + text.slice(0, 300)); }
+
+    if (result.success) {
+      showNotification(result.message || 'Payment rejected', 'success');
+      closeModal('rejectReasonModal');
+      closeModal('paymentDetailsModal');
+      loadPaymentVerifications();
+    } else {
+      showNotification(result.message || 'Failed to reject payment', 'error');
+    }
+
+  } catch (error) {
+    console.error('Error rejecting payment:', error);
+    // show the actual error message (includes server body when non-2xx)
+    showNotification('Failed to reject payment: ' + error.message, 'error');
+  }
 }
+
 
 // Event listeners for payment actions
 document.getElementById('btnApprovePayment')?.addEventListener('click', function () {

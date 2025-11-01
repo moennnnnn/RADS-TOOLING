@@ -1,2 +1,4 @@
 [2025-10-30 00:42:16] DB error on payment_submit: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'user_id' in 'field list'
 [2025-10-30 02:09:09] Notification insert skipped or failed: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'rads_tooling.admin_notifications' doesn't exist
+[2025-10-30 10:04:57] Notification insert skipped or failed: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'rads_tooling.admin_notifications' doesn't exist
+[2025-10-30 10:07:20] Notification insert skipped or failed: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'rads_tooling.admin_notifications' doesn't exist

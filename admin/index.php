@@ -947,7 +947,7 @@ if (!$isLoggedIn) {
             </div>
         </div>
 
-        <!-- View Order Modal -->
+        <!-- View Order Modal 
         <div class="modal" id="viewOrderModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -962,7 +962,7 @@ if (!$isLoggedIn) {
                     <p>Payment: <span id="vo-payment">—</span></p>
                 </div>
             </div>
-        </div>
+        </div>-->
 
         <!-- Confirm Modal -->
         <div class="modal" id="confirmModal">

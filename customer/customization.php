@@ -104,7 +104,7 @@ $avatarHtml   = $img
                             <div class="dropdown-divider"></div>
                             <a href="/RADS-TOOLING/customer/profile.php" class="dropdown-item"><span class="material-symbols-rounded">person</span><span>My Profile</span></a>
                             <a href="/RADS-TOOLING/customer/orders.php" class="dropdown-item"><span class="material-symbols-rounded">receipt_long</span><span>My Orders</span></a>
-                
+
                             <div class="dropdown-divider"></div>
                             <button onclick="showLogoutModal()" class="dropdown-item dropdown-logout" type="button">
                                 <span class="material-symbols-rounded">logout</span><span>Logout</span>
@@ -245,55 +245,55 @@ $avatarHtml   = $img
 
 
         <!-- CHAT WIDGET -->
-    <button id="rtChatBtn" class="rt-chat-btn">
-        <span class="material-symbols-rounded">chat</span>
-        Need Help?
-    </button>
+        <button id="rtChatBtn" class="rt-chat-btn">
+            <span class="material-symbols-rounded">chat</span>
+            Need Help?
+        </button>
 
-    <div id="rtChatPopup" class="rt-chat-popup">
-        <div class="rt-chat-header">
-            <span>Rads Tooling - Chat Support</span>
-            <button id="rtClearChat" class="rt-clear-btn" type="button">
-                <span class="material-symbols-rounded">delete</span>
-            </button>
-        </div>
-        <div class="rt-faq-container" id="rtFaqContainer">
-            <div class="rt-faq-toggle" id="rtFaqToggle">
-                <span>Quick FAQs</span>
-                <span class="rt-faq-icon">▼</span>
+        <div id="rtChatPopup" class="rt-chat-popup">
+            <div class="rt-chat-header">
+                <span>Rads Tooling - Chat Support</span>
+                <button id="rtClearChat" class="rt-clear-btn" type="button">
+                    <span class="material-symbols-rounded">delete</span>
+                </button>
             </div>
-            <div class="rt-faq-dropdown" id="rtFaqDropdown">
-                <div style="padding: 12px; color: #999; font-size: 13px;">Loading FAQs...</div>
-            </div>
-        </div>
-        <div id="rtChatMessages" class="rt-chat-messages"></div>
-        <div class="rt-chat-input">
-            <input id="rtChatInput" type="text" placeholder="Type your message…" />
-            <button id="rtChatSend" class="rt-chat-send">
-                <span class="material-symbols-rounded">send</span>
-            </button>
-        </div>
-    </div>
-
-       <!-- LOGOUT MODAL -->
-    <div class="modal" id="logoutModal" style="display:none;">
-        <div class="modal-content modal-small">
-            <button class="modal-close" onclick="closeLogoutModal()" type="button">
-                <span class="material-symbols-rounded">close</span>
-            </button>
-            <div class="modal-icon-wrapper">
-                <div class="modal-icon warning">
-                    <span class="material-symbols-rounded">logout</span>
+            <div class="rt-faq-container" id="rtFaqContainer">
+                <div class="rt-faq-toggle" id="rtFaqToggle">
+                    <span>Quick FAQs</span>
+                    <span class="rt-faq-icon">▼</span>
+                </div>
+                <div class="rt-faq-dropdown" id="rtFaqDropdown">
+                    <div style="padding: 12px; color: #999; font-size: 13px;">Loading FAQs...</div>
                 </div>
             </div>
-            <h2 class="modal-title">Confirm Logout</h2>
-            <p class="modal-message">Are you sure you want to logout?</p>
-            <div class="modal-actions">
-                <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
-                <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
+            <div id="rtChatMessages" class="rt-chat-messages"></div>
+            <div class="rt-chat-input">
+                <input id="rtChatInput" type="text" placeholder="Type your message…" />
+                <button id="rtChatSend" class="rt-chat-send">
+                    <span class="material-symbols-rounded">send</span>
+                </button>
             </div>
         </div>
-    </div>
+
+        <!-- LOGOUT MODAL -->
+        <div class="modal" id="logoutModal" style="display:none;">
+            <div class="modal-content modal-small">
+                <button class="modal-close" onclick="closeLogoutModal()" type="button">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+                <div class="modal-icon-wrapper">
+                    <div class="modal-icon warning">
+                        <span class="material-symbols-rounded">logout</span>
+                    </div>
+                </div>
+                <h2 class="modal-title">Confirm Logout</h2>
+                <p class="modal-message">Are you sure you want to logout?</p>
+                <div class="modal-actions">
+                    <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
+                    <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
+                </div>
+            </div>
+        </div>
 
     </div><!-- /.page-wrapper -->
 
@@ -303,7 +303,7 @@ $avatarHtml   = $img
     </script>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <script src="/RADS-TOOLING/assets/JS/customize.js" defer></script>
-<script>
+    <script>
         (function() {
             'use strict';
 

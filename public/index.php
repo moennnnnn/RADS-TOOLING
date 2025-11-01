@@ -127,12 +127,12 @@ if ($isCustomer) {
                 <div id="hero3d" style="width:100%;max-width:580px;height:460px;border-radius:16px;overflow:hidden;background:#f8fafc"></div>
                 <script type="importmap">
                   {
-                  "imports": {
-                      "three": "/RADS-TOOLING/assets/vendor_js/three/three.module.js",
-                      "three/addons/": "/RADS-TOOLING/assets/vendor_js/three/"
-                  }
-                }
-                </script>
+        "imports": {
+          "three": "/RADS-TOOLING/assets/vendor_js/three/three.module.js",
+          "three/addons/": "/RADS-TOOLING/assets/vendor_js/three/"
+        }
+      }
+    </script>
                 <script type="module">
                   import * as THREE from 'three';
                   import {
@@ -159,10 +159,11 @@ if ($isCustomer) {
                   camera.position.set(3, 2, 3);
 
                   const controls = new OrbitControls(camera, renderer.domElement);
-                  controls.enableZoom = false;
-                  controls.enablePan = false;
-                  controls.autoRotate = true;
-                  controls.autoRotateSpeed = 0.6;
+                  controls.enableZoom = false; // ✅ Disable zoom
+                  controls.enablePan = false; // ✅ Disable pan
+                  controls.enableRotate = false; // ✅ ADD THIS LINE - Disable manual rotation!
+                  controls.autoRotate = true; // ✅ Keep auto-rotation
+                  controls.autoRotateSpeed = 0.6; // ✅ Turntable speed
 
                   scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.9));
                   const dir = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -193,7 +194,7 @@ if ($isCustomer) {
 
                   function resize() {
                     const w = wrap.clientWidth,
-                      h = wrap.clientHeight || 460; // guard
+                      h = wrap.clientHeight || 460;
                     renderer.setSize(w, h, false);
                     camera.aspect = w / h;
                     camera.updateProjectionMatrix();

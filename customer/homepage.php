@@ -554,63 +554,6 @@ if ($img) {
       });
     }
 
-    // ========== LOAD USER STATISTICS ==========
-    /*async function loadUserStatistics() {
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
-          credentials: 'same-origin'
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          document.getElementById('totalOrders').textContent = data.stats.total || 0;
-          document.getElementById('pendingOrders').textContent = data.stats.pending || 0;
-          document.getElementById('completedOrders').textContent = data.stats.completed || 0;
-        } else {
-          document.getElementById('totalOrders').textContent = '0';
-          document.getElementById('pendingOrders').textContent = '0';
-          document.getElementById('completedOrders').textContent = '0';
-        }
-      } catch (err) {
-        console.error('Failed to load stats:', err);
-        document.getElementById('totalOrders').textContent = '0';
-        document.getElementById('pendingOrders').textContent = '0';
-        document.getElementById('completedOrders').textContent = '0';
-      }
-    }*/
-
-    // ========== LOAD RECENT ORDERS ==========
-    /*async function loadRecentOrders() {
-      const ordersContainer = document.getElementById('recentOrdersContainer');
-      if (!ordersContainer) return;
-
-      try {
-        const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
-          credentials: 'same-origin'
-        });
-        const data = await response.json();
-
-        if (data.success && data.orders.length > 0) {
-          ordersContainer.innerHTML = data.orders.map(order => `
-        <div class="order-item">
-          <div class="order-info">
-            <h4>Order #${escapeHtml(order.order_code)}</h4>
-            <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
-            <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
-          </div>
-          <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
-            ${escapeHtml(order.status)}
-          </span>
-        </div>
-      `).join('');
-        } else {
-          ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
-        }
-      } catch {
-        ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
-      }
-    }*/
-
     // ========== LOGOUT MODAL ==========
     function showLogoutModal() {
       const modal = document.getElementById('logoutModal');
