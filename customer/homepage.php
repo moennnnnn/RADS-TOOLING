@@ -1,4 +1,89 @@
 <?php
+// public/testimonials.php
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Try to load config
+$configPaths = [
+    __DIR__ . '/../backend/config/app.php',
+    __DIR__ . '/../../backend/config/app.php',
+    __DIR__ . '/../backend/config/database.php'
+];
+
+$pdo = null;
+foreach ($configPaths as $configPath) {
+    if (file_exists($configPath)) {
+        require_once $configPath;
+        break;
+    }
+}
+
+if (!isset($pdo) || !$pdo) {
+    if (class_exists('Database')) {
+        try {
+            $pdo = Database::getInstance()->getConnection();
+        } catch (Throwable $e) {
+            error_log('Testimonials DB error: ' . $e->getMessage());
+        }
+    }
+}
+
+if (!$pdo) {
+    try {
+        $pdo = new PDO("mysql:host=localhost;dbname=rads_tooling;charset=utf8mb4", "root", "");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('Testimonials DB connection failed: ' . $e->getMessage());
+    }
+}
+
+$testimonials = [];
+$stats = ['count' => 0, 'avg' => 0];
+
+if ($pdo instanceof PDO) {
+    try {
+        $statsQuery = $pdo->query("
+            SELECT 
+                COUNT(*) AS cnt, 
+                COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating
+            FROM feedback
+            WHERE is_released = 1
+        ");
+        $statsRow = $statsQuery->fetch(PDO::FETCH_ASSOC);
+        $stats['count'] = (int)($statsRow['cnt'] ?? 0);
+        $stats['avg'] = (float)($statsRow['avg_rating'] ?? 0);
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                f.rating,
+                f.comment,
+                f.created_at,
+                COALESCE(c.full_name, 'Customer') AS customer_name
+            FROM feedback f
+            INNER JOIN customers c ON c.id = f.customer_id
+            WHERE f.is_released = 1
+            ORDER BY COALESCE(f.released_at, f.created_at) DESC
+            LIMIT 50
+        ");
+        $stmt->execute();
+        $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    } catch (Throwable $e) {
+        error_log('Testimonials query error: ' . $e->getMessage());
+    }
+}
+
+function e(string $s): string { 
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); 
+}
+
+function safeDate(?string $s): string {
+    if (!$s) return '—';
+    $t = strtotime($s);
+    return $t ? date('M d, Y', $t) : e($s);
+}
 // STEP 1: Load config + helper
 require_once __DIR__ . '/../backend/config/app.php';
 require_once __DIR__ . '/../backend/lib/cms_helper.php';
@@ -145,6 +230,7 @@ if ($img) {
         <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item active">Home</a>
         <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
         <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+        <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
       </nav>
     </header>
 
@@ -160,7 +246,7 @@ if ($img) {
                 <span class="material-symbols-rounded">view_in_ar</span>
                 <span><?php echo htmlspecialchars($ctaPrimaryText); ?></span>
               </a>
-              <a href="/RADS-TOOLING/public/products.php" class="btn-hero-secondary">
+              <a href="/RADS-TOOLING/customer/testimonials.php" class="btn-hero-secondary">
                 <span class="material-symbols-rounded">storefront</span>
                 <span><?php echo htmlspecialchars($ctaSecondaryText); ?></span>
               </a>
@@ -278,7 +364,7 @@ if ($img) {
             <p>Create custom 3D designs</p>
           </a>
 
-          <a href="/RADS-TOOLING/customer/products.php" class="action-card">
+          <a href="/RADS-TOOLING/customer/testimonials.php" class="action-card">
             <div class="action-icon">
               <span class="material-symbols-rounded">storefront</span>
             </div>
@@ -377,7 +463,7 @@ if ($img) {
         function rt_url($raw)
         {
           $raw = trim((string)$raw);
-          if ($raw === '') return '/RADS-TOOLING/assets/images/placeholder.jpg';
+          if ($raw === '') return '/RADS-TOOLING/uploads';
           if (preg_match('~^https?://~i', $raw)) return $raw;   // absolute
           if ($raw[0] === '/') return $raw;                     // site-absolute
           // otherwise treat as a file under /assets/images/
@@ -413,7 +499,7 @@ if ($img) {
             <div class="carousel-item">
               <img src="<?= htmlspecialchars($src) ?>"
                 alt="<?= htmlspecialchars($ttl) ?>"
-                onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                onerror="this.onerror=null;this.src='/RADS-TOOLING/uploads'">
               <div class="carousel-caption">
                 <h4><?= htmlspecialchars($ttl) ?></h4>
                 <p><?= htmlspecialchars($desc) ?></p>
@@ -463,6 +549,7 @@ if ($img) {
             <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
             <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
             <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
+            <li><a href="/RADS-TOOLING/customer/testimonials.php">Testimonials</a></li>
           </ul>
         </div>
 
@@ -554,6 +641,63 @@ if ($img) {
       });
     }
 
+    // ========== LOAD USER STATISTICS ==========
+    /*async function loadUserStatistics() {
+      try {
+        const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('totalOrders').textContent = data.stats.total || 0;
+          document.getElementById('pendingOrders').textContent = data.stats.pending || 0;
+          document.getElementById('completedOrders').textContent = data.stats.completed || 0;
+        } else {
+          document.getElementById('totalOrders').textContent = '0';
+          document.getElementById('pendingOrders').textContent = '0';
+          document.getElementById('completedOrders').textContent = '0';
+        }
+      } catch (err) {
+        console.error('Failed to load stats:', err);
+        document.getElementById('totalOrders').textContent = '0';
+        document.getElementById('pendingOrders').textContent = '0';
+        document.getElementById('completedOrders').textContent = '0';
+      }
+    }*/
+
+    // ========== LOAD RECENT ORDERS ==========
+    /*async function loadRecentOrders() {
+      const ordersContainer = document.getElementById('recentOrdersContainer');
+      if (!ordersContainer) return;
+
+      try {
+        const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+
+        if (data.success && data.orders.length > 0) {
+          ordersContainer.innerHTML = data.orders.map(order => `
+        <div class="order-item">
+          <div class="order-info">
+            <h4>Order #${escapeHtml(order.order_code)}</h4>
+            <p>${escapeHtml(order.product_name || 'Custom Cabinet')} - ₱${parseFloat(order.total_amount).toLocaleString()}</p>
+            <p style="font-size:0.85rem;color:#999;">${formatDate(order.order_date)}</p>
+          </div>
+          <span class="order-status ${order.status.toLowerCase().replace(' ', '-')}">
+            ${escapeHtml(order.status)}
+          </span>
+        </div>
+      `).join('');
+        } else {
+          ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
+        }
+      } catch {
+        ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
+      }
+    }*/
+
     // ========== LOGOUT MODAL ==========
     function showLogoutModal() {
       const modal = document.getElementById('logoutModal');
@@ -616,9 +760,9 @@ if ($img) {
           productsContainer.innerHTML = result.data.products.map(product => `
         <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
           <div class="product-image">
-            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.jpg'}" 
+            <img src="/RADS-TOOLING/${product.image || 'uploads'}" 
                  alt="${escapeHtml(product.name)}"
-                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                 onerror="this.src='/RADS-TOOLING/uploads/placeholder.jpg'">
           </div>
           <div class="product-info">
             <h3>${escapeHtml(product.name)}</h3>

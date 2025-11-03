@@ -60,9 +60,9 @@
     let activePart = 'body';
     let chosen = {
         size: { w: 80, h: 180, d: 45 }, // cm
-        door: { mode: null, id: null },
-        body: { mode: null, id: null },
-        inside: { mode: null, id: null },
+        door: { textureId: null, colorId: null },
+        body: { textureId: null, colorId: null },
+        inside: { textureId: null, colorId: null },
         handle: { id: null }
     };
 
@@ -256,6 +256,13 @@
 
         // Size guide
         document.getElementById('btnSizeGuide')?.addEventListener('click', openSizeGuide);
+
+        // Load initial colors for active tab
+        const activeColorTab = document.querySelector('#sec-colors .part-tabs button.active');
+        if (activeColorTab) {
+            const part = activeColorTab.getAttribute('data-part');
+            loadColorsForPart(part);
+        }
 
         syncStepUI();
         updateUnitLabels();
@@ -491,6 +498,78 @@
         }
     }
 
+    async function loadColorsForPart(partName) {
+        const colList = document.getElementById('colors');
+        if (!colList) return;
+
+        colList.innerHTML = '<div style="padding:10px;color:#666">Loading colors...</div>';
+
+        try {
+            const resp = await fetch(`/RADS-TOOLING/backend/api/get_part_colors.php?product_id=${PID}&part=${partName}`, { credentials: 'same-origin' });
+            const data = await resp.json();
+
+            if (!data.success || !data.colors || data.colors.length === 0) {
+                colList.innerHTML = '<div style="padding:10px;color:#999">No colors available</div>';
+                return;
+            }
+
+            displayColors(data.colors, partName);
+        } catch (err) {
+            console.error('Load colors failed:', err);
+            colList.innerHTML = '<div style="padding:10px;color:#e11">Error loading colors</div>';
+        }
+    }
+
+    function displayColors(colors, partName) {
+        const colList = document.getElementById('colors');
+        if (!colList) return;
+
+        colList.innerHTML = '';
+
+        colors.forEach(color => {
+            const div = document.createElement('div');
+            div.className = 'cz-item';
+
+            const isActive = chosen[partName]?.mode === 'color' && chosen[partName]?.id == color.id;
+            if (isActive) div.classList.add('is-active');
+
+            div.innerHTML = `
+            <div class="cz-swatch" style="background-color: ${color.hex_value || '#ccc'}; width: 96px; height: 96px;"></div>
+            <div class="cz-item-name">${color.color_name}</div>
+            ${color.base_price > 0 ? `<div class="cz-price-badge">+ ₱${color.base_price}</div>` : ''}
+        `;
+
+            div.onclick = () => {
+                const wasActive = div.classList.contains('is-active');
+
+                // Remove active from all
+                colList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
+
+                if (wasActive) {
+                    // DESELECT - reset to original texture/color
+                    console.log(`🔄 Deselected color for ${partName}`);
+
+                    // Reset material to white (shows original texture)
+                    const mv = getMV();
+                    const mat = getMaterial(mv, MATERIAL_MAP[partName]);
+                    if (mat) {
+                        mat.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 1]);
+                    }
+
+                    // Clear chosen state
+                    chosen[partName] = { mode: null, id: null };
+                    refreshPrice();
+                } else {
+                    // SELECT - apply color
+                    div.classList.add('is-active');
+                    applyColorToPart(partName, color.hex_value, color.id);
+                }
+            };
+
+            colList.appendChild(div);
+        });
+    }
+
     // ======= Viewer =======
     function renderModel(modelURL) {
         mediaBox.innerHTML = `
@@ -544,38 +623,25 @@
         const mv = getMV();
         if (!mv?.model?.materials) return;
 
-        // Reset all emissive
-        mv.model.materials.forEach(m => {
-            if (m.setEmissiveFactor) {
-                m.setEmissiveFactor([0, 0, 0]);
-            }
-        });
+        console.log(`📍 Highlighting ${partKey}`);
 
-        // Highlight selected part(s)
         const materialName = MATERIAL_MAP[partKey];
+        const mat = getMaterial(mv, materialName);
 
-        if (partKey === 'door') {
-            // Highlight both doors
-            const door1 = getMaterial(mv, 'Door1');
-            const door2 = getMaterial(mv, 'Door2');
-            if (door1) door1.setEmissiveFactor([0.1, 0.3, 0.6]);
-            if (door2) door2.setEmissiveFactor([0.1, 0.3, 0.6]);
-        } else {
-            const mat = getMaterial(mv, materialName);
-            if (mat) mat.setEmissiveFactor([0.1, 0.3, 0.6]);
-        }
-
-        // ADD THIS FALLBACK (if model-viewer API failed, use THREE.js directly)
-        if (!mv.model.materials || mv.model.materials.length === 0) {
-            console.log('⚠️ Fallback: Using THREE.js direct access');
-            const threeMat = getThreeMaterial(mv, materialName);
-            if (threeMat && threeMat.emissive) {
-                if (!threeMat._origEmissive) {
-                    threeMat._origEmissive = threeMat.emissive.clone();
-                }
-                threeMat.emissive.setRGB(0.1, 0.3, 0.6);
-                threeMat.needsUpdate = true;
+        if (mat && mat.setEmissiveFactor) {
+            // Store original emissive
+            if (!mat._origEmissive) {
+                mat._origEmissive = [0, 0, 0];
             }
+
+            // Set glow
+            mat.setEmissiveFactor([0.3, 0.5, 1.0]);
+
+            // Auto-clear after 1 second
+            setTimeout(() => {
+                mat.setEmissiveFactor(mat._origEmissive || [0, 0, 0]);
+                console.log(`✅ Cleared highlight for ${partKey}`);
+            }, 1000);
         }
     }
 
@@ -743,6 +809,10 @@
                 loadTexturesForPart(partName);
             }
 
+            if (sel.includes('colors')) {
+                loadColorsForPart(partName);
+            }
+
             // Highlight the 3D part
             highlightPart(partName);
         });
@@ -761,23 +831,74 @@
             refreshPrice();
         } catch (err) { console.error('Texture apply failed:', err); }
     }
+
     function applyColorToPart(partKey, hex, id) {
-        const mv = getMV(); if (!mv) return;
-        const mat = getMaterial(mv, MATERIAL_MAP[partKey]); if (!mat) return;
-        mat.pbrMetallicRoughness.baseColorTexture.setTexture(null);
+        const mv = getMV();
+        if (!mv) return;
+
+        const mat = getMaterial(mv, MATERIAL_MAP[partKey]);
+        if (!mat) return;
+
+        // DON'T remove texture - comment out this line:
+        // mat.pbrMetallicRoughness.baseColorTexture.setTexture(null);
+
+        // Just set color factor (tints the texture)
         const [r, g, b, a] = hexToRGBA01(hex);
         mat.pbrMetallicRoughness.setBaseColorFactor([r, g, b, a]);
+
         setChosen(partKey, { mode: 'color', id });
         refreshPrice();
     }
+
     function setChosen(partKey, data) {
-        if (partKey === 'handle') { chosen.handle.id = data?.id ?? null; return; }
-        chosen[partKey].mode = data?.mode ?? null;
-        chosen[partKey].id = data?.id ?? null;
+        if (partKey === 'handle') {
+            chosen.handle.id = data?.id ?? null;
+            return;
+        }
+
+        // Store texture and color separately
+        if (data?.mode === 'texture') {
+            chosen[partKey].textureId = data?.id ?? null;
+        } else if (data?.mode === 'color') {
+            chosen[partKey].colorId = data?.id ?? null;
+        }
     }
+
+    function clearChosen(partKey) {
+        if (partKey === 'handle') {
+            chosen.handle.id = null;
+        } else {
+            chosen[partKey].textureId = null;
+            chosen[partKey].colorId = null;
+
+            // Reset 3D model appearance
+            const mv = getMV();
+            if (mv) {
+                const materials = getMaterialsForPart(partKey);
+                materials.forEach(mat => {
+                    if (mat && mat.pbrMetallicRoughness) {
+                        // Clear texture
+                        if (mat.pbrMetallicRoughness.baseColorTexture) {
+                            mat.pbrMetallicRoughness.baseColorTexture.setTexture(null);
+                        }
+                        // Reset to default color
+                        if (mat.pbrMetallicRoughness.setBaseColorFactor) {
+                            mat.pbrMetallicRoughness.setBaseColorFactor([0.8, 0.8, 0.8, 1]);
+                        }
+                    }
+                });
+            }
+        }
+        refreshPrice();
+    }
+
     function hexToRGBA01(hex) {
-        const m = hex.replace('#', ''); const v = parseInt(m, 16);
-        const r = (v >> 16) & 255, g = (v >> 8) & 255, b = v & 255; return [r / 255, g / 255, b / 255, 1];
+        const m = hex.replace('#', '');
+        const v = parseInt(m, 16);
+        const r = (v >> 16) & 255;
+        const g = (v >> 8) & 255;
+        const b = v & 255;
+        return [r / 255, g / 255, b / 255, 1];
     }
 
     // ======= Build Options (Allowed) =======
@@ -787,59 +908,225 @@
         (allow.textures || []).forEach(t => {
             const btn = document.createElement('button');
             btn.className = 'cz-item';
+            const surcharge = getSurcharge('textures', t.id);
+            // NEW: Improved layout matching color section
             btn.innerHTML = `
-        <div class="cz-swatch"><img src="${TEX_DIR + t.file}" alt="${t.name || 'texture'}"></div>
+        <div class="cz-swatch cz-swatch-texture">
+            <img src="${TEX_DIR + t.file}" alt="${t.name || 'texture'}" style="width:100%;height:100%;object-fit:cover;">
+        </div>
         <div class="cz-item-name">${t.name || 'Texture'}</div>
-        ${priceBadge(getSurcharge('textures', t.id))}
-      `;
-            btn.addEventListener('click', () => { applyTextureToPart(activePart, TEX_DIR + t.file, t.id); selectExclusive(texList, btn); });
+        ${priceBadge(surcharge)}
+    `;
+            // NEW: Click to select, click again to deselect
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('is-active')) {
+                    // Deselect - remove texture
+                    btn.classList.remove('is-active');
+                    chosen[activePart].textureId = null;
+
+                    // Clear texture from 3D model
+                    const mv = getMV();
+                    if (mv) {
+                        const materials = getMaterialsForPart(activePart);
+                        materials.forEach(mat => {
+                            if (mat && mat.pbrMetallicRoughness && mat.pbrMetallicRoughness.baseColorTexture) {
+                                mat.pbrMetallicRoughness.baseColorTexture.setTexture(null);
+                            }
+                        });
+                    }
+                    refreshPrice();
+                } else {
+                    // Select - apply texture
+                    applyTextureToPart(activePart, TEX_DIR + t.file, t.id);
+                    selectExclusive(texList, btn);
+                }
+            });
             texList.appendChild(btn);
         });
     }
-    function rebuildColorOptions() {
-        if (!colList) return; colList.innerHTML = '';
-        const allow = productData?.allowed?.[getActiveTabPart('#sec-colors .part-tabs')] || { colors: [] };
-        (allow.colors || []).forEach(c => {
+
+    async function rebuildColorOptions() {
+        if (!colList) return;
+        colList.innerHTML = '';
+
+        // first try the productData.allowed (fast, preferred)
+        const partKey = getActiveTabPart('#sec-colors .part-tabs') || 'door';
+        const allowFromProduct = productData?.allowed?.[partKey] || null;
+
+        let colorsToRender = [];
+
+        if (allowFromProduct && Array.isArray(allowFromProduct.colors) && allowFromProduct.colors.length) {
+            colorsToRender = allowFromProduct.colors.slice();
+        } else {
+            // fallback: call backend list_colors for this product (admin_customization.php?action=list_colors&product_id=PID)
+            try {
+                if (!PID) throw new Error('PID missing');
+                const resp = await fetch(`/RADS-TOOLING/backend/api/admin_customization.php?action=list_colors&product_id=${PID}`, { credentials: 'same-origin' });
+                if (resp.ok) {
+                    const js = await resp.json();
+                    if (js?.success && Array.isArray(js.data)) {
+                        // js.data items include 'assigned' (1/0) and hex fields (we normalized in backend)
+                        // map to the shape used elsewhere: { id, name, hex, assigned, allowed_parts? }
+                        colorsToRender = js.data
+                            .filter(c => Number(c.assigned || 0) === 1) // only assigned colors for this product
+                            .map(c => ({
+                                id: Number(c.id),
+                                name: c.color_name || c.name || c.hex_value || c.hex || '',
+                                hex: (c.hex_value || c.hex || c.color_code || '').replace(/^([^#])/, '#$1'),
+                                allowed_parts: c.allowed_parts || c.allowed || null // optional
+                            }));
+                    }
+                } else {
+                    console.warn('list_colors returned', resp.status);
+                }
+            } catch (err) {
+                console.warn('Could not fetch product colors fallback:', err);
+            }
+        }
+
+        // If the colors have allowed_parts info, filter by active part
+        const activePart = partKey; // 'door' | 'body' | 'inside' etc.
+        const filtered = colorsToRender.filter(c => {
+            if (!c) return false;
+            // if allowed_parts is an array, require it contains activePart (support synonyms)
+            if (Array.isArray(c.allowed_parts) && c.allowed_parts.length) {
+                // normalize keys (some admin code may use 'interior' vs 'inside')
+                const norms = c.allowed_parts.map(x => String(x || '').toLowerCase());
+                const map = { inside: 'interior', interior: 'interior', door: 'door', body: 'body' };
+                const dbPart = map[activePart] || activePart;
+                return norms.includes(dbPart) || norms.includes(activePart);
+            }
+            // otherwise, no per-part restriction -> show
+            return true;
+        });
+
+        (filtered || []).forEach(c => {
             const btn = document.createElement('button');
             btn.className = 'cz-item';
+            const hex = (c.hex || '#cccccc');
             btn.innerHTML = `
-        <div class="cz-swatch" style="background:${c.hex || '#ccc'}"></div>
-        <div class="cz-item-name">${c.name || (c.hex || 'Color')}</div>
-        ${priceBadge(getSurcharge('colors', c.id))}
-      `;
-            btn.addEventListener('click', () => { applyColorToPart(activePart, c.hex || '#cccccc', c.id); selectExclusive(colList, btn); });
+            <div class="cz-swatch" style="background:${hex}"></div>
+            <div class="cz-item-name">${c.name || hex}</div>
+            ${priceBadge(getSurcharge('colors', c.id))}
+        `;
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('is-active')) {
+                    // Deselect - remove color and reduce price
+                    btn.classList.remove('is-active');
+                    clearChosen(activePart);
+                } else {
+                    // Select - apply color
+                    applyColorToPart(activePart, hex, c.id);
+                    selectExclusive(colList, btn);
+                }
+            });
             colList.appendChild(btn);
         });
+
+        // If nothing to render, show a placeholder
+        if ((filtered || []).length === 0) {
+            const p = document.createElement('div');
+            p.className = 'cz-empty';
+            p.textContent = 'No colors available';
+            colList.appendChild(p);
+        }
     }
-    function rebuildHandleOptions() {
-        if (!handleList) return; handleList.innerHTML = '';
-        const allow = productData?.allowed?.handle || { handles: [] };
-        (allow.handles || []).forEach(h => {
+
+    async function rebuildHandleOptions() {
+        if (!handleList) return;
+        handleList.innerHTML = '';
+
+        // prefer productData.allowed.handle if present
+        const allowHandles = productData?.allowed?.handle || null;
+        let handlesToRender = [];
+
+        if (allowHandles && Array.isArray(allowHandles.handles) && allowHandles.handles.length) {
+            handlesToRender = allowHandles.handles.slice();
+        } else {
+            // fallback: fetch handles list and only include those assigned to product (if product assignment exists)
+            try {
+                if (!PID) throw new Error('PID missing');
+                const resp = await fetch(`/RADS-TOOLING/backend/api/admin_customization.php?action=list_handles`, { credentials: 'same-origin' });
+                if (resp.ok) {
+                    const js = await resp.json();
+                    if (js?.success && Array.isArray(js.data)) {
+                        // map to expected shape { id, name, preview/file, assigned?, allowed_parts? }
+                        handlesToRender = js.data.map(h => ({
+                            id: Number(h.id),
+                            name: h.handle_name || h.name || '',
+                            preview: h.handle_image || h.file || '',
+                            allowed_parts: h.allowed_parts || h.allowed || null,
+                            assigned: h.assigned || 0
+                        }));
+                        // if you want only product-assigned handles, try to detect assigned via productData or backend later
+                        // If admin assigns handles via product_handles table you'll want admin_customization.php?action=list_handles&product_id=PID to return assigned.
+                    }
+                } else {
+                    console.warn('list_handles returned', resp.status);
+                }
+            } catch (err) {
+                console.warn('Could not fetch handles fallback:', err);
+            }
+        }
+
+        // If handles include allowed_parts, filter by part (handles usually only apply to doors)
+        const activePart = getActiveTabPart('#sec-handles .part-tabs') || 'door';
+        const filtered = handlesToRender.filter(h => {
+            if (!h) return false;
+            if (Array.isArray(h.allowed_parts) && h.allowed_parts.length) {
+                const norms = h.allowed_parts.map(x => String(x || '').toLowerCase());
+                return norms.includes(activePart) || norms.includes('door');
+            }
+            return true;
+        });
+
+        (filtered || []).forEach(h => {
             const btn = document.createElement('button');
             btn.className = 'cz-item';
+            const src = HANDLE_DIR + (h.preview || '');
             btn.innerHTML = `
-        <div class="cz-swatch"><img src="${HANDLE_DIR + (h.preview || h.file || '')}" alt="${h.name || 'Handle'}"></div>
-        <div class="cz-item-name">${h.name || 'Handle'}</div>
-        ${priceBadge(getSurcharge('handles', h.id))}
-      `;
-            btn.addEventListener('click', () => { chosen.handle.id = h.id; selectExclusive(handleList, btn); refreshPrice(); });
+            <div class="cz-swatch"><img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25"></div>
+            <div class="cz-item-name">${h.name || 'Handle'}</div>
+            ${priceBadge(getSurcharge('handles', h.id))}
+        `;
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('is-active')) {
+                    // Deselect - remove handle and reduce price
+                    btn.classList.remove('is-active');
+                    chosen.handle.id = null;
+                } else {
+                    // Select - apply handle
+                    chosen.handle.id = h.id;
+                    selectExclusive(handleList, btn);
+                }
+                refreshPrice();
+            });
             handleList.appendChild(btn);
         });
+
+        if ((filtered || []).length === 0) {
+            const p = document.createElement('div');
+            p.className = 'cz-empty';
+            p.textContent = 'No handles available';
+            handleList.appendChild(p);
+        }
     }
     function selectExclusive(listEl, btn) {
         listEl.querySelectorAll('.cz-item').forEach(x => x.classList.remove('is-active'));
         btn.classList.add('is-active');
     }
+
     function getActiveTabPart(selector) {
         const tabs = document.querySelector(selector);
         const active = tabs?.querySelector('button.active')?.getAttribute('data-part');
         return active || 'door';
     }
+
     function priceBadge(surcharge) {
         if (!Number.isFinite(surcharge) || surcharge === 0) return '';
-        const sign = surcharge > 0 ? '+' : '–';
+        // Always show as addition (positive)
         const abs = Math.abs(surcharge);
-        return `<div class="cz-price-badge">${sign} ₱${fmt(abs)}</div>`;
+        return `<div class="cz-price-badge">+ ₱${fmt(abs)}</div>`;
     }
 
     // ======= Pricing =======
@@ -851,7 +1138,7 @@
     function computePrice() {
         let total = Number(productData?.pricing?.base_price || 0);
 
-        // Baseline is ADMIN MIN (not defaults)
+        // Baseline is ADMIN MIN
         const wCfg = dimCfg('width'), hCfg = dimCfg('height'), dCfg = dimCfg('depth');
         const baseW = wCfg.min * (UNIT_TO_CM[wCfg.unit] || 1);
         const baseH = hCfg.min * (UNIT_TO_CM[hCfg.unit] || 1);
@@ -861,14 +1148,25 @@
         total += dimSurcharge(chosen.size.h, baseH, hCfg);
         total += dimSurcharge(chosen.size.d, baseD, dCfg);
 
-        // option surcharges
+        // FIXED: Add ALL active options per part (texture AND color if both exist)
         ['door', 'body', 'inside'].forEach(part => {
-            const mode = chosen[part].mode, id = chosen[part].id;
-            if (!id) return;
-            if (mode === 'texture') total += getSurcharge('textures', id);
-            else if (mode === 'color') total += getSurcharge('colors', id);
+            const partData = chosen[part];
+
+            // Add texture price if texture is set
+            if (partData.textureId) {
+                total += getSurcharge('textures', partData.textureId);
+            }
+
+            // Add color price if color is set
+            if (partData.colorId) {
+                total += getSurcharge('colors', partData.colorId);
+            }
         });
-        if (chosen.handle.id) total += getSurcharge('handles', chosen.handle.id);
+
+        // Handle price
+        if (chosen.handle.id) {
+            total += getSurcharge('handles', chosen.handle.id);
+        }
 
         return Math.max(0, Math.round(total));
     }

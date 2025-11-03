@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initializeAccountManagement();
             initializeOrderManagement();
             initializeCustomerManagement();
-            initializeFeedbackManagement(); // ADD THIS LINE
+            initializeFeedbackManagement();
             setupFloatingPwToggle();
             setupLogout();
         })
@@ -1036,14 +1036,14 @@ function displayOrders(orders) {
 }
 
 function getStatusBadgeClass(status) {
-  const s = (status || '').toLowerCase();
-  switch (s) {
-    case 'pending': return 'pending';
-    case 'processing': return 'processing';
-    case 'completed': return 'completed';
-    case 'cancelled': return 'cancelled';
-    default: return 'pending'; // unknown/null -> pending
-  }
+    const s = (status || '').toLowerCase();
+    switch (s) {
+        case 'pending': return 'pending';
+        case 'processing': return 'processing';
+        case 'completed': return 'completed';
+        case 'cancelled': return 'cancelled';
+        default: return 'pending'; // unknown/null -> pending
+    }
 }
 
 
@@ -1568,7 +1568,7 @@ function initializeModals() {
     document.addEventListener('click', (e) => {
         // FIXED: Only close modal when clicking the backdrop itself, not any content inside
         const target = e.target;
-        
+
         // Check if the target is a modal element
         if (target.classList && target.classList.contains('modal')) {
             // Make sure we're NOT clicking on the modal-content or anything inside it
@@ -1578,7 +1578,7 @@ function initializeModals() {
                 if (id) closeModal(id);
             }
         }
-        
+
         // Close button handlers
         if (e.target.closest('.modal-close') || e.target.closest('[data-modal-close]')) {
             const modal = e.target.closest('.modal');
@@ -1595,49 +1595,49 @@ function initializeModals() {
 
 function initializeActionBindings() {
     // Toggle user status handler
-document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.btn-toggle');
-    if (!btn) return;
-    e.preventDefault();
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-toggle');
+        if (!btn) return;
+        e.preventDefault();
 
-    const userId = btn.getAttribute('data-user-id');
-    const currentStatus = btn.getAttribute('data-current-status');
-    const row = btn.closest('tr');
-    const userName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this user';
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        const userId = btn.getAttribute('data-user-id');
+        const currentStatus = btn.getAttribute('data-current-status');
+        const row = btn.closest('tr');
+        const userName = row?.querySelector('td:nth-child(3)')?.textContent?.trim() || 'this user';
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
 
-    showConfirm({
-        title: `${newStatus === 'active' ? 'Activate' : 'Deactivate'} User`,
-        message: `Are you sure you want to ${newStatus === 'active' ? 'activate' : 'deactivate'} <b>${userName}</b>?`,
-        okText: newStatus === 'active' ? 'Activate' : 'Deactivate',
-        onConfirm: async () => {
-            try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_accounts.php?action=toggle_status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ id: parseInt(userId) })
-                });
+        showConfirm({
+            title: `${newStatus === 'active' ? 'Activate' : 'Deactivate'} User`,
+            message: `Are you sure you want to ${newStatus === 'active' ? 'activate' : 'deactivate'} <b>${userName}</b>?`,
+            okText: newStatus === 'active' ? 'Activate' : 'Deactivate',
+            onConfirm: async () => {
+                try {
+                    const response = await fetch('/RADS-TOOLING/backend/api/admin_accounts.php?action=toggle_status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ id: parseInt(userId) })
+                    });
 
-                const result = await response.json();
+                    const result = await response.json();
 
-                if (!result.success) {
-                    throw new Error(result.message || 'Failed to toggle user status');
+                    if (!result.success) {
+                        throw new Error(result.message || 'Failed to toggle user status');
+                    }
+
+                    showNotification(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`, 'success');
+                    loadUsers();
+
+                } catch (error) {
+                    console.error('Error toggling user status:', error);
+                    showNotification('Failed to toggle user status: ' + error.message, 'error');
                 }
-
-                showNotification(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`, 'success');
-                loadUsers();
-
-            } catch (error) {
-                console.error('Error toggling user status:', error);
-                showNotification('Failed to toggle user status: ' + error.message, 'error');
             }
-        }
+        });
     });
-});
 
     // Reset password handler
     document.addEventListener('click', (e) => {
@@ -1685,30 +1685,30 @@ document.addEventListener('click', (e) => {
 
     // View order handler
     document.addEventListener('click', (e) => {
-  const btn = e.target.closest('.btn-view');
-  if (!btn) return;
-  e.preventDefault();
+        const btn = e.target.closest('.btn-view');
+        if (!btn) return;
+        e.preventDefault();
 
-  const row = btn.closest('tr');
-  if (!row) return;
+        const row = btn.closest('tr');
+        if (!row) return;
 
-  // safe helper
-  const setText = (id, value) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = value;
-  };
+        // safe helper
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = value;
+        };
 
-  // use optional chaining to read children text safely
-  setText('vo-code', row.children[0]?.textContent?.trim() || '—');
-  setText('vo-customer', row.children[2]?.textContent?.trim() || '—');
-  setText('vo-date', row.children[3]?.textContent?.trim() || '—');
-  setText('vo-total', row.children[4]?.textContent?.trim() || '₱0');
-  setText('vo-status', row.children[6]?.textContent?.trim() || '—');
-  setText('vo-payment', row.children[5]?.textContent?.trim() || '—');
+        // use optional chaining to read children text safely
+        setText('vo-code', row.children[0]?.textContent?.trim() || '—');
+        setText('vo-customer', row.children[2]?.textContent?.trim() || '—');
+        setText('vo-date', row.children[3]?.textContent?.trim() || '—');
+        setText('vo-total', row.children[4]?.textContent?.trim() || '₱0');
+        setText('vo-status', row.children[6]?.textContent?.trim() || '—');
+        setText('vo-payment', row.children[5]?.textContent?.trim() || '—');
 
-  openModal('viewOrderModal');
-});
+        openModal('viewOrderModal');
+    });
 }
 
 function setupLogout() {
@@ -1954,20 +1954,20 @@ async function loadFeedback() {
 
         if (!resp.ok) {
             // resp is not OK (e.g. 500). show error with body preview.
-            throw new Error(`Server returned HTTP ${resp.status}: ${raw.slice(0,200)}`);
+            throw new Error(`Server returned HTTP ${resp.status}: ${raw.slice(0, 200)}`);
         }
 
         if (!json || !json.success) {
             // either invalid JSON or success:false
             const msg = (json && json.message) ? json.message : 'Invalid or missing JSON response';
-            throw new Error(msg + (raw ? ` — raw: ${raw.slice(0,200)}` : ''));
+            throw new Error(msg + (raw ? ` — raw: ${raw.slice(0, 200)}` : ''));
         }
 
         displayFeedback(json.data || []);
 
     } catch (error) {
         console.error('Error loading feedback:', error);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">Error loading feedback</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">Error loading feedback</td></tr>';
         // optional: showNotification('Failed to load feedback: ' + error.message, 'error');
     }
 }
@@ -1977,42 +1977,33 @@ function displayFeedback(feedbackList) {
     const tbody = document.getElementById('feedbackTableBody');
     if (!tbody) return;
 
+    // If empty
     if (!feedbackList || feedbackList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#666;">No feedback found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#666;">No feedback found</td></tr>';
         return;
     }
 
     tbody.innerHTML = feedbackList.map(feedback => {
-        const stars = '★'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating);
-        const statusBadge = feedback.is_released
-            ? '<span class="badge badge-completed">Released</span>'
-            : '<span class="badge badge-pending">Pending</span>';
+        const rating = parseInt(feedback.rating || 0, 10);
+        const stars = '★'.repeat(rating) + '☆'.repeat(Math.max(0, 5 - rating));
+
+        // Keep a small excerpt for comment
+        const comment = feedback.comment ? String(feedback.comment) : 'No comment';
 
         return `
             <tr data-feedback-id="${feedback.id}">
                 <td>${feedback.id}</td>
                 <td>${escapeHtml(feedback.customer_name)}</td>
                 <td style="color: #fbbf24; font-size: 1.2rem;">${stars}</td>
-                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(feedback.comment || 'No comment')}">${escapeHtml(feedback.comment || 'No comment')}</td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(comment)}">${escapeHtml(comment)}</td>
                 <td>${escapeHtml(feedback.order_code)}</td>
                 <td>${formatDate(feedback.created_at)}</td>
-                <td>
-                    ${feedback.is_released ? `
-                        <button class="btn-action btn-delete" onclick="hideFeedback(${feedback.id})" title="Hide from Public">
-                            <span class="material-symbols-rounded">visibility_off</span>
-                        </button>
-                    ` : `
-                        <button class="btn-action btn-view" onclick="releaseFeedback(${feedback.id})" title="Release to Public">
-                            <span class="material-symbols-rounded">publish</span>
-                        </button>
-                    `}
-                </td>
             </tr>
         `;
     }).join('');
 }
 
-async function releaseFeedback(feedbackId) {
+/*async function releaseFeedback(feedbackId) {
     try {
         const response = await fetch('/RADS-TOOLING/backend/api/feedback/release.php', {
             method: 'POST',
@@ -2076,37 +2067,84 @@ async function hideFeedback(feedbackId) {
         }
     });
 }
-console.log('Enhanced Admin Dashboard Script Loaded Successfully!');
+console.log('Enhanced Admin Dashboard Script Loaded Successfully!'); 
+
+// admin release/hide click handlers (use event delegation)
+document.addEventListener('click', function (e) {
+    const rel = e.target.closest('.btn-release-feedback');
+    if (rel) {
+        e.preventDefault();
+        const id = rel.getAttribute('data-id');
+        if (id && confirm('Release this feedback to public?')) releaseFeedback(parseInt(id,10));
+        return;
+    }
+    const hid = e.target.closest('.btn-hide-feedback');
+    if (hid) {
+        e.preventDefault();
+        const id = hid.getAttribute('data-id');
+        if (id && confirm('Hide this feedback from public?')) hideFeedback(parseInt(id,10));
+        return;
+    }
+});*/
+
 
 // ============================================================================
 // PAYMENT VERIFICATION
 // ============================================================================
 
-function initializePaymentVerification() {
-    const paymentNavItem = document.querySelector('[data-section="payment"]');
-    if (paymentNavItem) {
-        paymentNavItem.addEventListener('click', function () {
-            setTimeout(() => loadPaymentVerifications(), 100);
+function initializePaymentVerfication() {
+    const orderNavItem = document.querySelector('[data-section="orders"]');
+    if (orderNavItem) {
+        orderNavItem.addEventListener('click', function () {
+            setTimeout(() => loadOrders(), 100);
         });
     }
 
+    const orderSearch = document.getElementById('order-search');
+    if (orderSearch) {
+        let searchTimeout;
+        orderSearch.addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadOrders(this.value.trim());
+            }, 300);
+        });
+    }
+
+    const statusFilter = document.getElementById('statusFilter');
+    const paymentFilter = document.getElementById('paymentFilter');
+
+    [statusFilter, paymentFilter].forEach(filter => {
+        if (filter) {
+            filter.addEventListener('change', () => loadOrders());
+        }
+    });
+
     const currentSection = document.querySelector('.nav-item.active');
-    if (currentSection && currentSection.dataset.section === 'payment') {
-        loadPaymentVerifications();
+    if (currentSection && currentSection.dataset.section === 'orders') {
+        loadOrders();
     }
 }
 
 async function loadPaymentVerifications() {
+    const searchValue = document.getElementById('order-search')?.value || '';
+    const statusFilter = document.getElementById('paymentFilter')?.value || '';
+
     const tbody = document.getElementById('paymentsTableBody');
 
-    // If element doesn't exist, don't try to load
     if (!tbody) {
         console.log('Payment table not found - skipping payment verification load');
         return;
     }
 
     try {
-        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=list', {
+        // Build URL with filters
+        let url = '/RADS-TOOLING/backend/api/payment_verification.php?action=list';
+        if (searchValue) url += '&search=' + encodeURIComponent(searchValue);
+        if (statusFilter) url += '&payment_status=' + encodeURIComponent(statusFilter);
+
+
+        const response = await fetch(url, {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         });
@@ -2160,119 +2198,118 @@ function displayPaymentVerifications(verifications) {
         `;
     }).join('');
 }
-
 async function viewPaymentDetails(verificationId) {
-  // --- helpers (local) ---
-  const money = v => '₱' + (Number(v || 0)).toLocaleString();
-  const pct = v => (v === null || v === undefined || v === '') ? 'N/A' : (Number(v) + '%');
-  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const text = v => (v === null || v === undefined || v === '') ? 'N/A' : escapeHtml(String(v));
-  const formatDate = d => {
+    // --- helpers (local) ---
+    const money = v => '₱' + (Number(v || 0)).toLocaleString();
+    const pct = v => (v === null || v === undefined || v === '') ? 'N/A' : (Number(v) + '%');
+    const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    const text = v => (v === null || v === undefined || v === '') ? 'N/A' : escapeHtml(String(v));
+    const formatDate = d => {
+        try {
+            const dt = new Date(d);
+            if (Number.isNaN(dt.getTime())) return text(d);
+            return dt.toLocaleString();
+        } catch (e) { return text(d); }
+    };
+
     try {
-      const dt = new Date(d);
-      if (Number.isNaN(dt.getTime())) return text(d);
-      return dt.toLocaleString();
-    } catch (e) { return text(d); }
-  };
+        // fetch
+        const response = await fetch(`/RADS-TOOLING/backend/api/payment_verification.php?action=details&id=${verificationId}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
 
-  try {
-    // fetch
-    const response = await fetch(`/RADS-TOOLING/backend/api/payment_verification.php?action=details&id=${verificationId}`, {
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    });
-
-    // read text first so we can show meaningful errors
-    const raw = await response.text();
-    if (!response.ok) {
-      let bodyMsg = raw;
-      try { const parsed = JSON.parse(raw); bodyMsg = parsed.message || JSON.stringify(parsed); } catch (e) {}
-      throw new Error(`Server returned ${response.status}: ${bodyMsg}`);
-    }
-
-    let result;
-    try { result = JSON.parse(raw); } catch (e) { throw new Error('Invalid JSON response from server'); }
-    if (!result.success) throw new Error(result.message || 'Failed to load payment details');
-
-    const payment = result.data || {};
-    const content = document.getElementById('paymentDetailsContent');
-    if (!content) throw new Error('Modal content container not found');
-
-    // --- normalize proof src (make absolute if relative) ---
-    let proofSrc = payment.screenshot_path || payment.proof_path || payment.image || '';
-    if (proofSrc) {
-      if (!/^https?:\/\//i.test(proofSrc) && !proofSrc.startsWith('/')) {
-        // prefix with project base - change '/RADS-TOOLING/' if different
-        proofSrc = window.location.origin + '/RADS-TOOLING/' + proofSrc.replace(/^(\.\/|\/)+/, '');
-      } else if (proofSrc.startsWith('/')) {
-        proofSrc = window.location.origin + proofSrc;
-      }
-    }
-
-    // --- build full address HTML (ordered, labeled, de-duplicated) ---
-    const addressCandidates = [
-      // order shipping variants (common aliases)
-      payment.order_shipping_street, payment.order_shipping_barangay, payment.order_shipping_city, payment.order_shipping_province, payment.order_shipping_postal_code,
-      payment.shipping_street, payment.shipping_barangay, payment.shipping_city, payment.shipping_province, payment.shipping_postal_code,
-
-      // order address common
-      payment.order_street, payment.order_barangay, payment.order_city, payment.order_province, payment.order_postal_code,
-      payment.street, payment.barangay, payment.city, payment.province, payment.postal_code, payment.zip,
-
-      // customer address fallback fields
-      payment.customer_street, payment.customer_barangay, payment.customer_city, payment.customer_province, payment.customer_postal_code,
-      payment.customer_address, payment.address
-    ];
-
-    // Friendly labeled mapping when possible (key names may not be present in all responses)
-    // We'll create labeled lines for the first occurrences of street/barangay/city/province/postal in that order
-    const labelOrder = [
-      { keys: ['order_shipping_street','shipping_street','order_street','street','customer_street'], label: 'Street' },
-      { keys: ['order_shipping_barangay','shipping_barangay','order_barangay','barangay','customer_barangay'], label: 'Barangay' },
-      { keys: ['order_shipping_city','shipping_city','order_city','city','customer_city'], label: 'City' },
-      { keys: ['order_shipping_province','shipping_province','order_province','province','customer_province'], label: 'Province' },
-      { keys: ['order_shipping_postal_code','shipping_postal_code','order_postal_code','postal_code','zip','customer_postal_code'], label: 'Postal' }
-    ];
-
-    // Build lines: prefer specific fields if present in payment object; also collect any combined address fallback
-    const seen = new Set();
-    const addrLines = [];
-
-    // add labeled lines by scanning labelOrder keys for the first non-empty value
-    for (const item of labelOrder) {
-      for (const k of item.keys) {
-        if (Object.prototype.hasOwnProperty.call(payment, k) && payment[k]) {
-          const val = String(payment[k]).trim();
-          if (val && !seen.has(val)) {
-            seen.add(val);
-            addrLines.push(`${item.label}: ${escapeHtml(val)}`);
-            break;
-          }
+        // read text first so we can show meaningful errors
+        const raw = await response.text();
+        if (!response.ok) {
+            let bodyMsg = raw;
+            try { const parsed = JSON.parse(raw); bodyMsg = parsed.message || JSON.stringify(parsed); } catch (e) { }
+            throw new Error(`Server returned ${response.status}: ${bodyMsg}`);
         }
-      }
-    }
 
-    // also include any combined address string if present and not duplicate
-    const combinedCandidates = [payment.address, payment.customer_address];
-    for (const c of combinedCandidates) {
-      if (c) {
-        const s = String(c).trim();
-        if (s && !seen.has(s)) {
-          seen.add(s);
-          addrLines.push(escapeHtml(s)); // no label - combined line
+        let result;
+        try { result = JSON.parse(raw); } catch (e) { throw new Error('Invalid JSON response from server'); }
+        if (!result.success) throw new Error(result.message || 'Failed to load payment details');
+
+        const payment = result.data || {};
+        const content = document.getElementById('paymentDetailsContent');
+        if (!content) throw new Error('Modal content container not found');
+
+        // --- normalize proof src (make absolute if relative) ---
+        let proofSrc = payment.screenshot_path || payment.proof_path || payment.image || '';
+        if (proofSrc) {
+            if (!/^https?:\/\//i.test(proofSrc) && !proofSrc.startsWith('/')) {
+                // prefix with project base - change '/RADS-TOOLING/' if different
+                proofSrc = window.location.origin + '/RADS-TOOLING/' + proofSrc.replace(/^(\.\/|\/)+/, '');
+            } else if (proofSrc.startsWith('/')) {
+                proofSrc = window.location.origin + proofSrc;
+            }
         }
-      }
-    }
 
-    const addressHtml = addrLines.length ? addrLines.join('<br>') : 'N/A';
+        // --- build full address HTML (ordered, labeled, de-duplicated) ---
+        const addressCandidates = [
+            // order shipping variants (common aliases)
+            payment.order_shipping_street, payment.order_shipping_barangay, payment.order_shipping_city, payment.order_shipping_province, payment.order_shipping_postal_code,
+            payment.shipping_street, payment.shipping_barangay, payment.shipping_city, payment.shipping_province, payment.shipping_postal_code,
 
-    // --- build image html with onerror fallback ---
-    const imgHtml = proofSrc
-      ? `<img id="pv-proof-img" src="${escapeHtml(proofSrc)}" alt="payment proof" style="max-width:100%;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08);" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<div style=\\'color:#6b7280;\\'>Payment proof not available</div>');">`
-      : `<div style="color:#6b7280;">Payment proof not available</div>`;
+            // order address common
+            payment.order_street, payment.order_barangay, payment.order_city, payment.order_province, payment.order_postal_code,
+            payment.street, payment.barangay, payment.city, payment.province, payment.postal_code, payment.zip,
 
-    // --- render content (safe; addressHtml already escaped) ---
-    content.innerHTML = `
+            // customer address fallback fields
+            payment.customer_street, payment.customer_barangay, payment.customer_city, payment.customer_province, payment.customer_postal_code,
+            payment.customer_address, payment.address
+        ];
+
+        // Friendly labeled mapping when possible (key names may not be present in all responses)
+        // We'll create labeled lines for the first occurrences of street/barangay/city/province/postal in that order
+        const labelOrder = [
+            { keys: ['order_shipping_street', 'shipping_street', 'order_street', 'street', 'customer_street'], label: 'Street' },
+            { keys: ['order_shipping_barangay', 'shipping_barangay', 'order_barangay', 'barangay', 'customer_barangay'], label: 'Barangay' },
+            { keys: ['order_shipping_city', 'shipping_city', 'order_city', 'city', 'customer_city'], label: 'City' },
+            { keys: ['order_shipping_province', 'shipping_province', 'order_province', 'province', 'customer_province'], label: 'Province' },
+            { keys: ['order_shipping_postal_code', 'shipping_postal_code', 'order_postal_code', 'postal_code', 'zip', 'customer_postal_code'], label: 'Postal' }
+        ];
+
+        // Build lines: prefer specific fields if present in payment object; also collect any combined address fallback
+        const seen = new Set();
+        const addrLines = [];
+
+        // add labeled lines by scanning labelOrder keys for the first non-empty value
+        for (const item of labelOrder) {
+            for (const k of item.keys) {
+                if (Object.prototype.hasOwnProperty.call(payment, k) && payment[k]) {
+                    const val = String(payment[k]).trim();
+                    if (val && !seen.has(val)) {
+                        seen.add(val);
+                        addrLines.push(`${item.label}: ${escapeHtml(val)}`);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // also include any combined address string if present and not duplicate
+        const combinedCandidates = [payment.address, payment.customer_address];
+        for (const c of combinedCandidates) {
+            if (c) {
+                const s = String(c).trim();
+                if (s && !seen.has(s)) {
+                    seen.add(s);
+                    addrLines.push(escapeHtml(s)); // no label - combined line
+                }
+            }
+        }
+
+        const addressHtml = addrLines.length ? addrLines.join('<br>') : 'N/A';
+
+        // --- build image html with onerror fallback ---
+        const imgHtml = proofSrc
+            ? `<img id="pv-proof-img" src="${escapeHtml(proofSrc)}" alt="payment proof" style="max-width:100%;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08);" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<div style=\\'color:#6b7280;\\'>Payment proof not available</div>');">`
+            : `<div style="color:#6b7280;">Payment proof not available</div>`;
+
+        // --- render content (safe; addressHtml already escaped) ---
+        content.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
         <div>
           <h3 style="margin-bottom:.5rem;color:var(--brand);">Order Information</h3>
@@ -2294,14 +2331,14 @@ async function viewPaymentDetails(verificationId) {
       <div style="background:#f7fafc;padding:1rem;border-radius:8px;margin-top:1rem;">
         <h4 style="margin:0 0 .5rem 0;color:var(--brand);">Payment Details</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
-          <p><strong>Payment Method:</strong> ${text((payment.method||'').toUpperCase())}</p>
+          <p><strong>Payment Method:</strong> ${text((payment.method || '').toUpperCase())}</p>
           <p><strong>Account Name:</strong> ${text(payment.account_name)}</p>
           <p><strong>Account Number:</strong> ${text(payment.account_number)}</p>
           <p><strong>Reference Number:</strong> ${text(payment.reference_number)}</p>
           <p><strong>Amount Paid:</strong> ${money(payment.amount_reported || payment.amount_paid)}</p>
           <p><strong>Deposit Rate:</strong> ${pct(payment.deposit_rate)}</p>
           <p><strong>Amount Due:</strong> ${money(payment.amount_due ?? (payment.total_amount - (payment.amount_paid || 0)))}</p>
-          <p><strong>Status:</strong> <span class="badge badge-${(payment.status||'PENDING').toLowerCase()}">${escapeHtml(payment.status || 'PENDING')}</span></p>
+          <p><strong>Status:</strong> <span class="badge badge-${(payment.status || 'PENDING').toLowerCase()}">${escapeHtml(payment.status || 'PENDING')}</span></p>
         </div>
       </div>
 
@@ -2311,129 +2348,129 @@ async function viewPaymentDetails(verificationId) {
       </div>
     `;
 
-    // add click-to-open for proof image if present
-    setTimeout(() => {
-      const proofImg = document.getElementById('pv-proof-img');
-      if (proofImg) {
-        proofImg.style.cursor = 'zoom-in';
-        proofImg.addEventListener('click', () => {
-          try { window.open(proofImg.src, '_blank'); } catch (e) {}
-        });
-      }
-    }, 50);
+        // add click-to-open for proof image if present
+        setTimeout(() => {
+            const proofImg = document.getElementById('pv-proof-img');
+            if (proofImg) {
+                proofImg.style.cursor = 'zoom-in';
+                proofImg.addEventListener('click', () => {
+                    try { window.open(proofImg.src, '_blank'); } catch (e) { }
+                });
+            }
+        }, 50);
 
-    // --- approve/reject button wiring + labels ---
-    const approveBtn = document.getElementById('btnApprovePayment');
-    const rejectBtn = document.getElementById('btnRejectPayment');
-    if (approveBtn) approveBtn.dataset.verificationId = verificationId;
-    if (rejectBtn) rejectBtn.dataset.verificationId = verificationId;
+        // --- approve/reject button wiring + labels ---
+        const approveBtn = document.getElementById('btnApprovePayment');
+        const rejectBtn = document.getElementById('btnRejectPayment');
+        if (approveBtn) approveBtn.dataset.verificationId = verificationId;
+        if (rejectBtn) rejectBtn.dataset.verificationId = verificationId;
 
-    const status = (payment.status || '').toUpperCase();
-    if (approveBtn && rejectBtn) {
-      if (status === 'APPROVED') {
-        approveBtn.textContent = 'Re-approve';
-        rejectBtn.textContent = 'Reject (change)';
-      } else if (status === 'REJECTED') {
-        approveBtn.textContent = 'Approve (change)';
-        rejectBtn.textContent = 'Re-reject';
-      } else {
-        approveBtn.textContent = 'Approve';
-        rejectBtn.textContent = 'Reject';
-      }
-      approveBtn.style.display = 'inline-block';
-      rejectBtn.style.display = 'inline-block';
-      if (status === 'APPROVED') approveBtn.classList.add('muted'); else approveBtn.classList.remove('muted');
-      if (status === 'REJECTED') rejectBtn.classList.add('muted'); else rejectBtn.classList.remove('muted');
+        const status = (payment.status || '').toUpperCase();
+        if (approveBtn && rejectBtn) {
+            if (status === 'APPROVED') {
+                approveBtn.textContent = 'Re-approve';
+                rejectBtn.textContent = 'Reject (change)';
+            } else if (status === 'REJECTED') {
+                approveBtn.textContent = 'Approve (change)';
+                rejectBtn.textContent = 'Re-reject';
+            } else {
+                approveBtn.textContent = 'Approve';
+                rejectBtn.textContent = 'Reject';
+            }
+            approveBtn.style.display = 'inline-block';
+            rejectBtn.style.display = 'inline-block';
+            if (status === 'APPROVED') approveBtn.classList.add('muted'); else approveBtn.classList.remove('muted');
+            if (status === 'REJECTED') rejectBtn.classList.add('muted'); else rejectBtn.classList.remove('muted');
+        }
+
+        openModal('paymentDetailsModal');
+    } catch (error) {
+        console.error('Error viewing payment details:', error);
+        showNotification('Failed to load payment details: ' + (error.message || error), 'error');
     }
-
-    openModal('paymentDetailsModal');
-  } catch (error) {
-    console.error('Error viewing payment details:', error);
-    showNotification('Failed to load payment details: ' + (error.message || error), 'error');
-  }
 }
 
 
 
 // Approve payment (robust fetch + error handling)
 async function approvePayment(verificationId) {
-  try {
-    const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=approve', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ id: verificationId })
-    });
-
-    const text = await response.text(); // always read raw text first
-    if (!response.ok) {
-      // show raw server message when status != 2xx (helps debug 500)
-      throw new Error(`Server returned ${response.status}: ${text || response.statusText}`);
-    }
-
-    // try parse JSON, else throw
-    let result;
     try {
-      result = JSON.parse(text);
-    } catch (e) {
-      throw new Error('Invalid JSON response from server: ' + text.slice(0, 300));
-    }
+        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=approve', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: verificationId })
+        });
 
-    if (result.success) {
-      showNotification(result.message || 'Payment approved successfully!', 'success');
-      closeModal('paymentDetailsModal');
-      loadPaymentVerifications();
-    } else {
-      showNotification(result.message || 'Failed to approve payment', 'error');
-    }
+        const text = await response.text(); // always read raw text first
+        if (!response.ok) {
+            // show raw server message when status != 2xx (helps debug 500)
+            throw new Error(`Server returned ${response.status}: ${text || response.statusText}`);
+        }
 
-  } catch (error) {
-    console.error('Error approving payment:', error);
-    showNotification('Failed to approve payment: ' + error.message, 'error');
-  }
+        // try parse JSON, else throw
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (e) {
+            throw new Error('Invalid JSON response from server: ' + text.slice(0, 300));
+        }
+
+        if (result.success) {
+            showNotification(result.message || 'Payment approved successfully!', 'success');
+            closeModal('paymentDetailsModal');
+            loadPaymentVerifications();
+        } else {
+            showNotification(result.message || 'Failed to approve payment', 'error');
+        }
+
+    } catch (error) {
+        console.error('Error approving payment:', error);
+        showNotification('Failed to approve payment: ' + error.message, 'error');
+    }
 }
 
 // Reject payment (with reason) — robust fetch + error handling
 async function rejectPayment(verificationId, reason) {
-  try {
-    const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=reject', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ id: verificationId, reason })
-    });
+    try {
+        const response = await fetch('/RADS-TOOLING/backend/api/payment_verification.php?action=reject', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ id: verificationId, reason })
+        });
 
-    const text = await response.text();
+        const text = await response.text();
 
-    if (!response.ok) {
-      // Throw with server body so catch displays meaningful message
-      throw new Error(`Server returned ${response.status}: ${text || response.statusText}`);
+        if (!response.ok) {
+            // Throw with server body so catch displays meaningful message
+            throw new Error(`Server returned ${response.status}: ${text || response.statusText}`);
+        }
+
+        let result;
+        try { result = JSON.parse(text); }
+        catch (e) { throw new Error('Invalid JSON response from server: ' + text.slice(0, 300)); }
+
+        if (result.success) {
+            showNotification(result.message || 'Payment rejected', 'success');
+            closeModal('rejectReasonModal');
+            closeModal('paymentDetailsModal');
+            loadPaymentVerifications();
+        } else {
+            showNotification(result.message || 'Failed to reject payment', 'error');
+        }
+
+    } catch (error) {
+        console.error('Error rejecting payment:', error);
+        // show the actual error message (includes server body when non-2xx)
+        showNotification('Failed to reject payment: ' + error.message, 'error');
     }
-
-    let result;
-    try { result = JSON.parse(text); }
-    catch (e) { throw new Error('Invalid JSON response from server: ' + text.slice(0, 300)); }
-
-    if (result.success) {
-      showNotification(result.message || 'Payment rejected', 'success');
-      closeModal('rejectReasonModal');
-      closeModal('paymentDetailsModal');
-      loadPaymentVerifications();
-    } else {
-      showNotification(result.message || 'Failed to reject payment', 'error');
-    }
-
-  } catch (error) {
-    console.error('Error rejecting payment:', error);
-    // show the actual error message (includes server body when non-2xx)
-    showNotification('Failed to reject payment: ' + error.message, 'error');
-  }
 }
 
 
@@ -2468,4 +2505,63 @@ document.getElementById('btnConfirmReject')?.addEventListener('click', function 
     }
 
     rejectPayment(parseInt(verificationId), reason);
+});
+
+// Customer-delete feedback handler (attach once)
+document.addEventListener('click', async function (e) {
+    const btn = e.target.closest('.btn-delete-own-feedback');
+    if (!btn) return;
+    e.preventDefault();
+
+    const id = btn.getAttribute('data-id');
+    if (!id) return;
+
+    // Optional: ensure the button belongs to logged-in customer, using window.CURRENT_CUSTOMER_ID
+    // (This is only a UI check; server enforces permissions)
+    const ownerId = btn.getAttribute('data-owner-id'); // if you rendered owner id in DOM
+    if (typeof window.CURRENT_CUSTOMER_ID !== 'undefined' && ownerId && String(window.CURRENT_CUSTOMER_ID) !== String(ownerId)) {
+        alert('You can only delete your own feedback.');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete this feedback?')) return;
+
+    try {
+        const resp = await fetch('/RADS-TOOLING/backend/api/feedback/delete.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ feedback_id: parseInt(id, 10) })
+        });
+
+        const json = await resp.json();
+
+        if (!resp.ok || !json.success) {
+            alert(json.message || 'Failed to delete feedback');
+            return;
+        }
+
+        // Remove UI element (card or row)
+        // Try row first (admin table), then card
+        let el = document.querySelector(`[data-feedback-id="${id}"]`);
+        if (!el) {
+            // maybe button inside a card: closest .feedback-card
+            el = btn.closest('.feedback-card');
+        }
+        if (el) el.remove();
+
+        // optional visual feedback
+        if (typeof showNotification === 'function') {
+            showNotification('Feedback deleted', 'success');
+        } else {
+            alert('Feedback deleted');
+        }
+
+    } catch (err) {
+        console.error('Delete request failed', err);
+        alert('Failed to delete feedback. Please try again.');
+    }
 });

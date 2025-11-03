@@ -53,17 +53,26 @@ $activeType = $_GET['type'] ?? 'All';
 if (isset($alias[$activeType])) $activeType = $alias[$activeType];
 if (!isset($allowedTypes[$activeType])) $activeType = 'All';
 
-/* ---------- Fetch released-only from Product Management (use actual columns) ---------- */
+/* ---------- Fetch released-only from Product Management (use actual columns) ----------
+   NOTE: do NOT concatenate placeholder with image in SQL (that was a bug).
+   Fetch raw image column and normalize in PHP below.
+   FIX: Also fetch primary image from product_images table if available
+*/
 $sql = "
 SELECT
-  id,
-  name,
-  description AS short_desc,
-  price       AS base_price,
-  CONCAT('/RADS-TOOLING/uploads/products/', image) AS image_url,
-  type
-FROM products
-WHERE status='released' AND is_archived=0
+  p.id,
+  p.name,
+  p.description AS short_desc,
+  p.price       AS base_price,
+  p.image       AS image_raw,
+  p.type,
+  p.is_customizable,
+  (SELECT pi.image_path 
+   FROM product_images pi 
+   WHERE pi.product_id = p.id AND pi.is_primary = 1 
+   LIMIT 1) AS primary_image_path
+FROM products p
+WHERE p.status='released' AND p.is_archived=0
 ";
 $params = [];
 if ($activeType !== 'All') {
@@ -88,6 +97,63 @@ function peso($n)
 }
 if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 $CSRF = $_SESSION['csrf_token'];
+
+/**
+ * Normalize image URL coming from DB.
+ * FIX: Check if file exists and use primary_image_path from product_images table
+ * Accepts:
+ *  - absolute urls (http/https) -> return as-is
+ *  - absolute paths (/...) -> return as-is
+ *  - known relative roots -> prefix /RADS-TOOLING/
+ *  - filename only -> prefix /RADS-TOOLING/uploads/products/
+ *  - empty -> placeholder
+ */
+function public_img_url($raw, $checkExists = true)
+{
+    $raw = trim((string)$raw);
+    if ($raw === '') {
+        return '/RADS-TOOLING/uploads/products/placeholder.jpg';
+    }
+
+    if (preg_match('~^https?://~i', $raw)) return $raw;
+    if ($raw[0] === '/') return $raw;
+
+    $knownRoots = [
+        'uploads/products/',
+        'assets/uploads/',
+        'assets/images/',
+        'images/',
+        'backend/uploads/',
+    ];
+    
+    $finalPath = '';
+    foreach ($knownRoots as $root) {
+        if (strpos($raw, $root) === 0) {
+            $finalPath = '/RADS-TOOLING/' . ltrim($raw, '/');
+            break;
+        }
+    }
+    
+    if (!$finalPath) {
+        // If it includes uploads/products somewhere, prefix cleanly
+        if (stripos($raw, 'uploads/products/') !== false) {
+            $finalPath = '/RADS-TOOLING/' . ltrim($raw, '/');
+        } else {
+            // Otherwise assume it's a filename
+            $finalPath = '/RADS-TOOLING/uploads/products/' . ltrim($raw, '/');
+        }
+    }
+    
+    // FIX: Check if file actually exists (optional)
+    if ($checkExists) {
+        $serverPath = $_SERVER['DOCUMENT_ROOT'] . $finalPath;
+        if (!file_exists($serverPath)) {
+            return '/RADS-TOOLING/uploads/products/placeholder.jpg';
+        }
+    }
+    
+    return $finalPath;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -100,10 +166,13 @@ $CSRF = $_SESSION['csrf_token'];
     <!-- Fonts/Icons -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css" />
+    <style>
+        /* small helper for consistent product img sizing and selector */
+        .product-public-img { width:100%; height:180px; object-fit:cover; display:block; border-radius:6px; }
+    </style>
 </head>
 
 <body>
@@ -176,28 +245,26 @@ $CSRF = $_SESSION['csrf_token'];
             <?php if (empty($products)) : ?>
                 <div class="rt-empty">No released products found<?= $q !== '' ? " for “" . htmlspecialchars($q) . "”" : '' ?>.</div>
             <?php else : ?>
-                <div class="rt-grid">
+                <div class="rt-grid" id="publicProductsGrid">
                     <?php foreach ($products as $p):
                         $id    = (int)$p['id'];
                         $name  = $p['name'] ?? 'Untitled';
                         $desc  = $p['short_desc'] ?? ($p['description'] ?? '');
-                        $img   = $p['image_url'] ?: '/RADS-TOOLING/assets/images/placeholder.jpg';
+                        // FIX: Use primary_image_path from product_images if available, fallback to product.image
+                        $imageToUse = !empty($p['primary_image_path']) ? $p['primary_image_path'] : ($p['image_raw'] ?? '');
+                        $img   = public_img_url($imageToUse);
                         $price = (float)$p['base_price'];
+                        $isCustom = (int)($p['is_customizable'] ?? 0);
                     ?>
                         <article class="rt-card" data-id="<?= $id ?>" data-name="<?= htmlspecialchars($name) ?>">
                             <div class="rt-imgwrap">
                                 <img
+                                    class="product-public-img"
                                     src="<?= htmlspecialchars($img) ?>"
                                     alt="<?= htmlspecialchars($name) ?>"
-                                    onerror="this.onerror=null;this.src='/RADS-TOOLING/assets/images/placeholder.png'">
+                                    data-product-id="<?= $id ?>"
+                                    onerror="this.onerror=null;this.src='/RADS-TOOLING/uploads/products/placeholder.jpg'">
 
-                                <?php if (!empty($p['is_customizable']) && (int)$p['is_customizable'] === 1): ?>
-                                    <a class="rt-ico rt-left-ico"
-                                        href="/RADS-TOOLING/customer/customization.php?pid=<?= (int)$id ?>"
-                                        onclick="event.stopPropagation()" title="Customize">
-                                        <span class="material-symbols-rounded">edit_square</span>
-                                    </a>
-                                <?php endif; ?>
                             </div>
 
 
@@ -250,9 +317,6 @@ $CSRF = $_SESSION['csrf_token'];
                         <a href="#" class="social-icon" aria-label="Facebook">
                             <span class="material-symbols-rounded">facebook</span>
                         </a>
-                        <a href="#" class="social-icon" aria-label="Instagram">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                        </a>
                         <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
                             <span class="material-symbols-rounded">mail</span>
                         </a>
@@ -263,8 +327,10 @@ $CSRF = $_SESSION['csrf_token'];
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
+          <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+          <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
                         <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
                         <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
                     </ul>
@@ -344,14 +410,17 @@ $CSRF = $_SESSION['csrf_token'];
         document.addEventListener('DOMContentLoaded', function() {
             const chatBtn = document.getElementById('rtChatBtn');
             const chatPopup = document.getElementById('rtChatPopup');
+            // Chat close element might not exist; keep safe
             const chatClose = document.getElementById('rtChatClose');
 
-            if (chatBtn && chatPopup && chatClose) {
+            if (chatBtn && chatPopup) {
                 chatBtn.addEventListener('click', function() {
                     chatPopup.style.display = 'flex';
                     chatBtn.style.display = 'none';
                 });
+            }
 
+            if (chatClose && chatPopup && chatBtn) {
                 chatClose.addEventListener('click', function() {
                     chatPopup.style.display = 'none';
                     chatBtn.style.display = 'flex';
@@ -359,8 +428,6 @@ $CSRF = $_SESSION['csrf_token'];
             }
         });
     </script><!-- /.page-wrapper -->
-
-    <!-- NOTE: removed the "Saved" toast para wala na sa footer -->
 
     <script>
         (() => {
@@ -409,7 +476,7 @@ $CSRF = $_SESSION['csrf_token'];
                 document.body.style.overflow = '';
             };
 
-            // ⬇️ DITO MO IDIDIKIT (kapalit ng dating closeBtn lines)
+            // close button
             document.getElementById('rtLoginX')?.addEventListener('click', closeLogin);
             modal?.addEventListener('click', (e) => {
                 if (e.target === modal) closeLogin();
@@ -469,11 +536,48 @@ $CSRF = $_SESSION['csrf_token'];
                 }
             });
         })();
+
+       // after render: patch product cards to use product_images primary if available
+document.addEventListener('DOMContentLoaded', function() {
+  // run after a small delay to ensure DOM/imgs present
+  setTimeout(patchProductCardsWithPrimaryImages, 150);
+});
+
+async function patchProductCardsWithPrimaryImages() {
+  // selector: use the images we added with data-product-id
+  const cardImgs = Array.from(document.querySelectorAll('.rt-card img[data-product-id]'));
+  if (!cardImgs.length) return;
+
+  const ids = [...new Set(cardImgs.map(i => i.dataset.productId).filter(Boolean))];
+
+  await Promise.all(ids.map(async pid => {
+    try {
+      const resp = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${pid}`, { credentials: 'same-origin' });
+      const j = await resp.json().catch(() => ({ success: false }));
+      if (!j.success) return;
+      const imgs = j.data?.images || j.data || [];
+      if (!Array.isArray(imgs) || imgs.length === 0) return;
+      const primary = imgs.find(i => Number(i.is_primary) === 1) || imgs[0];
+      if (!primary) return;
+      const filename = String(primary.image_path || primary.path || primary.filename || '').split('/').pop();
+      if (!filename) return;
+      const src = `/RADS-TOOLING/uploads/products/${filename}`;
+
+      // update all images for this pid if currently placeholder or different
+      cardImgs.forEach(imgEl => {
+        if (String(imgEl.dataset.productId) !== String(pid)) return;
+        const current = imgEl.getAttribute('src') || '';
+        const isPlaceholder = current.endsWith('placeholder.jpg') || current === '';
+        if (isPlaceholder || !current.includes(filename)) {
+          imgEl.src = src;
+        }
+      });
+    } catch (err) {
+      console.error('patch card image error', err);
+    }
+  }));
+}
     </script>
-
-
-    <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
-
+<script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 </body>
-
 </html>

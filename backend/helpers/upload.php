@@ -1,135 +1,109 @@
 <?php
-
 /**
- * Image/Video Upload Helper
- * Validates and processes file uploads with security measures
+ * RADS TOOLING - Unified Upload Helper
+ * Handles upload of images, videos, and 3D models securely.
+ * Now group-aware: saves files under uploads/<group>/ consistently.
  */
 
-/**
- * Upload and validate a file (image or video)
- * 
- * @param array $file The uploaded file from $_FILES
- * @param string $group The group/category for organizing uploads
- * @return array Result with success status and file info
- */
 function processFileUpload($file, $group = 'general')
-{  // CHANGED: renamed function
-    // Configuration
+{
+    // === CONFIG ===
     $maxFileSize = 30 * 1024 * 1024; // 30 MB
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov', 'avi', 'glb'];
     $allowedMimes = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/webp',
-        'video/mp4',
-        'video/quicktime',
-        'video/x-msvideo',
-        'model/gltf-binary',
-        'application/octet-stream'
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+        'video/mp4', 'video/quicktime', 'video/x-msvideo',
+        'model/gltf-binary', 'application/octet-stream'
     ];
 
-    // Check for upload errors
+    // === VALIDATION ===
+    if (!isset($file) || !is_array($file)) {
+        return ['success' => false, 'message' => 'No file provided'];
+    }
+
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        return [
-            'success' => false,
-            'message' => 'Upload error: ' . getUploadErrorMessage($file['error'])
-        ];
+        return ['success' => false, 'message' => 'Upload error: ' . getUploadErrorMessage($file['error'])];
     }
 
-    // Validate file size
     if ($file['size'] > $maxFileSize) {
-        return [
-            'success' => false,
-            'message' => 'File size exceeds 30MB limit'
-        ];
+        return ['success' => false, 'message' => 'File size exceeds 30MB limit'];
     }
 
-    // Validate file exists
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-        return [
-            'success' => false,
-            'message' => 'Invalid uploaded file'
-        ];
+        return ['success' => false, 'message' => 'Invalid uploaded file'];
     }
 
-    // Get file extension
+    // === FILE INFO ===
     $originalName = basename($file['name']);
     $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-    // Validate extension
-    if (!in_array($extension, $allowedExtensions)) {
-        return [
-            'success' => false,
-            'message' => 'Invalid file type. Only JPG, PNG, WebP, MP4, MOV, AVI, and GLB are allowed'
-        ];
+    if (!in_array($extension, $allowedExtensions, true)) {
+        return ['success' => false, 'message' => 'Invalid file type. Allowed: ' . implode(', ', $allowedExtensions)];
     }
 
-    // Validate MIME type
+    // MIME type check
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
     $mimeType = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
-
-    if (!in_array($mimeType, $allowedMimes)) {
-        return [
-            'success' => false,
-            'message' => 'Invalid file MIME type: ' . $mimeType
-        ];
-    }
-
-    // FIX: Calculate base directory correctly
-    // We're in /backend/helpers/, need to go up 2 levels to project root
-    $baseDir = dirname(dirname(__DIR__));
-    $uploadDir = $baseDir . '/uploads/cms/' . sanitizeGroupName($group) . '/';
-
-    // Create upload directory if it doesn't exist
-    if (!is_dir($uploadDir)) {
-        if (!mkdir($uploadDir, 0755, true)) {
-            return [
-                'success' => false,
-                'message' => 'Failed to create upload directory'
-            ];
+    if (!in_array($mimeType, $allowedMimes, true)) {
+        // allow GLB flexibility
+        if (!($extension === 'glb' && in_array($mimeType, ['application/octet-stream', 'application/x-unknown'], true))) {
+            return ['success' => false, 'message' => 'Invalid file MIME type: ' . $mimeType];
         }
     }
 
-    // Verify directory is writable
-    if (!is_writable($uploadDir)) {
-        return [
-            'success' => false,
-            'message' => 'Upload directory is not writable: ' . $uploadDir
-        ];
+    // === DETERMINE UPLOAD DIR ===
+    $baseDir = dirname(dirname(__DIR__)); // go from /backend/helpers/ to project root
+    $groupClean = sanitizeGroupName($group);
+    if ($groupClean === '') $groupClean = 'general';
+
+    // Allow known groups only
+    $allowedGroups = ['products', 'cms', 'models', 'avatars', 'handles', 'general'];
+    if (!in_array($groupClean, $allowedGroups, true)) {
+        $groupClean = 'general';
     }
 
-    // Generate unique filename
+    $uploadDir = $baseDir . '/uploads/' . $groupClean . '/';
+
+    // Ensure directory exists
+    if (!is_dir($uploadDir)) {
+        if (!mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            return ['success' => false, 'message' => 'Failed to create upload directory'];
+        }
+    }
+
+    // Ensure directory writable
+    if (!is_writable($uploadDir)) {
+        return ['success' => false, 'message' => 'Upload directory not writable: ' . $uploadDir];
+    }
+
+    // === SAVE FILE ===
     $uniqueName = generateUniqueFileName($originalName, $extension);
     $filePath = $uploadDir . $uniqueName;
-    $relativePath = '/RADS-TOOLING/uploads/cms/' . sanitizeGroupName($group) . '/' . $uniqueName;
+    $relativePath = 'uploads/' . $groupClean . '/' . $uniqueName; // consistent with other scripts
 
-    // Move uploaded file
     if (!move_uploaded_file($file['tmp_name'], $filePath)) {
-        return [
-            'success' => false,
-            'message' => 'Failed to move uploaded file'
-        ];
+        return ['success' => false, 'message' => 'Failed to move uploaded file'];
     }
 
-    // Get dimensions for images only
-    $width = 0;
-    $height = 0;
-    if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'])) {
-        $dimensions = @getimagesize($filePath);
-        $width = $dimensions ? $dimensions[0] : 0;
-        $height = $dimensions ? $dimensions[1] : 0;
+    // === OPTIONAL IMAGE DETAILS ===
+    $width = 0; $height = 0;
+    if (in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+        $dims = @getimagesize($filePath);
+        if ($dims) {
+            $width = $dims[0]; $height = $dims[1];
+        }
 
-        // Optionally create WebP version if not already WebP
+        // Auto-convert to webp (optional)
         if ($extension !== 'webp' && function_exists('imagewebp')) {
-            createWebPVersion($filePath, $extension);
+            @createWebPVersion($filePath, $extension);
         }
     }
 
+    // === RETURN RESULT ===
     return [
         'success' => true,
-        'file_path' => $relativePath,
+        'file_path' => $relativePath, // e.g. uploads/products/image.jpg
         'file_name' => $uniqueName,
         'mime' => $mimeType,
         'width' => $width,
@@ -138,28 +112,27 @@ function processFileUpload($file, $group = 'general')
 }
 
 /**
- * Generate a unique filename
+ * Generate unique, safe filename
  */
 function generateUniqueFileName($originalName, $extension)
 {
     $timestamp = time();
-    $random = bin2hex(random_bytes(8));
-    $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($originalName, PATHINFO_FILENAME));
-    $safeName = substr($safeName, 0, 30); // Limit length
-
-    return $safeName . '_' . $timestamp . '_' . $random . '.' . $extension;
+    $random = bin2hex(random_bytes(6));
+    $safe = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($originalName, PATHINFO_FILENAME));
+    $safe = substr($safe, 0, 30);
+    return $safe . '_' . $timestamp . '_' . $random . '.' . $extension;
 }
 
 /**
- * Sanitize group name for directory creation
+ * Sanitize group name (folder name)
  */
 function sanitizeGroupName($group)
 {
-    return preg_replace('/[^a-zA-Z0-9_-]/', '', $group);
+    return preg_replace('/[^a-zA-Z0-9_-]/', '', strtolower((string)$group));
 }
 
 /**
- * Get human-readable upload error message
+ * Return human-readable upload error message
  */
 function getUploadErrorMessage($errorCode)
 {
@@ -172,18 +145,16 @@ function getUploadErrorMessage($errorCode)
         UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
         UPLOAD_ERR_EXTENSION => 'Upload stopped by extension'
     ];
-
     return $errors[$errorCode] ?? 'Unknown upload error';
 }
 
 /**
- * Create WebP version of an image
+ * Optionally create a .webp version of image
  */
 function createWebPVersion($filePath, $extension)
 {
     try {
         $image = null;
-
         switch ($extension) {
             case 'jpg':
             case 'jpeg':
@@ -194,16 +165,13 @@ function createWebPVersion($filePath, $extension)
                 break;
         }
 
-        if (!$image) {
-            return false;
-        }
+        if (!$image) return false;
 
         $webpPath = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $filePath);
-        $result = imagewebp($image, $webpPath, 85);
-        imagedestroy($image);
-
+        $result = @imagewebp($image, $webpPath, 85);
+        @imagedestroy($image);
         return $result;
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         return false;
     }
 }

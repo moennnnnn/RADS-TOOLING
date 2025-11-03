@@ -87,11 +87,13 @@ document.addEventListener('DOMContentLoaded', function () {
     clearError();
     setLoading(true, 'Creating your account…');
 
-    // Collect form data (by IDs for safety)
+    const firstName = get('firstName');
+    const lastName = get('lastName');
+    const fullName = `${firstName} ${lastName}`.trim();
+
     const payload = {
       audience: 'customer',
-      first_name: get('firstName'),
-      last_name: get('lastName'),
+      full_name: fullName,  // ← CHANGED: combine first + last name
       email: get('email'),
       username: get('username'),
       password: get('password')
@@ -107,7 +109,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Client-side validation (server re-validates too)
-    if (!payload.first_name || !payload.last_name) return showError('Please enter your first and last name.');
+    if (!firstName || !lastName) return showError('Please enter your first and last name.');
+    if (!payload.full_name || payload.full_name.length < 2) return showError('Please enter your full name.');
     if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return showError('Please enter a valid email.');
     if (!payload.username || !/^[A-Za-z0-9_]{3,20}$/.test(payload.username)) return showError('Username must be 3–20 characters (letters, numbers, underscore).');
     if (!payload.password || payload.password.length < 6) return showError('Password must be at least 6 characters long.');

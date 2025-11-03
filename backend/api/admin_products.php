@@ -46,7 +46,6 @@ if ($action !== 'view') {
     }
 }
 
-
 // Error handler
 set_error_handler(function ($severity, $message, $file, $line) {
     error_log("PHP Error: $message in $file on line $line");
@@ -70,7 +69,7 @@ try {
 function requireStaffAuth(): void
 {
     // Check new session format
-    if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? null) === 'staff') {
+    if (!empty($_SESSION['user']) && in_array($_SESSION['user']['aud'] ?? '', ['staff','admin'], true)) {
         return;
     }
     // Check staff-specific session
@@ -86,7 +85,6 @@ function requireStaffAuth(): void
 }
 
 // Allow 'view' for logged-in admin OR customer; other actions require staff/admin
-// NEW:
 if ($action !== 'view') {
     requireStaffAuth();
 } else {
@@ -94,7 +92,6 @@ if ($action !== 'view') {
         sendJSON(false, 'Unauthorized access', null, 401);
     }
 }
-
 
 // Get database connection
 try {
@@ -196,6 +193,7 @@ function viewProduct(PDO $conn): void
 
     if (empty($productId)) {
         sendJSON(false, 'Product ID is required', null, 400);
+        return;
     }
 
     try {
@@ -207,10 +205,11 @@ function viewProduct(PDO $conn): void
 
         if (!$product) {
             sendJSON(false, 'Product not found', null, 404);
+            return;
         }
 
         // Get size configuration
-        $sql = "SELECT * FROM product_size_config WHERE product_id = ?";
+        $sql = "SELECT * FROM product_size_config WHERE product_id = ? ORDER BY id ASC";
         $stmt = $conn->prepare($sql);
         $stmt->execute([$productId]);
         $sizeConfig = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -272,21 +271,21 @@ function viewProduct(PDO $conn): void
         $allowed = [
             'door'     => ['textures' => [], 'colors' => []],
             'body'     => ['textures' => [], 'colors' => []],
-            'interior' => ['textures' => [], 'colors' => []],  // Note: interior not inside
+            'interior' => ['textures' => [], 'colors' => []],
             'handle'   => ['handles'  => []],
         ];
 
         // Process textures by their allowed parts
         foreach ($textures as $t) {
             $textureData = [
-                'id' => (int)$t['texture_id'], 
-                'name' => $t['texture_name'], 
+                'id' => (int)$t['texture_id'],
+                'name' => $t['texture_name'],
                 'file' => $t['texture_image']
             ];
-            
+
             // Get allowed parts for this texture (comma-separated from GROUP_CONCAT)
-            $allowedParts = !empty($t['allowed_parts']) ? explode(',', $t['allowed_parts']) : [];
-            
+            $allowedParts = !empty($t['allowed_parts']) ? array_filter(array_map('trim', explode(',', $t['allowed_parts']))) : [];
+
             // If no specific parts assigned, texture is available for all parts (backward compatibility)
             if (empty($allowedParts)) {
                 $allowed['door']['textures'][] = $textureData;
@@ -295,7 +294,6 @@ function viewProduct(PDO $conn): void
             } else {
                 // Only add to allowed parts
                 foreach ($allowedParts as $part) {
-                    $part = trim($part);
                     if ($part === 'door') {
                         $allowed['door']['textures'][] = $textureData;
                     } elseif ($part === 'body') {
@@ -310,8 +308,8 @@ function viewProduct(PDO $conn): void
         // Colors remain available for all parts (no part-specific logic yet)
         foreach ($colors as $c) {
             $colorData = [
-                'id' => (int)$c['color_id'], 
-                'name' => $c['color_name'], 
+                'id' => (int)$c['color_id'],
+                'name' => $c['color_name'],
                 'hex' => $c['hex_value']
             ];
             $allowed['door']['colors'][] = $colorData;
@@ -362,12 +360,115 @@ function viewProduct(PDO $conn): void
             'handles'    => $handleMap,
         ];
 
-        // Attach normalized fields for frontend
-        $product['size_confs'] = $sizeConfs;
-        $product['allowed']    = $allowed;
-        $product['pricing']    = $pricing;
+               // ----------------------------
+        // Attach normalized fields for frontend (IMPROVED)
+        // ----------------------------
+        // Defensive: ensure $product is array
+        if (!isset($product) || !is_array($product)) {
+            throw new Exception('Invalid product record');
+        }
 
+        // Base path used by frontend for images/models (adjust if necessary)
+        $publicBasePrefix = '/RADS-TOOLING/'; // <- change if different
+        $uploadsProductsPrefix = 'uploads/products/';
+
+        // Normalize main image (if stored as filename or relative path)
+        $product['image'] = $product['image'] ?? null;
+        if (!empty($product['image'])) {
+            $img = (string)$product['image'];
+            if (preg_match('#^https?://#i', $img)) {
+                $product['image_public'] = $img;
+            } else {
+                $imgClean = ltrim($img, '/');
+                if (!preg_match('#^uploads/#', $imgClean)) {
+                    $imgClean = $uploadsProductsPrefix . basename($imgClean);
+                }
+                $product['image_public'] = rtrim($publicBasePrefix, '/') . '/' . ltrim($imgClean, '/');
+            }
+        } else {
+            $product['image_public'] = null;
+        }
+
+        // Normalize 3D model path (if any)
+        $product['model_3d'] = $product['model_3d'] ?? null;
+        if (!empty($product['model_3d']) && !preg_match('#^https?://#i', $product['model_3d'])) {
+            $m = ltrim((string)$product['model_3d'], '/');
+            // if model stored under uploads/models or uploads/models/..., adjust as needed
+            $product['model_3d_public'] = rtrim($publicBasePrefix, '/') . '/' . $m;
+        } else {
+            $product['model_3d_public'] = $product['model_3d'] ?: null;
+        }
+
+        // Attach computed size configs to product (frontend expects size_confs)
+        // $sizeConfs was built earlier from $sizeConfig
+        $product['size_confs'] = $sizeConfs ?? [];
+
+        // Keep raw DB arrays for reference
+        $product['raw_textures'] = $textures;
+        $product['raw_colors']   = $colors;
+        $product['raw_handles']  = $handles;
+
+        // Attach allowed options (textures/colors per part) computed earlier
+        $product['allowed_options'] = $allowed;
+
+        // Build pricing map and attach
+        $product['pricing'] = $pricing;
+
+        // Fetch product images from product_images table and normalize
+        $stmt = $conn->prepare("
+            SELECT image_id, image_path, display_order, is_primary
+            FROM product_images
+            WHERE product_id = ?
+            ORDER BY is_primary DESC, display_order ASC, image_id ASC
+        ");
+        $stmt->execute([$productId]);
+        $imgRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $imagesOut = [];
+        foreach ($imgRows as $ir) {
+            $rawPath = trim((string)($ir['image_path'] ?? ''));
+            if ($rawPath === '') continue;
+
+            if (preg_match('#^https?://#i', $rawPath)) {
+                $publicPath = $rawPath;
+                $rel = preg_replace('#^https?://[^/]+/#i', '', $rawPath);
+                $rel = ltrim($rel, '/');
+            } else {
+                $rel = ltrim($rawPath, '/');
+                if (!preg_match('#^uploads/#', $rel)) {
+                    $rel = $uploadsProductsPrefix . basename($rel);
+                }
+                $publicPath = rtrim($publicBasePrefix, '/') . '/' . $rel;
+            }
+
+            $imagesOut[] = [
+                'image_id'     => (int)$ir['image_id'],
+                'filename'     => basename($rel),
+                'image_path'   => $rel,
+                'public_path'  => $publicPath,
+                'display_order'=> (int)$ir['display_order'],
+                'is_primary'   => (int)$ir['is_primary'],
+            ];
+        }
+        $product['images'] = $imagesOut;
+
+        // If there's a primary image in images[], ensure product.image_public points to it (fallback)
+        if (empty($product['image_public']) && !empty($imagesOut)) {
+            foreach ($imagesOut as $im) {
+                if (!empty($im['is_primary'])) {
+                    $product['image_public'] = $im['public_path'];
+                    break;
+                }
+            }
+            // if still empty, set to first image
+            if (empty($product['image_public'])) {
+                $product['image_public'] = $imagesOut[0]['public_path'] ?? null;
+            }
+        }
+
+        // Finally send response
         sendJSON(true, 'Product details retrieved successfully', $product);
+        return;
+
     } catch (Throwable $e) {
         error_log("View product error: " . $e->getMessage());
         sendJSON(false, 'Failed to retrieve product details', null, 500);
@@ -380,7 +481,12 @@ function addProduct(PDO $conn): void
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw = file_get_contents('php://input');
+    $input = json_decode($raw, true);
+
+    if (!is_array($input)) {
+        sendJSON(false, 'Invalid JSON payload', null, 400);
+    }
 
     if (empty($input['name']) || empty($input['type'])) {
         sendJSON(false, 'Product name and type are required', null, 400);
@@ -390,9 +496,11 @@ function addProduct(PDO $conn): void
         $conn->beginTransaction();
 
         // ✅ NEW: Check for duplicate product name
-        $checkStmt = $conn->prepare("SELECT id FROM products WHERE LOWER(name) = LOWER(?) LIMIT 1");
-        $checkStmt->execute([$input['name']]);
-        if ($checkStmt->fetch()) {
+        // If input provides id (shouldn't for add), exclude it; otherwise 0
+        $excludeId = isset($input['id']) ? (int)$input['id'] : 0;
+        $stmt = $conn->prepare('SELECT id FROM products WHERE name = ? AND id != ? LIMIT 1');
+        $stmt->execute([$input['name'], $excludeId]);
+        if ($stmt->fetch()) {
             $conn->rollBack();
             sendJSON(false, 'A product with this name already exists. Please use a different name.', null, 409);
         }
@@ -417,10 +525,10 @@ function addProduct(PDO $conn): void
             $createdBy
         ]);
 
-        $productId = $conn->lastInsertId();
+        $productId = (int)$conn->lastInsertId();
 
         // If customizable, insert size configuration
-        if (!empty($input['is_customizable']) && !empty($input['size_config'])) {
+        if (!empty($input['is_customizable']) && !empty($input['size_config']) && is_array($input['size_config'])) {
             foreach ($input['size_config'] as $dimension => $config) {
                 $sql = "INSERT INTO product_size_config (product_id, dimension_type, min_value, max_value, 
                         default_value, step_value,
@@ -459,7 +567,8 @@ function updateProduct(PDO $conn): void
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
-    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $raw = file_get_contents('php://input');
+    $input = json_decode($raw, true) ?? [];
     if (empty($input['id']) && !empty($_GET['id'])) {
         $input['id'] = (int)$_GET['id'];
     }
@@ -474,6 +583,14 @@ function updateProduct(PDO $conn): void
         $params = [];
 
         if (isset($input['name'])) {
+            // check duplicate except this id
+            $stmt = $conn->prepare('SELECT id FROM products WHERE name = ? AND id != ? LIMIT 1');
+            $stmt->execute([$input['name'], (int)$input['id']]);
+            if ($stmt->fetch()) {
+                $conn->rollBack();
+                sendJSON(false, 'A product with this name already exists. Please use a different name.', null, 409);
+            }
+
             $updateFields[] = 'name = ?';
             $params[] = $input['name'];
         }
@@ -521,7 +638,7 @@ function updateProduct(PDO $conn): void
 
         $conn->commit();
 
-        sendJSON(true, 'Product updated successfully');
+        sendJSON(true, 'Product updated successfully', null);
     } catch (Throwable $e) {
         $conn->rollBack();
         error_log("Update product error: " . $e->getMessage());
@@ -535,7 +652,8 @@ function deleteProduct(PDO $conn): void
         sendJSON(false, 'Method not allowed', null, 405);
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
+    $raw = file_get_contents('php://input');
+    $input = json_decode($raw, true);
     $id = (int)($input['id'] ?? $_GET['id'] ?? 0);
 
     if (!$id) {
@@ -552,7 +670,7 @@ function deleteProduct(PDO $conn): void
         $stmt = $conn->prepare('DELETE FROM products WHERE id = ?');
         $stmt->execute([$id]);
 
-        sendJSON(true, 'Product deleted successfully');
+        sendJSON(true, 'Product deleted successfully', null);
     } catch (Throwable $e) {
         error_log("Delete product error: " . $e->getMessage());
         sendJSON(false, 'Failed to delete product', null, 500);
@@ -561,59 +679,147 @@ function deleteProduct(PDO $conn): void
 
 function uploadImage(): void
 {
-    if (empty($_FILES['image'])) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
+    // Accept both 'images' (multiple) and 'image' (single)
+    if (empty($_FILES)) {
+        sendJSON(false, 'No files uploaded', null, 400);
+    }
+
+    // Ensure helper is available
+    $helperPath = __DIR__ . '/../helpers/upload.php';
+    if (!file_exists($helperPath)) {
+        sendJSON(false, 'Upload helper not found', null, 500);
+    }
+    require_once $helperPath;
+
+    $savedFiles = [];    // relative paths: uploads/products/xxx.jpg
+    $savedNames = [];    // filenames only: xxx.jpg
+    $errors = [];
+
+    // Normalize to list of files
+    $fileList = [];
+    if (isset($_FILES['images'])) {
+        // multiple files array (images[])
+        $files = $_FILES['images'];
+        $count = is_array($files['name']) ? count($files['name']) : 0;
+        for ($i = 0; $i < $count; $i++) {
+            $fileList[] = [
+                'name' => $files['name'][$i],
+                'type' => $files['type'][$i] ?? '',
+                'tmp_name' => $files['tmp_name'][$i] ?? '',
+                'error' => $files['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+                'size' => $files['size'][$i] ?? 0
+            ];
+        }
+    } elseif (isset($_FILES['image'])) {
+        $f = $_FILES['image'];
+        $fileList[] = [
+            'name' => $f['name'],
+            'type' => $f['type'] ?? '',
+            'tmp_name' => $f['tmp_name'] ?? '',
+            'error' => $f['error'] ?? UPLOAD_ERR_NO_FILE,
+            'size' => $f['size'] ?? 0
+        ];
+    } else {
+        // Fallback: pick first file present in $_FILES
+        foreach ($_FILES as $k => $f) {
+            if (!is_array($f['name'])) {
+                $fileList[] = [
+                    'name' => $f['name'],
+                    'type' => $f['type'] ?? '',
+                    'tmp_name' => $f['tmp_name'] ?? '',
+                    'error' => $f['error'] ?? UPLOAD_ERR_NO_FILE,
+                    'size' => $f['size'] ?? 0
+                ];
+            } else {
+                $count = count($f['name']);
+                for ($i = 0; $i < $count; $i++) {
+                    $fileList[] = [
+                        'name' => $f['name'][$i],
+                        'type' => $f['type'][$i] ?? '',
+                        'tmp_name' => $f['tmp_name'][$i] ?? '',
+                        'error' => $f['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+                        'size' => $f['size'][$i] ?? 0
+                    ];
+                }
+            }
+            break;
+        }
+    }
+
+    if (empty($fileList)) {
         sendJSON(false, 'No image file provided', null, 400);
     }
 
-    $file = $_FILES['image'];
-    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-
-    if (!in_array($file['type'], $allowedTypes)) {
-        sendJSON(false, 'Invalid file type. Only JPG, PNG, and WEBP allowed', null, 400);
+    foreach ($fileList as $f) {
+        // call the central helper to validate/save
+        $res = processFileUpload($f, 'products');
+        if ($res['success']) {
+            // res.file_path = uploads/products/<name>
+            $savedFiles[] = $res['file_path'];
+            $savedNames[] = $res['file_name'];
+        } else {
+            // collect error but continue to try others
+            $errors[] = sprintf('%s: %s', $f['name'] ?? 'file', $res['message'] ?? 'Unknown error');
+        }
     }
 
-    $uploadDir = __DIR__ . '/../../uploads/products/';
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    if (empty($savedFiles)) {
+        $msg = !empty($errors) ? implode('; ', $errors) : 'No files saved';
+        sendJSON(false, 'Upload failed: ' . $msg, ['errors' => $errors], 400);
     }
 
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $filename = 'product_' . time() . '_' . uniqid() . '.' . $extension;
-    $uploadPath = $uploadDir . $filename;
+    // Success: return arrays that frontend expects (both relative paths and filenames)
+    $payload = [
+        'files'     => $savedFiles,   // e.g. ['uploads/products/abc.jpg', ...]
+        'filenames' => $savedNames,   // e.g. ['abc.jpg', ...]
+        'errors'    => $errors
+    ];
 
-    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-        sendJSON(true, 'Image uploaded successfully', ['filename' => $filename]);
-    } else {
-        sendJSON(false, 'Failed to upload image', null, 500);
-    }
+    sendJSON(true, count($savedFiles) . ' image(s) uploaded successfully', $payload);
 }
+
 
 function uploadModel(): void
 {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+
     if (empty($_FILES['model'])) {
         sendJSON(false, 'No 3D model file provided', null, 400);
     }
 
+    // Use central helper for consistent saving
+    $helperPath = __DIR__ . '/../helpers/upload.php';
+    if (!file_exists($helperPath)) {
+        sendJSON(false, 'Upload helper not found', null, 500);
+    }
+    require_once $helperPath;
+
     $file = $_FILES['model'];
 
-    if ($file['type'] !== 'model/gltf-binary' && pathinfo($file['name'], PATHINFO_EXTENSION) !== 'glb') {
+    // Accept .glb only; helper accepts glb in allowedExtensions
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if ($extension !== 'glb') {
         sendJSON(false, 'Invalid file type. Only GLB files allowed', null, 400);
     }
 
-    $uploadDir = __DIR__ . '/../../uploads/models/';
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
+    $res = processFileUpload($file, 'models');
+    if (!$res['success']) {
+        sendJSON(false, $res['message'] ?? 'Failed to upload model', ['error' => $res['message'] ?? null], 400);
     }
 
-    $filename = 'model_' . time() . '_' . uniqid() . '.glb';
-    $uploadPath = $uploadDir . $filename;
-
-    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-        sendJSON(true, '3D model uploaded successfully', ['filename' => $filename]);
-    } else {
-        sendJSON(false, 'Failed to upload 3D model', null, 500);
-    }
+    // return relative path and filename for frontend to save into products.model_3d
+    sendJSON(true, '3D model uploaded successfully', [
+        'filename' => $res['file_name'],
+        'file_path' => $res['file_path'] // e.g. uploads/models/name.glb
+    ]);
 }
+
 
 function toggleRelease(PDO $conn): void
 {
@@ -638,32 +844,36 @@ function toggleRelease(PDO $conn): void
         $stmt = $conn->prepare($sql);
         $ok = $stmt->execute([$id]);
 
-        sendJSON($ok, $ok ? 'Status updated' : 'Failed to update', null, $ok ? 200 : 500);
+        sendJSON((bool)$ok, $ok ? 'Status updated' : 'Failed to update', null, $ok ? 200 : 500);
     } catch (Throwable $e) {
         error_log('toggleRelease error: ' . $e->getMessage());
         sendJSON(false, 'Server error', null, 500);
     }
 }
 
+// Legacy / alternative endpoint for setting availability (keeps backward compatibility)
 if ($action === 'set_availability') {
-    header('Content-Type: application/json; charset=utf-8');
+    // Using sendJSON for consistent responses
     $payload = json_decode(file_get_contents('php://input'), true);
     $id = (int)($payload['id'] ?? 0);
     $is_available = isset($payload['is_available']) ? (int)$payload['is_available'] : 0;
 
     if ($id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid product id']);
-        exit;
+        sendJSON(false, 'Invalid product id', null, 400);
     }
 
-    $stmt = $conn->prepare('UPDATE products SET is_available = ? WHERE id = ?');
-    $ok = $stmt->execute([$is_available, $id]);
+    try {
+        global $conn;
+        $stmt = $conn->prepare('UPDATE products SET is_available = ? WHERE id = ?');
+        $ok = $stmt->execute([$is_available, $id]);
 
-
-    if ($ok) {
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'DB error updating availability']);
+        if ($ok) {
+            sendJSON(true, 'Availability updated', null, 200);
+        } else {
+            sendJSON(false, 'DB error updating availability', null, 500);
+        }
+    } catch (Throwable $e) {
+        error_log('set_availability error: ' . $e->getMessage());
+        sendJSON(false, 'Server error', null, 500);
     }
-    exit;
 }

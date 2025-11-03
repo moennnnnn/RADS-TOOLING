@@ -128,6 +128,7 @@ if ($img) {
                 <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item ">Home</a>
                 <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
                 <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
             </nav>
         </header>
 

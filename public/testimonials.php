@@ -1,8 +1,13 @@
 <?php
-// public/testimonials.php
+// public/testimonials.php - Fixed version
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
+
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Try to load config
 $configPaths = [
@@ -44,26 +49,33 @@ $stats = ['count' => 0, 'avg' => 0];
 
 if ($pdo instanceof PDO) {
     try {
+        // Get stats - check if deleted column exists first
+        $colCheck = $pdo->query("SHOW COLUMNS FROM feedback LIKE 'deleted'")->fetch();
+        $deletedFilter = $colCheck ? " AND deleted = 0" : "";
+        
         $statsQuery = $pdo->query("
             SELECT 
                 COUNT(*) AS cnt, 
                 COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating
             FROM feedback
-            WHERE is_released = 1
+            WHERE is_released = 1 {$deletedFilter}
         ");
         $statsRow = $statsQuery->fetch(PDO::FETCH_ASSOC);
         $stats['count'] = (int)($statsRow['cnt'] ?? 0);
         $stats['avg'] = (float)($statsRow['avg_rating'] ?? 0);
 
+        // ✅ FIXED: Simpler query without product details for public page
         $stmt = $pdo->prepare("
             SELECT 
+                f.id as feedback_id,
                 f.rating,
                 f.comment,
                 f.created_at,
+                f.customer_id,
                 COALESCE(c.full_name, 'Customer') AS customer_name
             FROM feedback f
             INNER JOIN customers c ON c.id = f.customer_id
-            WHERE f.is_released = 1
+            WHERE f.is_released = 1 {$deletedFilter}
             ORDER BY COALESCE(f.released_at, f.created_at) DESC
             LIMIT 50
         ");
@@ -84,18 +96,31 @@ function safeDate(?string $s): string {
     $t = strtotime($s);
     return $t ? date('M d, Y', $t) : e($s);
 }
+
+$user = $_SESSION['user'] ?? null;
+$isCustomer = $user && (($user['aud'] ?? '') === 'customer');
+
+// If customer is logged in, redirect to customer view
+if ($isCustomer) {
+    header('Location: /RADS-TOOLING/customer/testimonials.php');
+    exit;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Testimonials - RADS Tooling</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-    <style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RADS TOOLING - Customer Testimonials</title>
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+     <style>
         * { 
             margin: 0; 
             padding: 0; 
@@ -352,18 +377,45 @@ function safeDate(?string $s): string {
             }
         }
     </style>
-</head>
 <body>
-    <!-- Header matching homepage -->
-    <div class="top-header">
-        <div class="header-content">
-            <a href="/RADS-TOOLING/public/index.php" class="logo">RADS TOOLING</a>
-            <a href="/RADS-TOOLING/public/index.php" class="back-link">
-                <span class="material-symbols-rounded">arrow_back</span>
-                Back to Home
-            </a>
+    <!-- HEADER -->
+    <header class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/RADS-TOOLING/public/index.php" class="logo-link">
+                    <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+                </a>
+            </div>
+
+            <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+                <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
+                <button type="submit" class="search-btn" aria-label="Search">
+                    <span class="material-symbols-rounded">search</span>
+                </button>
+            </form>
+
+            <div class="navbar-actions">
+                <a href="/RADS-TOOLING/customer/cust_login.php" class="nav-link">
+                    <span class="material-symbols-rounded">login</span>
+                    <span>Login</span>
+                </a>
+                <a href="/RADS-TOOLING/customer/register.php" class="nav-link">
+                    <span class="material-symbols-rounded">person_add</span>
+                    <span>Sign Up</span>
+                </a>
+                <a href="/RADS-TOOLING/admin/login.php" class="nav-link-icon" title="Staff Login">
+                    <span class="material-symbols-rounded">admin_panel_settings</span>
+                </a>
+            </div>
         </div>
-    </div>
+
+        <nav class="navbar-menu">
+            <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item">Home</a>
+            <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
+            <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
+            <a href="/RADS-TOOLING/public/testimonials.php" class="nav-menu-item active">Testimonials</a>
+        </nav>
+    </header>
 
     <div class="container">
         <div class="page-header">
@@ -434,5 +486,122 @@ function safeDate(?string $s): string {
             </div>
         <?php endif; ?>
     </div>
+    <!-- RADS-TOOLING Chat Support Widget (Guest Mode) -->
+    <button id="rtChatBtn" class="rt-chat-btn">
+        <span class="material-symbols-rounded">chat</span>
+        Need Help?
+    </button>
+
+    <div id="rtChatPopup" class="rt-chat-popup">
+        <div class="rt-chat-header">
+            <span>Rads Tooling - Chat Support</span>
+        </div>
+
+        <div class="rt-chat-messages" style="padding: 40px 20px; text-align: center;">
+            <div style="margin-bottom: 20px;">
+                <i class="fas fa-lock" style="font-size: 48px; color: #1f4e74; opacity: 0.6;"></i>
+            </div>
+            <h3 style="color: #333; margin-bottom: 10px;">Chat Support Unavailable</h3>
+            <p style="color: #666; margin-bottom: 20px;">
+                Please login to chat with our support team and get instant answers to your questions.
+            </p>
+            <a href="/RADS-TOOLING/customer/cust_login.php"
+                style="display: inline-block; padding: 12px 24px; background: #1f4e74; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                <i class="fas fa-sign-in-alt"></i> Login Now
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Simple toggle for public page
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatBtn = document.getElementById('rtChatBtn');
+            const chatPopup = document.getElementById('rtChatPopup');
+            const chatClose = document.getElementById('rtChatClose');
+
+            if (chatBtn && chatPopup && chatClose) {
+                chatBtn.addEventListener('click', function() {
+                    chatPopup.style.display = 'flex';
+                    chatBtn.style.display = 'none';
+                });
+
+                chatClose.addEventListener('click', function() {
+                    chatPopup.style.display = 'none';
+                    chatBtn.style.display = 'flex';
+                });
+            }
+        });
+    </script>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>About RADS TOOLING</h3>
+                <p class="footer-description">
+                    Premium custom cabinet manufacturer serving clients since 2007.
+                    Quality craftsmanship, affordable prices, and exceptional service.
+                </p>
+                <div class="footer-social">
+                    <a href="#" class="social-icon" aria-label="Facebook">
+                        <span class="material-symbols-rounded">facebook</span>
+                    </a>
+                    <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
+                        <span class="material-symbols-rounded">mail</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
+                    <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+                    <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                    <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
+                    <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
+                    <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Categories</h3>
+                <ul class="footer-links">
+                    <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen Cabinet</a></li>
+                    <li><a href="/RADS-TOOLING/public/products.php?type=Wardrobe">Wardrobe</a></li>
+                    <li><a href="/RADS-TOOLING/public/products.php?type=Office Cabinet">Office Cabinet</a></li>
+                    <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
+                    <li><a href="/RADS-TOOLING/public/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Contact Info</h3>
+                <div class="contact-info-item">
+                    <span class="material-symbols-rounded">location_on</span>
+                    <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
+                </div>
+                <div class="contact-info-item">
+                    <span class="material-symbols-rounded">mail</span>
+                    <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
+                </div>
+                <div class="contact-info-item">
+                    <span class="material-symbols-rounded">schedule</span>
+                    <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p class="footer-copyright">
+                © 2025 RADS TOOLING INC. All rights reserved.
+            </p>
+            <div class="footer-legal">
+                <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
+                <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
+            </div>
+        </div>
+    </footer>
+    <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
 </body>
 </html>

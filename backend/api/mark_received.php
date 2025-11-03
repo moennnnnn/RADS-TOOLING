@@ -122,28 +122,30 @@ try {
     $stmt = $db->prepare($updateSql);
     $stmt->execute([$orderId]);
 
-    // Insert or update feedback if rating or comment provided
+    // ✅ FIXED: Insert feedback using INSERT ... ON DUPLICATE KEY UPDATE
+    // This prevents duplicate entries
     if ($rating > 0 || !empty($comment)) {
-        // Check if feedback already exists for this order
-        $checkStmt = $db->prepare("SELECT id FROM feedback WHERE order_id = ? LIMIT 1");
-        $checkStmt->execute([$orderId]);
-        $existingFeedback = $checkStmt->fetch();
-
-        if ($existingFeedback) {
-            // Update existing feedback
-            $updateFeedback = $db->prepare("
-                UPDATE feedback 
-                SET rating = ?, comment = ?, status = 'pending', created_at = NOW()
-                WHERE order_id = ?
-            ");
-            $updateFeedback->execute([$rating, $comment, $orderId]);
-        } else {
-            // Insert new feedback
+        try {
             $insertFeedback = $db->prepare("
-                INSERT INTO feedback (order_id, customer_id, rating, comment, status, is_released, created_at)
-                VALUES (?, ?, ?, ?, 'pending', 0, NOW())
+                INSERT INTO feedback 
+                (order_id, customer_id, rating, comment, status, is_released, released_at, created_at)
+                VALUES (?, ?, ?, ?, 'released', 1, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE
+                    rating = VALUES(rating),
+                    comment = VALUES(comment),
+                    status = 'released',
+                    is_released = 1,
+                    released_at = NOW(),
+                    created_at = NOW()
             ");
             $insertFeedback->execute([$orderId, $customerId, $rating, $comment]);
+            
+        } catch (PDOException $ex) {
+            // Log error but don't break the order flow
+            if (function_exists('error_log')) {
+                error_log('Feedback insert/update error: ' . $ex->getMessage());
+            }
+            // Continue - order marked as received is more important than feedback
         }
     }
 

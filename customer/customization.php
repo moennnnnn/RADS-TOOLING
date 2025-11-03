@@ -59,6 +59,127 @@ $avatarHtml   = $img
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/customize.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
+
+    <!-- === Add-to-Cart / Buy-Now minimal CSS from product_detail.php === -->
+    <style>
+        /* Modal shell */
+        .rt-modal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 12000;
+            background: rgba(15, 23, 42, .35);
+            backdrop-filter: blur(2px);
+        }
+
+        .rt-modal__dialog {
+            width: 520px;
+            max-width: 92%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .rt-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(8, 15, 35, .25);
+        }
+
+        /* Keep hidden behavior consistent */
+        #buyChoiceModal[hidden] {
+            display: none !important;
+        }
+
+        #buyChoiceModal:not([hidden]) {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Inner modal bits (same naming used in product_detail.php) */
+        .rt-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .rt-header h3 {
+            margin: 0;
+            font-weight: 800;
+            color: #17233b;
+        }
+
+        .rt-close {
+            background: transparent;
+            border: 0;
+            font-size: 22px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .rt-body {
+            padding: 18px;
+        }
+
+        .rt-body .muted {
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+
+        .rt-choices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .rt-choice {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1.5px solid #e5e7eb;
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            font-weight: 700;
+            justify-content: center;
+        }
+
+        .rt-choice.is-active {
+            border-color: #2f5b88;
+            box-shadow: 0 0 0 3px rgba(47, 91, 136, .1);
+        }
+
+        .rt-footer {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 12px;
+        }
+
+        .rt-btn {
+            border: 0;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .rt-btn-primary {
+            background: #2f5b88;
+            color: #fff;
+            opacity: 1;
+        }
+
+        .rt-btn-primary:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 
 <body>
@@ -236,7 +357,7 @@ $avatarHtml   = $img
 
                     <div class="cz-actions">
                         <button id="toCart" class="btn main">ADD TO CART</button>
-                        <a class="btn ghost" href="/RADS-TOOLING/backend/customer/buynow.php?pid=<?= (int)$pid ?>">BUY NOW</a>
+                        <a class="btn ghost js-buynow" data-pid="<?= (int)$pid ?>" href="#">BUY NOW</a>
                     </div>
                 </aside>
             </div>
@@ -493,9 +614,179 @@ $avatarHtml   = $img
         })();
     </script>
 
+    <script>
+        /* === Buy Now: open modal & redirect (ported) === */
+        (function() {
+            const modal = document.getElementById('buyChoiceModal');
+            const closeBtn = document.getElementById('closeChoiceModal');
+            const deliveryBtn = document.getElementById('choiceDelivery');
+            const pickupBtn = document.getElementById('choicePickup');
+            const okBtn = document.getElementById('choiceOk');
+
+            if (!modal) return;
+
+            // Open modal on any .js-buynow (anchor or button)
+            document.addEventListener('click', function(e) {
+                const b = e.target.closest && e.target.closest('.js-buynow');
+                if (!b) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const pid = b.dataset.pid || window.PID || '';
+                const qty = '1'; // customization page default = 1
+
+                modal.dataset.pid = String(pid);
+                modal.dataset.qty = String(qty);
+                delete modal.dataset.mode;
+
+                // reset UI
+                okBtn.disabled = true;
+                [deliveryBtn, pickupBtn].forEach(el => el && el.classList.remove('is-active'));
+                modal.hidden = false;
+                deliveryBtn && deliveryBtn.focus();
+            }, {
+                passive: false
+            });
+
+            // Close
+            closeBtn && closeBtn.addEventListener('click', function() {
+                modal.hidden = true;
+                delete modal.dataset.pid;
+                delete modal.dataset.qty;
+                delete modal.dataset.mode;
+                okBtn && (okBtn.disabled = true);
+            });
+
+            // Choose mode
+            deliveryBtn && deliveryBtn.addEventListener('click', function() {
+                modal.dataset.mode = 'delivery';
+                this.classList.add('is-active');
+                pickupBtn && pickupBtn.classList.remove('is-active');
+                okBtn && (okBtn.disabled = false);
+            });
+
+            pickupBtn && pickupBtn.addEventListener('click', function() {
+                modal.dataset.mode = 'pickup';
+                this.classList.add('is-active');
+                deliveryBtn && deliveryBtn.classList.remove('is-active');
+                okBtn && (okBtn.disabled = false);
+            });
+
+            // Confirm
+            okBtn && okBtn.addEventListener('click', function() {
+                const pid = modal.dataset.pid || '';
+                const qty = modal.dataset.qty || '1';
+                const mode = modal.dataset.mode || '';
+                if (!pid || !mode) return;
+
+                const url = (mode === 'delivery') ?
+                    `/RADS-TOOLING/customer/checkout_delivery.php?pid=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}` :
+                    `/RADS-TOOLING/customer/checkout_pickup.php?pid=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}`;
+
+                modal.hidden = true;
+                window.location.href = url;
+            });
+
+            // Escape to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && !modal.hidden) modal.hidden = true;
+            });
+
+            // Defensive: hidden on load
+            document.addEventListener('DOMContentLoaded', function() {
+                modal.hidden = true;
+            });
+        })();
+    </script>
+
+    <script>
+        /* === Add to Cart: portable version (ported) === */
+        (function() {
+            // Helper (same as product_detail’s showToast)
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.textContent = message;
+                toast.style.cssText =
+                    'position:fixed;top:100px;right:20px;background:' +
+                    (type === 'success' ? '#3db36b' : '#2f5b88') +
+                    ';color:#fff;padding:1rem 1.5rem;border-radius:10px;' +
+                    'box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:10000;font-weight:600;';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+
+            function updateCartCount() {
+                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const count = cart.reduce((s, i) => s + (i.quantity || 0), 0);
+                document.querySelectorAll('#cartCount, #navCartCount, .cart-badge').forEach(el => el.textContent = count);
+            }
+
+            // Portable handler: expects a button/link with data-action="add-to-cart"
+            // and data attributes: data-pid, data-name, data-type, data-price, data-image
+            document.addEventListener('click', function(e) {
+                const addBtn = e.target.closest && e.target.closest('[data-action="add-to-cart"]');
+                if (!addBtn) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                const product = {
+                    id: parseInt(addBtn.dataset.pid || (window.PID || '0')),
+                    name: addBtn.dataset.name || 'Custom Cabinet',
+                    type: addBtn.dataset.type || '',
+                    price: parseFloat(addBtn.dataset.price || '0'),
+                    image: addBtn.dataset.image || '',
+                    quantity: parseInt(addBtn.dataset.qty || '1')
+                };
+
+                let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const idx = cart.findIndex(i => i.id === product.id);
+                if (idx !== -1) {
+                    cart[idx].quantity = (cart[idx].quantity || 0) + product.quantity;
+                    showToast(product.name + ' quantity updated!', 'success');
+                } else {
+                    cart.push(product);
+                    showToast(product.name + ' added to cart!', 'success');
+                }
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateCartCount();
+            });
+        })();
+    </script>
+
+
     <!-- External Scripts -->
     <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
     <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+
+    <!-- === BUY CHOICE MODAL (ported from product_detail.php) === -->
+    <div id="buyChoiceModal" class="rt-modal" hidden>
+        <div class="rt-modal__dialog rt-card">
+            <div class="rt-header">
+                <h3>How do you want to get your order?</h3>
+                <button type="button" class="rt-close" id="closeChoiceModal">×</button>
+            </div>
+            <div class="rt-body">
+                <p class="muted">Choose your preferred fulfillment method.</p>
+
+                <div class="rt-choices">
+                    <button id="choiceDelivery" type="button" class="rt-choice">
+                        <span class="material-symbols-rounded">local_shipping</span>
+                        Delivery
+                    </button>
+                    <button id="choicePickup" type="button" class="rt-choice">
+                        <span class="material-symbols-rounded">store</span>
+                        Pick-up
+                    </button>
+                </div>
+
+                <div class="rt-footer">
+                    <button id="choiceOk" type="button" class="rt-btn rt-btn-primary" disabled>OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

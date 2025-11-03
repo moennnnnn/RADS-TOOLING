@@ -111,6 +111,9 @@ try {
         case 'list_colors':
             listColors($conn);
             break;
+        case 'toggle_assign_color':
+            toggleAssignColor($conn);
+            break;
         case 'add_color':
             addColor($conn);
             break;
@@ -369,16 +372,55 @@ function deleteTexture(PDO $conn): void
 function listColors(PDO $conn): void
 {
     try {
-        $sql = "SELECT * FROM colors ORDER BY color_name ASC";
+        // optional product filter
+        $product_id = isset($_GET['product_id']) ? (int)$_GET['product_id'] : 0;
+
+        $sql = "SELECT id, color_name, color_code, hex_value, base_price, is_active FROM colors ORDER BY color_name ASC";
         $stmt = $conn->query($sql);
         $colors = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        sendJSON(true, 'Colors retrieved successfully', $colors);
+        // build assigned map if product_id present
+        $assigned = [];
+        if ($product_id) {
+            $s = $conn->prepare("SELECT color_id FROM product_colors WHERE product_id = ?");
+            $s->execute([$product_id]);
+            $rows = $s->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($rows as $r) $assigned[(int)$r['color_id']] = 1;
+        }
+
+        $out = [];
+        foreach ($colors as $r) {
+            $hex = null;
+            if (!empty($r['hex_value'])) $hex = $r['hex_value'];
+            elseif (!empty($r['color_code'])) $hex = $r['color_code'];
+
+            if (!empty($hex)) {
+                $hex = trim($hex);
+                if ($hex !== '' && $hex[0] !== '#') $hex = '#' . $hex;
+            } else {
+                $hex = null;
+            }
+
+            $out[] = [
+                'id' => (int)$r['id'],
+                'color_name' => $r['color_name'] ?? '',
+                'name' => $r['color_name'] ?? '',
+                'hex_value' => $hex,
+                'hex_code' => $hex,
+                'hex' => $hex,
+                'base_price' => isset($r['base_price']) ? (float)$r['base_price'] : 0,
+                'is_active' => isset($r['is_active']) ? (int)$r['is_active'] : 1,
+                'assigned' => isset($assigned[(int)$r['id']]) ? 1 : 0
+            ];
+        }
+
+        sendJSON(true, 'Colors retrieved successfully', $out);
     } catch (Throwable $e) {
         error_log("List colors error: " . $e->getMessage());
         sendJSON(false, 'Failed to retrieve colors', null, 500);
     }
 }
+
 
 function addColor(PDO $conn): void
 {
@@ -416,6 +458,36 @@ function addColor(PDO $conn): void
         sendJSON(false, 'Failed to add color', null, 500);
     }
 }
+
+function toggleAssignColor(PDO $conn): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendJSON(false, 'Method not allowed', null, 405);
+    }
+    $input = json_decode(file_get_contents('php://input'), true);
+    $product_id = isset($input['product_id']) ? (int)$input['product_id'] : 0;
+    $color_id = isset($input['color_id']) ? (int)$input['color_id'] : 0;
+    $assign = isset($input['assign']) ? (int)$input['assign'] : 0;
+
+    if (!$product_id || !$color_id) {
+        sendJSON(false, 'Product ID and Color ID are required', null, 400);
+    }
+
+    try {
+        if ($assign) {
+            $ins = $conn->prepare('INSERT IGNORE INTO product_colors (product_id, color_id) VALUES (?, ?)');
+            $ins->execute([$product_id, $color_id]);
+        } else {
+            $del = $conn->prepare('DELETE FROM product_colors WHERE product_id = ? AND color_id = ?');
+            $del->execute([$product_id, $color_id]);
+        }
+        sendJSON(true, 'Assignment updated successfully');
+    } catch (Throwable $e) {
+        error_log('toggleAssignColor error: ' . $e->getMessage());
+        sendJSON(false, 'Failed to update assignment', null, 500);
+    }
+}
+
 
 function updateColor(PDO $conn): void
 {
@@ -484,6 +556,14 @@ function deleteColor(PDO $conn): void
     }
 
     try {
+        // check assignments
+        $s = $conn->prepare('SELECT COUNT(*) AS c FROM product_colors WHERE color_id = ?');
+        $s->execute([$id]);
+        $c = (int)($s->fetch(PDO::FETCH_ASSOC)['c'] ?? 0);
+        if ($c > 0) {
+            sendJSON(false, 'Cannot delete color: it is assigned to one or more products. Unassign first.', null, 400);
+        }
+
         $stmt = $conn->prepare('DELETE FROM colors WHERE id = ?');
         $stmt->execute([$id]);
 

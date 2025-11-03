@@ -236,6 +236,19 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
     </div>
   </main>
 
+  <div id="appModal" class="app-modal" style="display:none">
+    <div class="app-modal__dialog">
+      <div class="app-modal__header">
+        <h3 id="appModalTitle">Notice</h3>
+        <button type="button" class="app-modal__close" data-appmodal-close aria-label="Close">&times;</button>
+      </div>
+      <div class="app-modal__body" id="appModalBody"></div>
+      <div class="app-modal__footer" id="appModalFooter">
+        <button type="button" class="btn btn-primary" data-appmodal-close>OK</button>
+      </div>
+    </div>
+  </div>
+
   <style>
     .app-modal {
       position: fixed;
@@ -279,7 +292,8 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
       border: none;
       background: transparent;
       font-size: 22px;
-      cursor: pointer
+      cursor: pointer;
+      line-height: 1;
     }
 
     .btn {
@@ -304,9 +318,14 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
       const body = document.getElementById('appModalBody');
       const ftr = document.getElementById('appModalFooter');
 
+      if (!el || !ttl || !body || !ftr) {
+        console.error('Modal elements not found');
+        return;
+      }
+
       function close() {
         el.style.display = 'none';
-        ftr.innerHTML = '<button type="button" class="btn" data-appmodal-close>OK</button>';
+        ftr.innerHTML = '<button type="button" class="btn btn-primary" data-appmodal-close>OK</button>';
       }
 
       function open() {
@@ -328,7 +347,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
         ftr.innerHTML = '';
         (actions && actions.length ? actions : [{
           label: 'OK',
-          cls: 'btn',
+          cls: 'btn btn-primary',
           onClick: close
         }]).forEach(a => {
           const b = document.createElement('button');

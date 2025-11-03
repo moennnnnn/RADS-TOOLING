@@ -91,7 +91,7 @@ if ($isCustomer) {
                 <h1><?php echo strip_tags($content['about_headline'] ?? 'About RADS Tooling'); ?></h1>
                 <?php echo $content['about_subheadline'] ?? '<p>Your trusted partner</p>'; ?>
                 <div class="sp-hero-buttons">
-                    <a href="signup.php" class="sp-btn sp-btn-primary">Get Started</a>
+                    <a href="/RADS-TOOLING/customer/register.php" class="sp-btn sp-btn-primary">Get Started</a>
                     <a href="products.php" class="sp-btn sp-btn-secondary">Browse Products</a>
                 </div>
             </div>
@@ -237,9 +237,6 @@ if ($isCustomer) {
                         <a href="#" class="social-icon" aria-label="Facebook">
                             <span class="material-symbols-rounded">facebook</span>
                         </a>
-                        <a href="#" class="social-icon" aria-label="Instagram">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                        </a>
                         <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
                             <span class="material-symbols-rounded">mail</span>
                         </a>
@@ -250,8 +247,10 @@ if ($isCustomer) {
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
+          <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+          <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
                         <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
                         <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
                     </ul>

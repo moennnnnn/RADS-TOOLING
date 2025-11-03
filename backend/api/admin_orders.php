@@ -1,5 +1,5 @@
 <?php
-// backend/api/admin_orders.php - Order management API (rewritten)
+// backend/api/admin_orders.php -  API (rewritten)
 // compute payment status on-the-fly: Fully Paid / With Balance / Pending
 declare(strict_types=1);
 

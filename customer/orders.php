@@ -14,7 +14,6 @@ if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? '') !== 'customer')
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-$CSRF = $_SESSION['csrf_token'];
 
 // Get customer info
 $customerName = $_SESSION['user']['full_name'] ?? 'Customer';
@@ -38,9 +37,129 @@ $customerId = $_SESSION['user']['id'] ?? 0;
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="/RADS-TOOLING/assets/css/orders.css">
+    
+    <style>
+        /* Navigation Header */
+        .orders-navbar {
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .navbar-menu-btn {
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-100);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .navbar-menu-btn:hover {
+            background: var(--gray-200);
+        }
+        
+        .navbar-menu-btn .material-symbols-rounded {
+            font-size: 1.5rem;
+            color: var(--gray-700);
+        }
+        
+        .navbar-brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .navbar-brand .material-symbols-rounded {
+            color: var(--primary-color);
+        }
+        
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: var(--gray-50);
+            border-radius: var(--radius-lg);
+        }
+        
+        .navbar-user .material-symbols-rounded {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+        
+        .navbar-username {
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+        
+        @media (max-width: 768px) {
+            .orders-navbar {
+                padding: 1rem;
+            }
+            
+            .navbar-brand span {
+                display: none;
+            }
+            
+            .navbar-username {
+                display: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
+
+    <!-- ==========================================
+         NAVIGATION HEADER
+         ========================================== -->
+    <nav class="orders-navbar">
+        <div class="navbar-left">
+            <button class="navbar-menu-btn" onclick="window.location.href='/RADS-TOOLING/customer/homepage.php'" title="Back to Home">
+                <span class="material-symbols-rounded">menu</span>
+            </button>
+            <a href="/RADS-TOOLING/customer/homepage.php" class="navbar-brand">
+                <span class="material-symbols-rounded">home</span>
+                <span>RADS Tooling</span>
+            </a>
+        </div>
+        
+        <div class="navbar-right">
+            <div class="navbar-user">
+                <span class="material-symbols-rounded">account_circle</span>
+                <span class="navbar-username"><?php echo htmlspecialchars($customerName); ?></span>
+            </div>
+        </div>
+    </nav>
 
     <!-- ==========================================
          MAIN CONTENT
@@ -86,13 +205,6 @@ $customerId = $_SESSION['user']['id'] ?? 0;
                     <span>Cancelled</span>
                     <span class="badge badge-cancelled" id="badge-cancelled">0</span>
                 </button>
-
-                <div class="sidebar-footer">
-                    <a href="/RADS-TOOLING/customer/homepage.php" class="home-link">
-                        <span class="material-symbols-rounded">home</span>
-                        Home
-                    </a>
-                </div>
             </nav>
         </aside>
 
@@ -144,43 +256,40 @@ $customerId = $_SESSION['user']['id'] ?? 0;
     </div>
 
     <!-- ==========================================
-         PAYMENT SUBMISSION MODAL
+         FEEDBACK MODAL
          ========================================== -->
-    <div id="paymentModal" class="modal">
-        <div class="modal-overlay" onclick="closePaymentModal()"></div>
-        <div class="modal-content modal-medium">
+    <div id="feedbackModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
             <div class="modal-header">
                 <h2>
-                    <span class="material-symbols-rounded">payments</span>
-                    Submit Payment
+                    <span class="material-symbols-rounded">rate_review</span>
+                    Rate Your Order
                 </h2>
-                <button class="modal-close" onclick="closePaymentModal()">
+                <button class="modal-close" onclick="closeFeedbackModal()">
                     <span class="material-symbols-rounded">close</span>
                 </button>
             </div>
-            <div class="modal-body" id="paymentModalContent">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-    </div>
 
-    <!-- ==========================================
-         SPLIT PAYMENT MODAL
-         ========================================== -->
-    <div id="splitPaymentModal" class="modal">
-        <div class="modal-overlay" onclick="closeSplitPaymentModal()"></div>
-        <div class="modal-content modal-medium">
-            <div class="modal-header">
-                <h2>
-                    <span class="material-symbols-rounded">payments</span>
-                    Pay Remaining Balance
-                </h2>
-                <button class="modal-close" onclick="closeSplitPaymentModal()">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
+            <div class="modal-body">
+                <div class="feedback-stars" id="feedbackStars">
+                    <button type="button" class="fb-star" data-star="1">★</button>
+                    <button type="button" class="fb-star" data-star="2">★</button>
+                    <button type="button" class="fb-star" data-star="3">★</button>
+                    <button type="button" class="fb-star" data-star="4">★</button>
+                    <button type="button" class="fb-star" data-star="5">★</button>
+                </div>
+                <textarea 
+                    id="feedbackComment" 
+                    class="feedback-textarea" 
+                    placeholder="Tell us about your experience with the cabinet (optional)"
+                    rows="4"
+                ></textarea>
             </div>
-            <div class="modal-body" id="splitPaymentContent">
-                <!-- Populated by JS -->
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeFeedbackModal()">Cancel</button>
+                <button id="submitFeedback" class="btn btn-primary">Submit Feedback</button>
             </div>
         </div>
     </div>
@@ -190,180 +299,97 @@ $customerId = $_SESSION['user']['id'] ?? 0;
          ========================================== -->
     <script src="/RADS-TOOLING/assets/JS/orders.js"></script>
 
-    <script>
-        // Profile dropdown toggle
-        document.querySelector('.profile-btn')?.addEventListener('click', function(e) {
-            e.stopPropagation();
-            this.parentElement.classList.toggle('active');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.profile-dropdown')) {
-                document.querySelectorAll('.profile-dropdown').forEach(d => d.classList.remove('active'));
-            }
-        });
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            loadCustomerOrders('all');
-        });
-    </script>
-
     <!-- ==========================================
-         COMPLETE ORDER MODAL
+         FEEDBACK MODAL LOGIC
          ========================================== -->
-    <div id="completeOrderModal" class="modal">
-        <div class="modal-overlay" onclick="closeCompleteOrderModal()"></div>
-        <div class="modal-content modal-medium">
-            <div class="modal-header">
-                <h2>
-                    <span class="material-symbols-rounded">check_circle</span>
-                    Complete Order
-                </h2>
-                <button class="modal-close" onclick="closeCompleteOrderModal()">
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-            </div>
-            <div class="modal-body" id="completeOrderContent">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- ==========================================
-         FEEDBACK MODAL (NEW)
-         ========================================== -->
-    <div id="feedbackModal" class="modal">
-        <div class="modal-overlay" data-close></div>
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2>
-                    <span class="material-symbols-rounded">rate_review</span>
-                    Rate your order
-                </h2>
-                <button class="modal-close" data-close>
-                    <span class="material-symbols-rounded">close</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <div id="fbStars" style="display:flex;gap:6px;margin-bottom:10px;">
-                    <button type="button" data-star="1" class="fb-star">★</button>
-                    <button type="button" data-star="2" class="fb-star">★</button>
-                    <button type="button" data-star="3" class="fb-star">★</button>
-                    <button type="button" data-star="4" class="fb-star">★</button>
-                    <button type="button" data-star="5" class="fb-star">★</button>
-                </div>
-                <textarea id="fbComment" rows="4" placeholder="Tell us about the cabinet (optional)" style="width:100%;"></textarea>
-            </div>
-
-            <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-secondary" data-close>Cancel</button>
-                <button id="fbSubmit" class="btn btn-primary">Submit</button>
-            </div>
-        </div>
-    </div>
-    <style>
-        /* Minimal star styling (scoped to this modal) */
-        #feedbackModal .fb-star{font-size:24px;background:transparent;border:0;opacity:.5;cursor:pointer;line-height:1}
-        #feedbackModal .fb-star.is-on{opacity:1}
-    </style>
-
-    <!-- FEEDBACK JS HANDLERS (NEW; minimal + compatible) -->
     <script>
-    (function(){
-        let currentOrderId = null;
-        let currentRating = 0;
+        (function() {
+            let currentOrderId = null;
+            let currentRating = 0;
 
-        const modal = document.getElementById('feedbackModal');
-        const stars = Array.from(document.querySelectorAll('#fbStars [data-star]'));
-        const commentEl = document.getElementById('fbComment');
-        const submitBtn = document.getElementById('fbSubmit');
+            const modal = document.getElementById('feedbackModal');
+            const stars = Array.from(document.querySelectorAll('.fb-star'));
+            const commentEl = document.getElementById('feedbackComment');
+            const submitBtn = document.getElementById('submitFeedback');
 
-        function openFeedbackModal(orderId){
-            currentOrderId = Number(orderId);
-            currentRating = 0;
-            if (commentEl) commentEl.value = '';
-            stars.forEach(s => s.classList.remove('is-on'));
-            modal?.classList.add('active'); // align with your existing modal behavior
-            document.body.style.overflow = 'hidden';
-        }
-        function closeFeedbackModal(){
-            modal?.classList.remove('active');
-            document.body.style.overflow = '';
-        }
+            // Open feedback modal
+            window.openFeedbackModal = function(orderId) {
+                currentOrderId = Number(orderId);
+                currentRating = 0;
+                if (commentEl) commentEl.value = '';
+                stars.forEach(s => s.classList.remove('is-on'));
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
 
-        // Expose for orders.js if it calls openFeedbackModal(...)
-        window.openFeedbackModal = openFeedbackModal;
+            // Close feedback modal
+            window.closeFeedbackModal = function() {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+                currentOrderId = null;
+                currentRating = 0;
+            };
 
-        // Close via overlay / close buttons
-        modal?.addEventListener('click', (e) => {
-            if (e.target.hasAttribute('data-close') || e.target.closest('[data-close]')) {
-                closeFeedbackModal();
-            }
-        });
+            // Close on overlay click
+            modal.querySelector('.modal-overlay')?.addEventListener('click', closeFeedbackModal);
 
-        // Star clicks
-        stars.forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentRating = Number(btn.dataset.star);
-                stars.forEach(s => s.classList.toggle('is-on', Number(s.dataset.star) <= currentRating));
-            });
-        });
-
-        // Delegate buttons rendered by orders.js (optional if you render data-act)
-        document.addEventListener('click', async (e) => {
-            const el = e.target.closest('[data-act]');
-            if (!el) return;
-            const act = el.dataset.act;
-            const oid = el.dataset.orderId;
-
-            if (act === 'open-feedback') {
-                openFeedbackModal(oid);
-            }
-            if (act === 'received') {
-                // If you want to mark as received first, uncomment:
-                // await fetch('/RADS-TOOLING/backend/api/mark_received.php', {
-                //   method:'POST', headers:{'Content-Type':'application/json'},
-                //   body: JSON.stringify({order_id: Number(oid)})
-                // });
-                openFeedbackModal(oid);
-            }
-        });
-
-        // Submit feedback
-        submitBtn?.addEventListener('click', async () => {
-            if (!currentOrderId || currentRating < 1) {
-                alert('Please select a star rating (1-5).');
-                return;
-            }
-            try{
-                const res = await fetch('/RADS-TOOLING/backend/api/feedback/create.php', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({
-                        order_id: currentOrderId,
-                        rating: currentRating,
-                        comment: commentEl?.value?.trim() || ''
-                    })
+            // Star click handling
+            stars.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentRating = Number(btn.dataset.star);
+                    stars.forEach(s => {
+                        s.classList.toggle('is-on', Number(s.dataset.star) <= currentRating);
+                    });
                 });
-                const data = await res.json().catch(()=>({}));
-                if (!res.ok || !data.success) {
-                    alert(data.message || 'Failed to submit feedback.');
+            });
+
+            // Submit feedback
+            submitBtn?.addEventListener('click', async () => {
+                if (!currentOrderId || currentRating < 1) {
+                    alert('Please select a star rating (1-5).');
                     return;
                 }
-                closeFeedbackModal();
-                alert('Thanks! Your feedback is pending approval.');
-                // refresh list to reflect changes if needed
-                if (typeof loadCustomerOrders === 'function') {
-                    loadCustomerOrders(window.__ordersCurrentFilter || 'all');
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> Submitting...';
+
+                try {
+                    const res = await fetch('/RADS-TOOLING/backend/api/feedback/create.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            order_id: currentOrderId,
+                            rating: currentRating,
+                            comment: commentEl?.value?.trim() || ''
+                        })
+                    });
+
+                    const data = await res.json().catch(() => ({}));
+
+                    if (!res.ok || !data.success) {
+                        alert(data.message || 'Failed to submit feedback.');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Submit Feedback';
+                        return;
+                    }
+
+                    closeFeedbackModal();
+                    alert('Thank you! Your feedback has been submitted and is pending approval.');
+
+                    // Refresh orders to show updated feedback status
+                    if (typeof loadCustomerOrders === 'function') {
+                        loadCustomerOrders(window.__ordersCurrentFilter || 'all');
+                    }
+                } catch (err) {
+                    console.error('Feedback submission error:', err);
+                    alert('Network error. Please try again.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Submit Feedback';
                 }
-            }catch(err){
-                alert('Network error submitting feedback.');
-            }
-        });
-    })();
+            });
+        })();
     </script>
 
 </body>

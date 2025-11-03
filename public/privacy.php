@@ -80,7 +80,7 @@ if ($isCustomer) {
                 <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item">Home</a>
                 <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
                 <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
-                <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Testimonials</a>
+                <a href="/RADS-TOOLING/public/testimonials.php" class="nav-menu-item">Testimonials</a>
             </nav>
         </header>
 
@@ -158,9 +158,6 @@ if ($isCustomer) {
                         <a href="#" class="social-icon" aria-label="Facebook">
                             <span class="material-symbols-rounded">facebook</span>
                         </a>
-                        <a href="#" class="social-icon" aria-label="Instagram">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                        </a>
                         <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
                             <span class="material-symbols-rounded">mail</span>
                         </a>
@@ -171,8 +168,10 @@ if ($isCustomer) {
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-                        <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
+          <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
+          <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+          <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
                         <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
                         <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
                     </ul>

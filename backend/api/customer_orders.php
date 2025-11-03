@@ -1,236 +1,420 @@
 <?php
 // ==========================================
-// CUSTOMER ORDERS API - Enhanced with Installments
+// CUSTOMER ORDERS API - WITH ORDER_ADDRESSES
+// IMPROVED VERSION WITH BETTER DEBUGGING
 // ==========================================
 declare(strict_types=1);
-session_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 header('Content-Type: application/json; charset=utf-8');
-ini_set('display_errors', '0');
-error_reporting(E_ALL);
 
-require_once dirname(__DIR__, 2) . '/includes/guard.php';
-require_once dirname(__DIR__) . '/config/database.php';
-
-// Authentication check
-if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? '') !== 'customer') {
+// Check if customer is logged in
+if (empty($_SESSION['user'])) {
     http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized', 'redirect' => '/RADS-TOOLING/customer/login.php']);
+    echo json_encode(['success' => false, 'message' => 'Not logged in']);
     exit;
 }
 
-$customerId = (int)$_SESSION['user']['id'];
-$action = $_GET['action'] ?? '';
+$customerId = (int)($_SESSION['user']['id'] ?? 0);
 
-$db = new Database();
-$conn = $db->getConnection();
+if ($customerId <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid customer ID']);
+    exit;
+}
+
+// Include database
+require_once __DIR__ . '/../config/database.php';
 
 try {
-    if ($action === 'list') {
-        listCustomerOrders($conn, $customerId);
-    } elseif ($action === 'details') {
-        getOrderDetails($conn, $customerId);
-    } else {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid action']);
-    }
+    $database = new Database();
+    $conn = $database->getConnection();
 } catch (Exception $e) {
-    error_log("Customer Orders API Error: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server error']);
+    echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+    exit;
+}
+
+$action = $_GET['action'] ?? 'list';
+
+// ==========================================
+// IMPROVED DELIVERY ADDRESS FUNCTION
+// ==========================================
+function getDeliveryAddress($conn, $orderId) {
+    try {
+        // First, check if any address exists
+        $checkSql = "SELECT COUNT(*) as count FROM order_addresses WHERE order_id = ?";
+        $checkStmt = $conn->prepare($checkSql);
+        $checkStmt->execute([$orderId]);
+        $count = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        if ($count == 0) {
+            error_log("No address found for order_id: $orderId");
+            return 'N/A';
+        }
+        
+        // Get the address with priority: delivery > pickup
+        $sql = "
+            SELECT 
+                first_name,
+                last_name,
+                phone,
+                email,
+                street,
+                barangay,
+                city,
+                province,
+                postal,
+                type
+            FROM order_addresses 
+            WHERE order_id = ?
+            ORDER BY 
+                CASE 
+                    WHEN LOWER(TRIM(type)) = 'delivery' THEN 1
+                    WHEN LOWER(TRIM(type)) = 'pickup' THEN 2
+                    ELSE 3
+                END
+            LIMIT 1
+        ";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$orderId]);
+        $addr = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$addr) {
+            error_log("Query returned no results for order_id: $orderId");
+            return 'N/A';
+        }
+        
+        // Log what we got
+        error_log("Address data for order $orderId: type=" . ($addr['type'] ?? 'null'));
+        
+        // Check address type
+        $addrType = strtolower(trim($addr['type'] ?? ''));
+        
+        // If pickup type, return "For Pickup"
+        if ($addrType === 'pickup') {
+            return 'For Pickup';
+        }
+        
+        // Build address string for delivery
+        $parts = [];
+        
+        if (!empty(trim($addr['street'] ?? ''))) {
+            $parts[] = trim($addr['street']);
+        }
+        if (!empty(trim($addr['barangay'] ?? ''))) {
+            $parts[] = trim($addr['barangay']);
+        }
+        if (!empty(trim($addr['city'] ?? ''))) {
+            $parts[] = trim($addr['city']);
+        }
+        if (!empty(trim($addr['province'] ?? ''))) {
+            $parts[] = trim($addr['province']);
+        }
+        if (!empty(trim($addr['postal'] ?? ''))) {
+            $parts[] = trim($addr['postal']);
+        }
+        
+        $addressLine = !empty($parts) ? implode(', ', $parts) : '';
+        
+        // Build contact info
+        $contact = [];
+        $firstName = trim($addr['first_name'] ?? '');
+        $lastName = trim($addr['last_name'] ?? '');
+        
+        if (!empty($firstName) || !empty($lastName)) {
+            $name = trim($firstName . ' ' . $lastName);
+            if (!empty($name)) {
+                $contact[] = $name;
+            }
+        }
+        
+        if (!empty(trim($addr['phone'] ?? ''))) {
+            $contact[] = trim($addr['phone']);
+        }
+        
+        // Combine contact and address
+        $result = '';
+        if (!empty($contact)) {
+            $result = implode(' - ', $contact);
+            if (!empty($addressLine)) {
+                $result .= "\n" . $addressLine;
+            }
+        } else {
+            $result = $addressLine;
+        }
+        
+        // If still empty, return N/A
+        if (empty(trim($result))) {
+            error_log("Address data exists but all fields are empty for order_id: $orderId");
+            return 'N/A';
+        }
+        
+        return $result;
+        
+    } catch (Exception $e) {
+        error_log("Error in getDeliveryAddress for order $orderId: " . $e->getMessage());
+        return 'N/A';
+    }
 }
 
 // ==========================================
-// LIST CUSTOMER ORDERS
+// LIST ORDERS
 // ==========================================
-function listCustomerOrders($conn, $customerId)
-{
-    $status = $_GET['status'] ?? 'all';
+if ($action === 'list') {
+    try {
+        $status = $_GET['status'] ?? 'all';
+        
+        $whereClause = "WHERE o.customer_id = ?";
+        $params = [$customerId];
 
-    // Base query
-    $sql = "
-       SELECT 
-        o.id,
-        o.order_code,
-        o.order_date,
-        o.total_amount,
-        o.subtotal,
-        o.vat,
-        o.payment_status,
-        o.status,
-        o.mode,
-        o.is_installment,
-        p.deposit_rate,
-        p.method as payment_method,
-        p.status as payment_verification_status,
-        /* sum of verified payments for quick badges/buttons */
-        (SELECT COALESCE(SUM(pp.amount_paid),0)
-            FROM payments pp
-            WHERE pp.order_id = o.id AND UPPER(pp.status)='VERIFIED'
-            ) AS paid_amount,
-        GROUP_CONCAT(DISTINCT oi.name SEPARATOR ', ') as items
-        FROM orders o
-        LEFT JOIN payments p ON p.order_id = o.id
-        LEFT JOIN order_items oi ON oi.order_id = o.id
-        WHERE o.customer_id = :customer_id
+        if ($status !== 'all') {
+            $whereClause .= " AND LOWER(o.status) = LOWER(?)";
+            $params[] = $status;
+        }
+
+        // Query orders with payment info
+        $sql = "
+            SELECT 
+                o.*,
+                p.method as payment_method,
+                COALESCE(
+                    (SELECT SUM(pv.amount_reported) 
+                     FROM payment_verifications pv 
+                     WHERE pv.order_id = o.id 
+                     AND UPPER(COALESCE(pv.status,'')) IN ('VERIFIED','APPROVED')
+                    ), 0
+                ) as amount_paid,
+                (SELECT COUNT(*) FROM feedback f WHERE f.order_id = o.id) as has_feedback
+            FROM orders o
+            LEFT JOIN payments p ON p.order_id = o.id
+            $whereClause
+            ORDER BY o.order_date DESC
         ";
 
-    // Add status filter
-    if ($status !== 'all') {
-        $sql .= " AND LOWER(o.status) = :status";
-    }
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $sql .= " GROUP BY o.id ORDER BY o.order_date DESC";
-
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam(':customer_id', $customerId, PDO::PARAM_INT);
-
-    if ($status !== 'all') {
-        $statusLower = strtolower($status);
-        $stmt->bindParam(':status', $statusLower, PDO::PARAM_STR);
-    }
-
-    $stmt->execute();
-    $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Enhance each order with installment data
-    foreach ($orders as &$order) {
-        if ($order['is_installment'] == 1) {
-            // Get installments
-            $installmentStmt = $conn->prepare("
+        // Process each order
+        foreach ($orders as &$order) {
+            // Get items
+            $itemsSql = "
                 SELECT 
                     id,
-                    installment_number,
-                    amount_due,
-                    amount_paid,
-                    status,
-                    due_date,
-                    verified_at
-                FROM payment_installments
-                WHERE order_id = :order_id
-                ORDER BY installment_number ASC
-            ");
-            $installmentStmt->execute([':order_id' => $order['id']]);
-            $installments = $installmentStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $order['installments'] = $installments;
-            $st = array_map(fn($s) => strtoupper((string)$s), array_column($installments, 'status'));
-            $order['has_unpaid_installment'] = in_array('PENDING', $st, true) || in_array('UNPAID', $st, true);
-        } else {
-            $order['installments'] = [];
-            $order['has_unpaid_installment'] = false;
+                    order_id,
+                    name,
+                    quantity,
+                    unit_price as price,
+                    subtotal,
+                    line_total,
+                    image
+                FROM order_items 
+                WHERE order_id = ?
+            ";
+            
+            $itemsStmt = $conn->prepare($itemsSql);
+            $itemsStmt->execute([$order['id']]);
+            $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Calculate totals
+            $itemsSubtotal = 0;
+            foreach ($items as &$item) {
+                $itemTotal = !empty($item['line_total']) ? (float)$item['line_total'] : (float)$item['subtotal'];
+                if ($itemTotal <= 0) {
+                    $itemTotal = (float)$item['price'] * (float)$item['quantity'];
+                }
+                $item['subtotal'] = $itemTotal;
+                $itemsSubtotal += $itemTotal;
+                
+                if (empty($item['image'])) {
+                    $item['image'] = '/RADS-TOOLING/assets/images/cab1.jpg';
+                }
+            }
+            unset($item);
+            
+            $order['items'] = $items;
+            $order['items_subtotal'] = $itemsSubtotal;
+            $order['has_feedback'] = (int)$order['has_feedback'] > 0;
+            
+            // Calculate payment status
+            $total = (float)($order['total_amount'] ?? 0);
+            $paid = (float)($order['amount_paid'] ?? 0);
+            $remaining = max(0, $total - $paid);
+            
+            $order['remaining_balance'] = $remaining;
+            
+            if ($remaining <= 0.01) {
+                $order['payment_status_text'] = 'Fully Paid';
+            } elseif ($paid > 0) {
+                $order['payment_status_text'] = 'Partially Paid (' . number_format(($paid/$total)*100, 0) . '%)';
+            } else {
+                $order['payment_status_text'] = 'Pending Payment';
+            }
+            
+            // Get delivery address
+            $order['delivery_address'] = getDeliveryAddress($conn, $order['id']);
         }
-    }
+        unset($order);
 
-    echo json_encode([
-        'success' => true,
-        'data' => $orders
-    ]);
+        // Get counts
+        $countsSql = "
+            SELECT 
+                COUNT(*) as all_count,
+                SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN LOWER(status) = 'processing' THEN 1 ELSE 0 END) as processing_count,
+                SUM(CASE WHEN LOWER(status) = 'completed' THEN 1 ELSE 0 END) as completed_count,
+                SUM(CASE WHEN LOWER(status) = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count
+            FROM orders
+            WHERE customer_id = ?
+        ";
+        
+        $countsStmt = $conn->prepare($countsSql);
+        $countsStmt->execute([$customerId]);
+        $counts = $countsStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Orders retrieved successfully',
+            'orders' => $orders,
+            'counts' => [
+                'all' => (int)$counts['all_count'],
+                'pending' => (int)$counts['pending_count'],
+                'processing' => (int)$counts['processing_count'],
+                'completed' => (int)$counts['completed_count'],
+                'cancelled' => (int)$counts['cancelled_count']
+            ]
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ]);
+    }
 }
 
 // ==========================================
-// GET ORDER DETAILS
+// ORDER DETAILS
 // ==========================================
-function getOrderDetails($conn, $customerId)
-{
-    $orderId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-
-    if (!$orderId) {
+elseif ($action === 'details') {
+    $orderId = (int)($_GET['id'] ?? 0);
+    
+    if ($orderId <= 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid order ID']);
-        return;
+        echo json_encode(['success' => false, 'message' => 'Order ID required']);
+        exit;
     }
 
-    // Get order info
-    $orderStmt = $conn->prepare("
-        SELECT 
-            o.*,
-            p.deposit_rate,
-            p.method as payment_method,
-            p.status as payment_verification_status,
-            oa.first_name,
-            oa.last_name,
-            oa.phone,
-            oa.email,
-            oa.province,
-            oa.city,
-            oa.barangay,
-            oa.street,
-            oa.postal
-        FROM orders o
-        LEFT JOIN payments p ON p.order_id = o.id
-        LEFT JOIN order_addresses oa ON oa.order_id = o.id
-        WHERE o.id = :order_id AND o.customer_id = :customer_id
-    ");
-    $orderStmt->execute([
-        ':order_id' => $orderId,
-        ':customer_id' => $customerId
-    ]);
+    try {
+        // Get order with payment info
+        $sql = "
+            SELECT 
+                o.*,
+                p.method as payment_method,
+                COALESCE(
+                    (SELECT SUM(pv.amount_reported) 
+                     FROM payment_verifications pv 
+                     WHERE pv.order_id = o.id 
+                     AND UPPER(COALESCE(pv.status,'')) IN ('VERIFIED','APPROVED')
+                    ), 0
+                ) as amount_paid,
+                (SELECT COUNT(*) FROM feedback f WHERE f.order_id = o.id) as has_feedback
+            FROM orders o
+            LEFT JOIN payments p ON p.order_id = o.id
+            WHERE o.id = ? AND o.customer_id = ?
+            LIMIT 1
+        ";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$orderId, $customerId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $order = $orderStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$order) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Order not found']);
+            exit;
+        }
 
-    if (!$order) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Order not found']);
-        return;
-    }
-
-    // Compute paid_amount from VERIFIED payments + remaining (helps the UI)
-    $paidQ = $conn->prepare("
-    SELECT COALESCE(SUM(amount_paid),0) AS paid
-    FROM payments
-    WHERE order_id = :oid AND UPPER(status) = 'VERIFIED'
-    ");
-    $paidQ->execute([':oid' => $orderId]);
-    $paidRow = $paidQ->fetch(PDO::FETCH_ASSOC);
-    $order['paid_amount'] = (float)($paidRow['paid'] ?? 0);
-
-    // Normalize total field name (your schema uses total_amount)
-    $total = (float)($order['total_amount'] ?? 0);
-    $order['remaining_amount'] = max(0.0, round($total - $order['paid_amount'], 2));
-
-
-    // Get order items
-    $itemsStmt = $conn->prepare("
-        SELECT 
-            name,
-            qty,
-            unit_price,
-            line_total
-        FROM order_items
-        WHERE order_id = :order_id
-    ");
-    $itemsStmt->execute([':order_id' => $orderId]);
-    $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Get installments if applicable
-    $installments = [];
-    if ($order['is_installment'] == 1) {
-        $installmentStmt = $conn->prepare("
+        // Get items
+        $itemsSql = "
             SELECT 
                 id,
-                installment_number,
-                amount_due,
-                amount_paid,
-                status,
-                due_date,
-                payment_method,
-                reference_number,
-                verified_at,
-                notes
-            FROM payment_installments
-            WHERE order_id = :order_id
-            ORDER BY installment_number ASC
-        ");
-        $installmentStmt->execute([':order_id' => $orderId]);
-        $installments = $installmentStmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+                name,
+                quantity,
+                unit_price as price,
+                subtotal,
+                line_total,
+                image
+            FROM order_items 
+            WHERE order_id = ?
+        ";
+        $itemsStmt = $conn->prepare($itemsSql);
+        $itemsStmt->execute([$orderId]);
+        $items = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'order' => $order,
-            'items' => $items,
-            'installments' => $installments
-        ]
-    ]);
+        // Calculate totals
+        $itemsSubtotal = 0;
+        foreach ($items as &$item) {
+            $itemTotal = !empty($item['line_total']) ? (float)$item['line_total'] : (float)$item['subtotal'];
+            if ($itemTotal <= 0) {
+                $itemTotal = (float)$item['price'] * (float)$item['quantity'];
+            }
+            $item['subtotal'] = $itemTotal;
+            $itemsSubtotal += $itemTotal;
+            
+            if (empty($item['image'])) {
+                $item['image'] = '/RADS-TOOLING/assets/images/cab1.jpg';
+            }
+        }
+        unset($item);
+
+        $order['items'] = $items;
+        $order['items_subtotal'] = $itemsSubtotal;
+        $order['has_feedback'] = (int)$order['has_feedback'] > 0;
+        
+        // Calculate payment details
+        $total = (float)($order['total_amount'] ?? 0);
+        $paid = (float)($order['amount_paid'] ?? 0);
+        $remaining = max(0, $total - $paid);
+        
+        $order['remaining_balance'] = $remaining;
+        
+        // Calculate tax
+        $tax = max(0, $total - $itemsSubtotal);
+        $order['tax_amount'] = $tax;
+        
+        // Payment status text
+        if ($remaining <= 0.01) {
+            $order['payment_status_text'] = 'Fully Paid';
+        } elseif ($paid > 0) {
+            $order['payment_status_text'] = 'Partially Paid (' . number_format(($paid/$total)*100, 0) . '%)';
+        } else {
+            $order['payment_status_text'] = 'Pending Payment';
+        }
+        
+        // Get delivery address
+        $order['delivery_address'] = getDeliveryAddress($conn, $orderId);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Order details retrieved',
+            'order' => $order
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ]);
+    }
+}
+
+else {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid action']);
 }

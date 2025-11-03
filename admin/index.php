@@ -607,7 +607,7 @@ if (!$isLoggedIn) {
                         <span class="material-symbols-rounded">qr_code_2</span>
                         Payment QR Codes Management
                     </h3>
-                    
+
                     <p style="color: #666; margin: 0 0 24px 0; font-size: 14px;">
                         Upload and manage QR codes for GCash and BPI payments. These QR codes will be displayed to customers during checkout.
                     </p>
@@ -686,13 +686,13 @@ if (!$isLoggedIn) {
                     <div style="margin-top: 20px; padding: 12px 16px; background: #cfe2ff; border: 1px solid #b6d4fe; border-radius: 6px; display: flex; align-items: flex-start; gap: 10px;">
                         <span class="material-symbols-rounded" style="font-size: 20px; color: #084298;">info</span>
                         <p style="margin: 0; font-size: 14px; color: #084298; line-height: 1.5;">
-                            <strong>Note:</strong> After uploading new QR codes, they will be immediately available in the customer checkout process. 
+                            <strong>Note:</strong> After uploading new QR codes, they will be immediately available in the customer checkout process.
                             Make sure the QR codes are clear and scannable before uploading.
                         </p>
                     </div>
                 </div>
             </div>
-            <!-- 👆 END OF PAYMENT SECTION 👆 -->
+            <!-- END OF PAYMENT SECTION -->
 
         </section>
         <!-- REPORTS -->
@@ -772,12 +772,11 @@ if (!$isLoggedIn) {
                             <th>Comment</th>
                             <th>Order</th>
                             <th>Date</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="feedbackTableBody">
                         <tr>
-                            <td colspan="7" style="text-align:center">Loading feedback...</td>
+                            <td colspan="6" style="text-align:center">Loading feedback...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -835,6 +834,15 @@ if (!$isLoggedIn) {
         <section class="main-section" data-section="payment">
             <div class="section-header">
                 <h1>Payment Verification</h1>
+            </div>
+            <div class="order-controls">
+                <input type="text" class="order-search" id="order-search" placeholder="Search orders..." />
+                <select class="order-filter" id="paymentFilter">
+                    <option value="">All Payment Status</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
             </div>
             <div class="payments-table-container">
                 <table class="payments-table">
@@ -947,7 +955,7 @@ if (!$isLoggedIn) {
             </div>
         </div>
 
-        <!-- View Order Modal 
+        <!-- View Order Modal
         <div class="modal" id="viewOrderModal">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1019,7 +1027,7 @@ if (!$isLoggedIn) {
         <div id="addProductModal" class="modal">
             <div class="modal-content" style="max-width:800px">
                 <div class="modal-header">
-                    <h2>Add New Product</h2><button class="close-modal" onclick="closeModal('addProductModal')">×</button>
+                    <h2 id="addProductModalTitle">Add New Product</h2><button class="close-modal" onclick="closeModal('addProductModal')">×</button>
                 </div>
                 <form id="addProductForm" style="padding:16px">
                     <div class="form-row">
@@ -1039,8 +1047,16 @@ if (!$isLoggedIn) {
                         <div class="form-group"><label class="customizable-inline"><input type="checkbox" id="isCustomizable"><span>This product is customizable (3D)</span></label></div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group"><label for="productImage">Product Image (Normal View)</label>
-                            <div class="pm-filebox"><input type="file" id="productImage" accept="image/*"></div><img id="productImagePreview" style="max-width:200px;margin-top:10px;display:none">
+                        <div class="form-group">
+                            <label for="productImage">
+                                Product Images (Multiple)
+                                <span style="color: #666; font-size: 12px; font-weight: normal;">
+                                    - First image will be the primary display image
+                                </span>
+                            </label>
+                            <input type="file" id="productImage" accept="image/*" multiple>
+                            <div id="imagePreviewContainer" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;"></div>
+                            <img id="productImagePreview" style="display: none;">
                         </div>
                         <div class="form-group"><label for="productModel">3D Model (.glb)</label>
                             <div class="pm-filebox"><input type="file" id="productModel" accept=".glb,model/gltf-binary" disabled></div>
@@ -1050,7 +1066,7 @@ if (!$isLoggedIn) {
                     <div style="background:#e8f4f8;padding:15px;border-radius:8px;margin-top:15px">
                         <p style="margin:0;font-size:14px;color:#555"><strong>Note:</strong> After creating the product, use "Manage Customization Options" to assign textures, colors, and handles.</p>
                     </div>
-                    <div class="modal-actions"><button type="button" class="btn-secondary" id="addProductCancelBtn" onclick="closeModal('addProductModal')">Cancel</button><button type="submit" class="btn-primary">Add Product</button></div>
+                    <div class="modal-actions"><button type="button" class="btn-secondary" id="addProductCancelBtn" onclick="closeModal('addProductModal')">Cancel</button><button type="submit" class="btn-primary">Update Product</button></div>
                 </form>
             </div>
         </div>
@@ -1240,18 +1256,68 @@ if (!$isLoggedIn) {
         <div id="addColorModal" class="modal">
             <div class="modal-content" style="max-width:600px">
                 <div class="modal-header">
-                    <h2>Add New Color</h2><button class="close-modal" onclick="closeModal('addColorModal')">×</button>
+                    <h2>Add New Color</h2>
+                    <button class="close-modal" onclick="closeModal('addColorModal')">×</button>
                 </div>
                 <form id="addColorForm" onsubmit="handleAddColor(event)" style="padding:16px">
-                    <div class="form-group"><label for="colorName">Color Name *</label><input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White"></div>
-                    <div class="form-group"><label for="colorCode">Color Code *</label><input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY"><small style="color:#666">Use uppercase with underscores</small></div>
-                    <div class="form-row">
-                        <div class="form-group"><label for="colorHex">Hex Color Value *</label><input type="color" id="colorHex" value="#000000" required style="height:50px"></div>
-                        <div class="form-group"><label for="colorHexText">Hex Code</label><input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000"></div>
+                    <div class="form-group">
+                        <label for="colorName">Color Name *</label>
+                        <input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White">
                     </div>
-                    <div class="form-group"><label for="colorBasePrice">Base Price (₱)</label><input type="number" id="colorBasePrice" step="0.01" value="0"></div>
-                    <div class="form-group"><label><input type="checkbox" id="colorIsActive" checked> Active (Available for selection)</label></div>
-                    <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button><button type="submit" class="btn-primary">Add Color</button></div>
+                    <div class="form-group">
+                        <label for="colorCode">Color Code *</label>
+                        <input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY">
+                        <small style="color:#666">Use uppercase with underscores</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="colorHex">Hex Color Value *</label>
+                            <input type="color" id="colorHex" value="#000000" required style="height:50px">
+                        </div>
+                        <div class="form-group">
+                            <label for="colorHexText">Hex Code</label>
+                            <input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="colorBasePrice">Base Price (₱)</label>
+                        <input type="number" id="colorBasePrice" step="0.01" value="0">
+                    </div>
+
+                    <!-- CORRECTED: name="colorParts" -->
+                    <div class="form-group">
+                        <label style="font-weight:600; display:block; margin-bottom:8px;">Allowed Parts</label>
+                        <div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));gap: 10px;text-align: center;padding: 10px 12px;border: 1px solid #ddd;border-radius: 8px;background: #f9fafb;">
+                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                <input type="checkbox" name="colorParts" value="body" checked style="margin-bottom:4px;">
+                                Body / Frame
+                            </label>
+                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                <input type="checkbox" name="colorParts" value="door" checked style="margin-bottom:4px;">
+                                Door
+                            </label>
+                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                <input type="checkbox" name="colorParts" value="interior" checked style="margin-bottom:4px;">
+                                Interior
+                            </label>
+                        </div>
+                        <small style="color:#666; display:block; margin-top:6px;">
+                            Select where this color may be applied.
+                        </small>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
+                            <input type="checkbox" id="colorIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                        </div>
+                        <div style="flex:1;">
+                            <label for="colorIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
+                            <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the color from customers.</small>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Color</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -1484,34 +1550,46 @@ if (!$isLoggedIn) {
             }
         }
 
-        async function handleAddColor(e) {
-            e.preventDefault();
-            const formData = {
-                color_name: document.getElementById('colorName').value,
-                color_code: document.getElementById('colorCode').value,
+        function handleAddColor(event) {
+            event.preventDefault();
+
+            // Collect parts
+            const partCheckboxes = document.querySelectorAll('input[name="colorParts"]:checked');
+            const allowedParts = Array.from(partCheckboxes).map(cb => cb.value);
+
+            const colorData = {
+                color_name: document.getElementById('colorName').value.trim(),
+                color_code: document.getElementById('colorCode').value.trim(),
                 hex_value: document.getElementById('colorHex').value,
-                base_price: parseFloat(document.getElementById('colorBasePrice').value) || 0,
-                is_active: document.getElementById('colorIsActive').checked ? 1 : 0
+                base_price: parseFloat(document.getElementById('colorBasePrice').value || 0),
+                is_active: document.getElementById('colorIsActive').checked ? 1 : 0,
+                allowed_parts: allowedParts
             };
-            try {
-                const res = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_color', {
+
+            console.log('Sending color data:', colorData);
+
+            fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_color', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(formData)
+                    body: JSON.stringify(colorData),
+                    credentials: 'same-origin'
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Color added!');
+                        closeModal('addColorModal');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Add color error:', err);
+                    alert('Failed to add color');
                 });
-                const data = await res.json();
-                if (data.success) {
-                    showNotification('success', 'Color added successfully');
-                    closeModal('addColorModal');
-                    document.getElementById('addColorForm').reset();
-                    if (typeof loadColors === 'function') loadColors();
-                } else showNotification('error', data.message || 'Failed to add color');
-            } catch (err) {
-                console.error(err);
-                showNotification('error', 'Failed to add color');
-            }
         }
 
         async function handleAddHandle(e) {

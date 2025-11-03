@@ -116,10 +116,7 @@ if ($img) {
                     </div>
 
                     <!-- Cart -->
-<<<<<<< HEAD
-=======
                     <!-- Dapat ganito -->
->>>>>>> b0c1594 (24/10/2025 9:21AM)
                     <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>
@@ -131,6 +128,7 @@ if ($img) {
                 <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item ">Home</a>
                 <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
                 <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
             </nav>
         </header>
 

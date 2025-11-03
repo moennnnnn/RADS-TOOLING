@@ -64,7 +64,11 @@ switch ($action) {
 
 function listPaymentVerifications(PDO $conn): void {
     try {
-        $stmt = $conn->prepare("
+        // Get filter parameters
+        $search = $_GET['search'] ?? '';
+        $status = $_GET['status'] ?? '';
+        
+        $sql = "
             SELECT 
                 pv.id,
                 pv.order_id,
@@ -84,11 +88,30 @@ function listPaymentVerifications(PDO $conn): void {
             JOIN orders o ON pv.order_id = o.id
             JOIN customers c ON o.customer_id = c.id
             LEFT JOIN payments p ON p.order_id = o.id
-            ORDER BY 
-                CASE pv.status WHEN 'PENDING' THEN 1 WHEN 'APPROVED' THEN 2 WHEN 'REJECTED' THEN 3 ELSE 4 END,
-                pv.created_at DESC
-        ");
-        $stmt->execute();
+            WHERE 1=1
+        ";
+        
+        $params = [];
+        
+        // Add search filter
+        if (!empty($search)) {
+            $sql .= " AND (o.order_code LIKE :search OR c.full_name LIKE :search OR pv.amount_reported LIKE :search)";
+            $params[':search'] = '%' . $search . '%';
+        }
+        
+        // Add status filter
+        if (!empty($status)) {
+            $sql .= " AND pv.status = :status";
+            $params[':status'] = strtoupper($status);
+        }
+        
+        $sql .= " ORDER BY 
+            CASE pv.status WHEN 'PENDING' THEN 1 WHEN 'APPROVED' THEN 2 WHEN 'REJECTED' THEN 3 ELSE 4 END,
+            pv.created_at DESC
+        ";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         send_json(['success' => true, 'data' => $rows]);
     } catch (Throwable $e) {

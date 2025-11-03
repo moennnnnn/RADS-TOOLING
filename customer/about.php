@@ -1,4 +1,89 @@
 <?php
+// public/testimonials.php
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Try to load config
+$configPaths = [
+    __DIR__ . '/../backend/config/app.php',
+    __DIR__ . '/../../backend/config/app.php',
+    __DIR__ . '/../backend/config/database.php'
+];
+
+$pdo = null;
+foreach ($configPaths as $configPath) {
+    if (file_exists($configPath)) {
+        require_once $configPath;
+        break;
+    }
+}
+
+if (!isset($pdo) || !$pdo) {
+    if (class_exists('Database')) {
+        try {
+            $pdo = Database::getInstance()->getConnection();
+        } catch (Throwable $e) {
+            error_log('Testimonials DB error: ' . $e->getMessage());
+        }
+    }
+}
+
+if (!$pdo) {
+    try {
+        $pdo = new PDO("mysql:host=localhost;dbname=rads_tooling;charset=utf8mb4", "root", "");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('Testimonials DB connection failed: ' . $e->getMessage());
+    }
+}
+
+$testimonials = [];
+$stats = ['count' => 0, 'avg' => 0];
+
+if ($pdo instanceof PDO) {
+    try {
+        $statsQuery = $pdo->query("
+            SELECT 
+                COUNT(*) AS cnt, 
+                COALESCE(ROUND(AVG(rating), 1), 0) AS avg_rating
+            FROM feedback
+            WHERE is_released = 1
+        ");
+        $statsRow = $statsQuery->fetch(PDO::FETCH_ASSOC);
+        $stats['count'] = (int)($statsRow['cnt'] ?? 0);
+        $stats['avg'] = (float)($statsRow['avg_rating'] ?? 0);
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                f.rating,
+                f.comment,
+                f.created_at,
+                COALESCE(c.full_name, 'Customer') AS customer_name
+            FROM feedback f
+            INNER JOIN customers c ON c.id = f.customer_id
+            WHERE f.is_released = 1
+            ORDER BY COALESCE(f.released_at, f.created_at) DESC
+            LIMIT 50
+        ");
+        $stmt->execute();
+        $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    } catch (Throwable $e) {
+        error_log('Testimonials query error: ' . $e->getMessage());
+    }
+}
+
+function e(string $s): string { 
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); 
+}
+
+function safeDate(?string $s): string {
+    if (!$s) return '—';
+    $t = strtotime($s);
+    return $t ? date('M d, Y', $t) : e($s);
+}
 // /customer/about.php - Customer About Page (uses same CMS content as public)
 require_once __DIR__ . '/../backend/config/app.php';
 require_once __DIR__ . '/../backend/lib/cms_helper.php';
@@ -125,6 +210,7 @@ if ($img) {
                 <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item ">Home</a>
                 <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item active">About</a>
                 <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
             </nav>
         </header>
 
@@ -253,7 +339,27 @@ if ($img) {
                 </button>
             </div>
         </div>
-
+        
+ <!-- LOGOUT MODAL (Admin Style) -->
+      <div class="modal" id="logoutModal" style="display:none;">
+        <div class="modal-content modal-small">
+          <button class="modal-close" onclick="closeLogoutModal()" type="button">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+          <div class="modal-icon-wrapper">
+            <div class="modal-icon warning">
+              <span class="material-symbols-rounded">logout</span>
+            </div>
+          </div>
+          <h2 class="modal-title">Confirm Logout</h2>
+          <p class="modal-message">Are you sure you want to logout?</p>
+          <div class="modal-actions">
+            <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
+            <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
+          </div>
+        </div>
+      </div>
+    </main>
         <!-- FOOTER -->
         <footer class="footer">
             <div class="footer-content">
@@ -268,9 +374,6 @@ if ($img) {
                         <a href="#" class="social-icon" aria-label="Facebook">
                             <span class="material-symbols-rounded">facebook</span>
                         </a>
-                        <a href="#" class="social-icon" aria-label="Instagram">
-                            <span class="material-symbols-rounded">photo_camera</span>
-                        </a>
                         <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
                             <span class="material-symbols-rounded">mail</span>
                         </a>
@@ -284,6 +387,7 @@ if ($img) {
                         <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
                         <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
                         <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
+                        <li><a href="/RADS-TOOLING/customer/testimonials.php">Testimonials</a></li>
                     </ul>
                 </div>
 

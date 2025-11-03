@@ -306,18 +306,28 @@ require_once __DIR__ . '/../backend/config/database.php';
             </div>
             <div class="app-modal__body" id="appModalBody"></div>
             <div class="app-modal__footer" id="appModalFooter">
-                <button type="button" class="btn" data-appmodal-close>OK</button>
+                <button type="button" class="btn btn-primary" data-appmodal-close>OK</button>
             </div>
         </div>
     </div>
 
     <style>
+        .app-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
         .app-modal__dialog {
             width: min(520px, 92vw);
             background: #fff;
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, .2)
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
         }
 
         .app-modal__header {
@@ -325,11 +335,11 @@ require_once __DIR__ . '/../backend/config/database.php';
             justify-content: space-between;
             align-items: center;
             padding: 14px 18px;
-            border-bottom: 1px solid #eee
+            border-bottom: 1px solid #eee;
         }
 
         .app-modal__body {
-            padding: 16px 18px
+            padding: 16px 18px;
         }
 
         .app-modal__footer {
@@ -337,14 +347,15 @@ require_once __DIR__ . '/../backend/config/database.php';
             gap: 10px;
             justify-content: flex-end;
             padding: 12px 18px;
-            border-top: 1px solid #eee
+            border-top: 1px solid #eee;
         }
 
         .app-modal__close {
             border: none;
             background: transparent;
             font-size: 22px;
-            cursor: pointer
+            cursor: pointer;
+            line-height: 1;
         }
 
         .btn {
@@ -352,65 +363,60 @@ require_once __DIR__ . '/../backend/config/database.php';
             border-radius: 8px;
             border: 1px solid #ddd;
             background: #f7f7f7;
-            cursor: pointer
+            cursor: pointer;
         }
 
         .btn-primary {
             background: #2f5b88;
             color: #fff;
-            border-color: #2f5b88
+            border-color: #2f5b88;
         }
     </style>
 
     <script>
         (function() {
             const el = document.getElementById('appModal');
-            const box = document.getElementById('appModalDialog');
             const ttl = document.getElementById('appModalTitle');
             const body = document.getElementById('appModalBody');
             const ftr = document.getElementById('appModalFooter');
 
-            function clearVariant() {
-                box.classList.remove('rt-modal--success', 'rt-modal--error', 'rt-modal--warn', 'rt-modal--info');
+            if (!el || !ttl || !body || !ftr) {
+                console.error('Modal elements not found');
+                return;
             }
 
             function close() {
-                el.classList.remove('open');
-                ftr.innerHTML = '<button type="button" class="rt-btn rt-btn--primary" data-appmodal-close>OK</button>';
-                clearVariant();
+                el.style.display = 'none';
+                ftr.innerHTML = '<button type="button" class="btn btn-primary" data-appmodal-close>OK</button>';
             }
 
             function open() {
-                el.classList.add('open');
+                el.style.display = 'flex';
             }
 
-            // close on [x], OK, or backdrop click
             document.addEventListener('click', (e) => {
-                if (e.target.matches('[data-appmodal-close]')) return close();
-                if (e.target.classList?.contains('rt-modal') && !e.target.closest('.rt-modal__box')) return close();
+                if (e.target.matches('[data-appmodal-close]') || e.target === el) close();
             });
 
-            // Global API (type supports: success | error | warn | info)
+            // Global API
             window.showModal = function({
                 title = 'Notice',
                 html = '',
                 actions,
                 type = 'info'
             } = {}) {
-                clearVariant();
-                box.classList.add(`rt-modal--${['success','error','warn','info'].includes(type) ? type : 'info'}`);
                 ttl.textContent = title;
                 body.innerHTML = html;
                 ftr.innerHTML = '';
 
                 (actions && actions.length ? actions : [{
                     label: 'OK',
-                    cls: 'rt-btn rt-btn--primary',
+                    cls: 'btn btn-primary',
                     onClick: close
                 }])
                 .forEach(a => {
                     const b = document.createElement('button');
-                    b.className = a.cls || 'rt-btn';
+                    b.className = a.cls || 'btn';
                     b.textContent = a.label || 'OK';
                     b.addEventListener('click', () => (a.onClick ? a.onClick() : close()));
                     ftr.appendChild(b);
@@ -420,7 +426,7 @@ require_once __DIR__ . '/../backend/config/database.php';
             };
         })();
     </script>
-
+    <script src="/RADS-TOOLING/assets/JS/register.js"></script>
 
 </body>
 

@@ -13,11 +13,11 @@ function local_log(string $msg): void {
 }
 
 // minimal response helpers
-function ok($data = []){
+function ok($data = []) {
     echo json_encode(array_merge(['success' => true], is_array($data) ? $data : ['data' => $data]));
     exit;
 }
-function fail($msg = 'Error', $code = 400){
+function fail($msg = 'Error', $code = 400) {
     http_response_code($code);
     echo json_encode(['success' => false, 'message' => $msg]);
     exit;
@@ -26,7 +26,7 @@ function fail($msg = 'Error', $code = 400){
 // get current customer id from session (adjust keys if your app uses different)
 function require_customer_id(): int {
     if (!empty($_SESSION['customer']['id'])) return (int)$_SESSION['customer']['id'];
-    if (!empty($_SESSION['user']['id']) && ($_SESSION['user']['role'] ?? '') === 'customer') return (int)$_SESSION['user']['id'];
+    if (!empty($_SESSION['user']['id']) && (strtolower($_SESSION['user']['role'] ?? '') === 'customer')) return (int)$_SESSION['user']['id'];
     fail('Unauthorized', 401);
 }
 
@@ -41,14 +41,18 @@ try {
     fail('Server error (db)', 500);
 }
 
-// fetch inputs (FormData POST)
+// --- begin input collection ---
 $uid = require_customer_id();
 
 $order_id        = (int)($_POST['order_id'] ?? ($_GET['order_id'] ?? 0));
 $account_name    = trim((string)($_POST['account_name'] ?? ''));
 $account_number  = trim((string)($_POST['account_number'] ?? ''));
-$reference       = trim((string)($_POST['reference_number'] ?? ''));
+$reference       = trim((string)($_POST['reference_number'] ?? $_POST['reference'] ?? ''));
 $amount_paid     = (float)($_POST['amount_paid'] ?? 0.0);
+
+// quick debug (uncomment for troubleshooting)
+// @file_put_contents(__DIR__ . '/../logs/payment_submit_debug.log', date('[Y-m-d H:i:s] ') . "POST: " . json_encode($_POST) . PHP_EOL, FILE_APPEND);
+// @file_put_contents(__DIR__ . '/../logs/payment_submit_debug.log', date('[Y-m-d H:i:s] ') . "FILES: " . json_encode($_FILES) . PHP_EOL, FILE_APPEND);
 
 if (!$order_id) fail('Missing order_id.');
 if (!$account_name) fail('Account name is required.');
@@ -94,7 +98,8 @@ if (!empty($_FILES['screenshot']['tmp_name'])) {
             @unlink($tmp);
         }
     }
-    $screenshot_path = 'uploads/payments/' . $fname; // path used by other code
+    // web path used elsewhere in project; keep consistent
+    $screenshot_path = 'uploads/payments/' . $fname;
 }
 
 // Validation: enforce minimum payment rules (same logic as earlier)
@@ -134,6 +139,121 @@ try {
     fail('Server validation error', 500);
 }
 
+// --- ADDRESS ASSEMBLY & OPTIONAL ORDER UPDATE (safe, non-fatal) ---
+try {
+    // Collect possible POST address fields (common names)
+    $rawVals = [
+        'blk'      => trim((string)($_POST['blk'] ?? $_POST['block'] ?? $_POST['lot'] ?? '')),
+        'street'   => trim((string)($_POST['street'] ?? $_POST['st'] ?? '')),
+        'barangay' => trim((string)($_POST['barangay'] ?? $_POST['brgy'] ?? '')),
+        'city'     => trim((string)($_POST['city'] ?? $_POST['municipality'] ?? $_POST['town'] ?? '')),
+        'province' => trim((string)($_POST['province'] ?? '')),
+        'postal'   => trim((string)($_POST['postal_code'] ?? $_POST['zip'] ?? '')),
+        'combined' => trim((string)($_POST['address'] ?? '')),
+        'psgc'     => trim((string)($_POST['psgc'] ?? ''))
+    ];
+
+    // Normalize empties to null
+    foreach ($rawVals as $k => $v) if ($v === '') $rawVals[$k] = null;
+
+    // Optional PSGC resolver (if you have it)
+    if (!empty($rawVals['psgc']) && function_exists('getPsgcParts')) {
+        $ps = getPsgcParts($rawVals['psgc']);
+        if (!empty($ps['barangay']) && empty($rawVals['barangay'])) $rawVals['barangay'] = $ps['barangay'];
+        if (!empty($ps['city']) && empty($rawVals['city'])) $rawVals['city'] = $ps['city'];
+        if (!empty($ps['province']) && empty($rawVals['province'])) $rawVals['province'] = $ps['province'];
+        if (!empty($ps['postal']) && empty($rawVals['postal'])) $rawVals['postal'] = $ps['postal'] ?? $rawVals['postal'];
+    }
+
+    // Build readable address array
+    $addrParts = [];
+    if (!empty($rawVals['blk'])) $addrParts[] = 'Blk ' . $rawVals['blk'];
+    if (!empty($rawVals['street'])) $addrParts[] = $rawVals['street'];
+    if (!empty($rawVals['barangay'])) $addrParts[] = 'Brgy ' . $rawVals['barangay'];
+    if (!empty($rawVals['city'])) $addrParts[] = $rawVals['city'];
+    if (!empty($rawVals['province'])) $addrParts[] = $rawVals['province'];
+    if (!empty($rawVals['postal'])) $addrParts[] = $rawVals['postal'];
+
+    if (empty($addrParts) && !empty($rawVals['combined'])) {
+        $addrParts[] = $rawVals['combined'];
+    }
+
+    $fullAddress = $addrParts ? implode(', ', $addrParts) : null;
+
+    if ($fullAddress) {
+        // Determine which columns exist and update what we can
+        $check = $pdo->prepare("
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'orders'
+              AND column_name IN (
+                'customer_address',
+                'address','shipping_street','shipping_barangay','shipping_city','shipping_province','shipping_postal_code',
+                'street','barangay','city','province','postal_code'
+              )
+        ");
+        $check->execute();
+        $existing = $check->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+        $cols = [];
+
+        // prefer structured shipping columns
+        if (in_array('shipping_street', $existing) && !empty($rawVals['street'])) $cols['shipping_street'] = $rawVals['street'];
+        if (in_array('shipping_barangay', $existing) && !empty($rawVals['barangay'])) $cols['shipping_barangay'] = $rawVals['barangay'];
+        if (in_array('shipping_city', $existing) && !empty($rawVals['city'])) $cols['shipping_city'] = $rawVals['city'];
+        if (in_array('shipping_province', $existing) && !empty($rawVals['province'])) $cols['shipping_province'] = $rawVals['province'];
+        if (in_array('shipping_postal_code', $existing) && !empty($rawVals['postal'])) $cols['shipping_postal_code'] = $rawVals['postal'];
+
+        // generic fields if present
+        if (in_array('street', $existing) && !empty($rawVals['street'])) $cols['street'] = $rawVals['street'];
+        if (in_array('barangay', $existing) && !empty($rawVals['barangay'])) $cols['barangay'] = $rawVals['barangay'];
+        if (in_array('city', $existing) && !empty($rawVals['city'])) $cols['city'] = $rawVals['city'];
+        if (in_array('province', $existing) && !empty($rawVals['province'])) $cols['province'] = $rawVals['province'];
+        if (in_array('postal_code', $existing) && !empty($rawVals['postal'])) $cols['postal_code'] = $rawVals['postal'];
+
+        // prefer dedicated customer_address if available and nothing else
+        if (empty($cols) && in_array('customer_address', $existing)) {
+            $cols['customer_address'] = $fullAddress;
+        }
+
+        if (!empty($cols)) {
+            $sets = [];
+            $params = [':oid' => $order_id];
+            foreach ($cols as $k => $v) {
+                $sets[] = "`$k` = :$k";
+                $params[":$k"] = $v;
+            }
+            $sqlUpd = "UPDATE orders SET " . implode(', ', $sets) . " WHERE id = :oid";
+            $updStmt = $pdo->prepare($sqlUpd);
+            $updStmt->execute($params);
+        } else {
+            // last fallback: update customer_address if exists
+            $fallbackChk = $pdo->prepare("
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'orders'
+                  AND column_name = 'customer_address'
+                LIMIT 1
+            ");
+            $fallbackChk->execute();
+            if ($fallbackChk->fetchColumn()) {
+                $pdo->prepare("UPDATE orders SET customer_address = :addr WHERE id = :oid")->execute([':addr' => $fullAddress, ':oid' => $order_id]);
+            } else {
+                // no columns available; log for debug
+                local_log("payment_submit: built fullAddress but no orders address column found. order_id={$order_id} address=" . $fullAddress);
+            }
+        }
+    } else {
+        // nothing posted — log for debug
+        local_log("payment_submit: no address fields posted for order {$order_id} by user {$uid}");
+    }
+} catch (Throwable $e) {
+    local_log("payment_submit address update error: " . $e->getMessage());
+    // non-fatal: we don't want to block payment submission if address update fails
+}
+
 // insert verification and ensure payments row exists (but do NOT add to amount_paid here)
 try {
     $pdo->beginTransaction();
@@ -141,6 +261,7 @@ try {
     $ins = $pdo->prepare("INSERT INTO payment_verifications
         (order_id, method, account_name, account_number, reference_number, screenshot_path, amount_reported, status, created_at)
         VALUES (:oid, :method, :accname, :accnum, :ref, :img, :amt, 'PENDING', NOW())");
+
     // method: try to infer from existing payments row else default 'gcash'
     $st = $pdo->prepare("SELECT method FROM payments WHERE order_id = :oid LIMIT 1");
     $st->execute([':oid' => $order_id]);

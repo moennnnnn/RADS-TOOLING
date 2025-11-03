@@ -1,4 +1,6 @@
 <?php
+// /RADS-TOOLING/backend/api/order_create.php
+// ✅ FINAL FIXED VERSION - handles nested payload structure + better error messages
 
 declare(strict_types=1);
 session_start();
@@ -6,8 +8,9 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/_bootstrap.php';
 
-// Check if customer is logged in
+// ✅ IMPROVED: Better session check with detailed error
 if (!isset($_SESSION['customer']) || empty($_SESSION['customer'])) {
+    error_log('Order create failed: No customer session');
     http_response_code(401);
     echo json_encode([
         'success' => false,
@@ -17,25 +20,78 @@ if (!isset($_SESSION['customer']) || empty($_SESSION['customer'])) {
     exit;
 }
 
-$uid = $_SESSION['customer']['id'];
+$uid = (int)$_SESSION['customer']['id'];
 
+// Read and parse request body
 $raw = file_get_contents('php://input');
 $body = json_decode($raw, true) ?: [];
 
+// ✅ IMPROVED: Log received payload for debugging
+error_log('Order create request from customer ' . $uid . ': ' . $raw);
+
+// Extract basic order data
 $pid = (int)($body['pid'] ?? 0);
 $qty = max(1, (int)($body['qty'] ?? 1));
 $subtotal = (float)($body['subtotal'] ?? 0);
 $vat = (float)($body['vat'] ?? 0);
 $total = (float)($body['total'] ?? 0);
 $mode = ($body['mode'] ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
-$info = (array)($body['info'] ?? []);
 
-if ($pid <= 0 || $total <= 0) {
+// ✅ FIXED: Extract info from nested structure
+$rawInfo = (array)($body['info'] ?? []);
+
+// Handle nested structure (delivery/pickup inside info)
+if ($mode === 'delivery' && isset($rawInfo['delivery'])) {
+    $info = (array)$rawInfo['delivery'];
+} elseif ($mode === 'pickup' && isset($rawInfo['pickup'])) {
+    $info = (array)$rawInfo['pickup'];
+} else {
+    // Fallback: try using info directly
+    $info = $rawInfo;
+}
+
+// ✅ IMPROVED: Validate required fields
+$errors = [];
+
+if ($pid <= 0) {
+    $errors[] = 'Invalid product ID';
+}
+
+if ($total <= 0) {
+    $errors[] = 'Invalid order total';
+}
+
+if (empty($info['first_name'])) {
+    $errors[] = 'First name is required';
+}
+
+if (empty($info['last_name'])) {
+    $errors[] = 'Last name is required';
+}
+
+if (empty($info['phone'])) {
+    $errors[] = 'Phone number is required';
+}
+
+if ($mode === 'delivery') {
+    if (empty($info['province'])) $errors[] = 'Province is required';
+    if (empty($info['city'])) $errors[] = 'City is required';
+    if (empty($info['barangay'])) $errors[] = 'Barangay is required';
+    if (empty($info['street'])) $errors[] = 'Street address is required';
+}
+
+if (!empty($errors)) {
+    error_log('Order create validation failed: ' . implode(', ', $errors));
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Invalid order payload.']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Validation failed: ' . implode(', ', $errors),
+        'errors' => $errors
+    ]);
     exit;
 }
 
+// Start database transaction
 $pdo = db();
 $pdo->beginTransaction();
 
@@ -51,7 +107,10 @@ try {
         $productRow = $nameStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($productRow && !empty($productRow['name'])) {
-            $prodName = $productRow['name']; // ← ACTUAL PRODUCT NAME! 🔥
+            $prodName = $productRow['name'];
+        } else {
+            // Product not found
+            throw new Exception('Product not found');
         }
     }
 
@@ -59,21 +118,25 @@ try {
     // STEP 2: CREATE ORDER
     // ==========================================
     $stmt = $pdo->prepare("INSERT INTO orders
-    (order_code, customer_id, mode, status, payment_status, subtotal, vat, total_amount, order_date)
-    VALUES (
-      CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
-      :cid, :mode, 'Pending', 'Pending', :sub, :vat, :tot, NOW()
-    )");
+        (order_code, customer_id, mode, status, payment_status, subtotal, vat, total_amount, order_date)
+        VALUES (
+            CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
+            :cid, :mode, 'Pending', 'Pending', :sub, :vat, :tot, NOW()
+        )");
 
-$stmt->execute([
-    ':cid'  => $uid,      // <-- ensure $uid is the same var used in this file
-    ':mode' => $mode,
-    ':sub'  => $subtotal,
-    ':vat'  => $vat,
-    ':tot'  => $total
-]);
+    $stmt->execute([
+        ':cid'  => $uid,
+        ':mode' => $mode,
+        ':sub'  => $subtotal,
+        ':vat'  => $vat,
+        ':tot'  => $total
+    ]);
 
     $order_id = (int)$pdo->lastInsertId();
+
+    if (!$order_id) {
+        throw new Exception('Failed to create order');
+    }
 
     // Fetch the generated order_code
     $stmt = $pdo->prepare("SELECT order_code FROM orders WHERE id = :id LIMIT 1");
@@ -91,7 +154,7 @@ $stmt->execute([
     $stmt->execute([
         ':oid' => $order_id,
         ':pid' => $pid,
-        ':name' => $prodName,  // ← USING ACTUAL PRODUCT NAME! 💯
+        ':name' => $prodName,
         ':price' => $unitPrice,
         ':qty' => $qty,
         ':lt' => $subtotal
@@ -120,6 +183,8 @@ $stmt->execute([
 
     $pdo->commit();
 
+    error_log('Order created successfully: #' . $order_id . ' (' . $order_code . ')');
+
     echo json_encode([
         'success'    => true,
         'message'    => 'Order created successfully!',
@@ -128,10 +193,10 @@ $stmt->execute([
     ]);
 } catch (Throwable $e) {
     $pdo->rollBack();
-    error_log('Order creation error: ' . $e->getMessage());
+    error_log('Order creation error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Failed to create order. Please try again.'
+        'message' => 'Failed to create order: ' . $e->getMessage()
     ]);
 }

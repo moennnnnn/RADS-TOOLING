@@ -127,12 +127,12 @@ if ($isCustomer) {
                 <div id="hero3d" style="width:100%;max-width:580px;height:460px;border-radius:16px;overflow:hidden;background:#f8fafc"></div>
                 <script type="importmap">
                   {
-        "imports": {
-          "three": "/RADS-TOOLING/assets/vendor_js/three/three.module.js",
-          "three/addons/": "/RADS-TOOLING/assets/vendor_js/three/"
-        }
-      }
-    </script>
+                  "imports": {
+                      "three": "/RADS-TOOLING/assets/vendor_js/three/three.module.js",
+                      "three/addons/": "/RADS-TOOLING/assets/vendor_js/three/"
+                  }
+                }
+                </script>
                 <script type="module">
                   import * as THREE from 'three';
                   import {
@@ -159,11 +159,11 @@ if ($isCustomer) {
                   camera.position.set(3, 2, 3);
 
                   const controls = new OrbitControls(camera, renderer.domElement);
-                  controls.enableZoom = false; // ✅ Disable zoom
-                  controls.enablePan = false; // ✅ Disable pan
-                  controls.enableRotate = false; // ✅ ADD THIS LINE - Disable manual rotation!
-                  controls.autoRotate = true; // ✅ Keep auto-rotation
-                  controls.autoRotateSpeed = 0.6; // ✅ Turntable speed
+                  controls.enableZoom = false; 
+                  controls.enablePan = false; 
+                  controls.enableRotate = false;
+                  controls.autoRotate = true;
+                  controls.autoRotateSpeed = 0.8;
 
                   scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.9));
                   const dir = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -194,7 +194,7 @@ if ($isCustomer) {
 
                   function resize() {
                     const w = wrap.clientWidth,
-                      h = wrap.clientHeight || 460;
+                      h = wrap.clientHeight || 460; // guard
                     renderer.setSize(w, h, false);
                     camera.aspect = w / h;
                     camera.updateProjectionMatrix();
@@ -307,7 +307,7 @@ if ($isCustomer) {
       <div class="craft-media">
         <div class="craft-media-box">
           <video class="craft-video"
-            src="/RADS-TOOLING/assets/videos/crafting.mp4"
+            src="/RADS-TOOLING/uploads/general/Cabinets.mp4"
             muted autoplay loop playsinline controls
             preload="metadata"
             poster="/RADS-TOOLING/assets/images/cab1.jpg"></video>
@@ -326,7 +326,7 @@ if ($isCustomer) {
         <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary btn-large">
           <i class="fas fa-user-plus"></i> Create Free Account
         </a>
-        <a href="/RADS-TOOLING/public/products.php" class="btn-cta-secondary btn-large">
+        <a href="/RADS-TOOLING/public/testimonials.php" class="btn-cta-secondary btn-large">
           <i class="fas fa-images"></i> View Gallery
         </a>
       </div>
@@ -395,9 +395,6 @@ if ($isCustomer) {
           <a href="#" class="social-icon" aria-label="Facebook">
             <span class="material-symbols-rounded">facebook</span>
           </a>
-          <a href="#" class="social-icon" aria-label="Instagram">
-            <span class="material-symbols-rounded">photo_camera</span>
-          </a>
           <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
             <span class="material-symbols-rounded">mail</span>
           </a>
@@ -408,8 +405,10 @@ if ($isCustomer) {
       <div class="footer-section">
         <h3>Quick Links</h3>
         <ul class="footer-links">
+          <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
           <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
           <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
+          <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
           <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
           <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
         </ul>

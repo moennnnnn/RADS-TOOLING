@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once dirname(__DIR__, 2) . '/includes/logger.pdo.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../../includes/guard.php';
 require_once dirname(__DIR__, 2) . '/includes/phone_util.php';
@@ -324,6 +325,13 @@ class AuthAPI
                 error_log("Verification code for {$email}: {$verificationCode}");
             }
 
+            // -- LOG: registration (customer) --
+            try {
+                log_action_pdo($this->conn, 'customer', $customerId, 'register', json_encode(['email' => $email, 'username' => $username]));
+            } catch (Throwable $e) {
+                error_log("Registration logging failed: " . $e->getMessage());
+            }
+
             $this->send(true, 'Account created successfully. Please check your email for verification code.', [
                 'customer_id'         => $customerId,
                 'requiresVerification' => true
@@ -425,6 +433,13 @@ class AuthAPI
         $token = bin2hex(random_bytes(32));
         $_SESSION['session_token'] = $token;
 
+        // -- LOG: customer login --
+        try {
+            log_action_pdo($this->conn, 'customer', (int)$user['id'], 'login', 'Customer login (shop)');
+        } catch (Throwable $e) {
+            error_log("Customer login logging failed: " . $e->getMessage());
+        }
+
         $this->send(true, 'Login successful', [
             'user'           => $_SESSION['user'],
             'session_token'  => $token,
@@ -521,6 +536,13 @@ class AuthAPI
         $token = bin2hex(random_bytes(32));
         $_SESSION['session_token'] = $token;
 
+        // -- LOG: staff login --
+        try {
+            log_action_pdo($this->conn, $user['role'] ?? 'staff', (int)$user['id'], 'login', 'Staff login (dashboard)');
+        } catch (Throwable $e) {
+            error_log("Staff login logging failed: " . $e->getMessage());
+        }
+
         $this->send(true, 'Login successful', [
             'user'          => $_SESSION['user'],
             'session_token' => $token,
@@ -532,6 +554,16 @@ class AuthAPI
 
     private function logout(): void
     {
+        // -- LOG: logout (capture before clearing session) --
+        try {
+            $uid = $_SESSION['user']['id'] ?? $_SESSION['staff']['id'] ?? null;
+            $uname = $_SESSION['user']['name'] ?? $_SESSION['staff']['full_name'] ?? $_SESSION['admin_name'] ?? 'Unknown';
+            $urole = $_SESSION['user']['role'] ?? $_SESSION['staff']['role'] ?? ($_SESSION['admin_role'] ?? '');
+            log_action_pdo($this->conn, $urole ?: 'unknown', (int)($uid ?? 0), 'logout', 'User logged out: ' . $uname);
+        } catch (Throwable $e) {
+            error_log("Logout logging failed: " . $e->getMessage());
+        }
+
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
