@@ -248,8 +248,7 @@ const CM = {
 
             <!-- Hero Media -->
             <label>Hero Media (image or .glb)</label>
-              <input type="text" id="hero-image" class="form-input"
-                placeholder="/RADS-TOOLING/assets/images/cabinet-hero.jpg">
+              <input type="text" id="hero-image" class="form-input">
                 <button type="button" class="btn-upload"
                 onclick="document.getElementById('publicHeroUpload').click()">
             <span class="material-symbols-rounded">upload</span> Upload Hero

@@ -117,7 +117,7 @@ if ($isCustomer) {
           </div>
           <div class="hero-image-content">
             <?php
-            $heroMedia = $cmsContent['hero_image'] ?? '/RADS-TOOLING/assets/images/cabinet-hero.jpg';
+            $heroMedia = $cmsContent['hero_image'] ?? '/RADS-TOOLING/uploads/general/Cab_Hero.glb';
             $heroPath  = parse_url($heroMedia, PHP_URL_PATH) ?: $heroMedia;
             $ext       = strtolower(pathinfo($heroPath, PATHINFO_EXTENSION));
             $isGLB     = ($ext === 'glb');
@@ -143,7 +143,7 @@ if ($isCustomer) {
                   } from 'three/addons/loaders/GLTFLoader.js';
 
                   const MODEL_URL = <?= json_encode($heroMedia) ?>;
-                  const wrap = document.getElementById('hero3d');
+                  const wrap = document.getElementById('hero3d'); 
 
                   const scene = new THREE.Scene();
                   scene.background = new THREE.Color(0xffffff);
@@ -156,18 +156,18 @@ if ($isCustomer) {
                   wrap.appendChild(renderer.domElement);
 
                   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-                  camera.position.set(3, 2, 3);
+                  camera.position.set(1, .7, 3);
 
                   const controls = new OrbitControls(camera, renderer.domElement);
                   controls.enableZoom = false; 
                   controls.enablePan = false; 
                   controls.enableRotate = false;
                   controls.autoRotate = true;
-                  controls.autoRotateSpeed = 0.8;
+                  controls.autoRotateSpeed = 2.5;
 
-                  scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 0.9));
-                  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-                  dir.position.set(5, 5, 5);
+                  scene.add(new THREE.HemisphereLight(0xffffff, 0xb0b0b0, 5.0));
+                  const dir = new THREE.DirectionalLight(0xffffff, 10.0);
+                  dir.position.set(8, 8, 8);
                   scene.add(dir);
 
                   const loader = new GLTFLoader();
