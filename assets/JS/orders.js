@@ -470,8 +470,8 @@ function payRemainingBalance(orderId) {
         alert('Invalid order ID');
         return;
     }
-    // Redirect to payment page with order_id
-    window.location.href = `/RADS-TOOLING/customer/payment.php?order=${orderId}`;
+    // Redirect to remaining balance payment page with order_id
+    window.location.href = `/RADS-TOOLING/customer/payment_remaining_balance.php?order_id=${orderId}`;
 }
 
 function showError(message) {
