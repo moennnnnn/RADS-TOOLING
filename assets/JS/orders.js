@@ -12,7 +12,7 @@ let currentFilter = 'all';
 async function loadCustomerOrders(status = 'all') {
     currentFilter = status;
     window.__ordersCurrentFilter = status;
-    
+
     const container = document.getElementById('ordersContainer');
     if (!container) return;
 
@@ -67,7 +67,7 @@ function renderOrders(orders) {
 function createOrderCard(order) {
     const statusClass = `status-${order.status.toLowerCase()}`;
     const statusIcon = getStatusIcon(order.status);
-    
+
     const items = order.items || [];
     const itemsHtml = items.slice(0, 3).map(item => `
         <div class="order-item">
@@ -91,9 +91,12 @@ function createOrderCard(order) {
 
     const isCompleted = order.status.toLowerCase() === 'completed';
     const hasFeedback = order.has_feedback === true || order.has_feedback === 1;
-    
+    const isCancelled = order.status.toLowerCase() === 'cancelled';
+    const remainingBalance = parseFloat(order.remaining_balance || 0);
+    const hasBalance = remainingBalance > 0.01;
+
     let actionButtons = '';
-    
+
     if (isCompleted) {
         if (hasFeedback) {
             actionButtons = `
@@ -119,12 +122,25 @@ function createOrderCard(order) {
             `;
         }
     } else {
-        actionButtons = `
+        // For non-completed orders, show View Details and Pay Balance button if there's a balance
+        let buttons = `            
             <button class="btn btn-primary" onclick="viewOrderDetails(${order.id})">
                 <span class="material-symbols-rounded">visibility</span>
                 View Details
             </button>
         `;
+
+        // Add Pay Remaining Balance button if order is not cancelled and has balance
+        if (!isCancelled && hasBalance) {
+            buttons += `
+                <button class="btn btn-warning" onclick="payRemainingBalance(${order.id})">
+                    <span class="material-symbols-rounded">payments</span>
+                    Pay Balance (₱${formatNumber(remainingBalance)})
+                </button>
+            `;
+        }
+
+        actionButtons = buttons;
     }
 
     return `
@@ -171,7 +187,7 @@ function createOrderCard(order) {
 async function viewOrderDetails(orderId) {
     const modal = document.getElementById('orderDetailsModal');
     const content = document.getElementById('orderDetailsContent');
-    
+
     if (!modal || !content) return;
 
     content.innerHTML = `
@@ -180,7 +196,7 @@ async function viewOrderDetails(orderId) {
             <p>Loading order details...</p>
         </div>
     `;
-    
+
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
@@ -210,15 +226,15 @@ function renderOrderDetails(order) {
     const itemsSubtotal = parseFloat(order.items_subtotal || 0);
     const totalAmount = parseFloat(order.total_amount || 0);
     const taxAmount = parseFloat(order.tax_amount || 0);
-    
+
     // Calculate tax percentage
     const taxPercentage = itemsSubtotal > 0 ? ((taxAmount / itemsSubtotal) * 100) : 0;
-    
+
     // Build table rows with new format
     const itemsRows = items.map(item => {
         const itemPrice = parseFloat(item.price || 0);
         const itemQty = parseInt(item.quantity || 0);
-        
+
         return `
             <tr>
                 <td>${escapeHtml(item.name)}</td>
@@ -323,6 +339,24 @@ function renderOrderDetails(order) {
                 </tbody>
             </table>
         </div>
+                    ${remainingBalance > 0.01 && order.status.toLowerCase() !== 'cancelled' ? `
+            <div class="detail-section" style="border-top: 2px solid var(--primary-color); padding-top: 1.5rem;">
+                <div style="background: var(--warning-light, #fff3cd); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--warning-color, #856404);">
+                        <span class="material-symbols-rounded">info</span>
+                        <strong>Payment Required</strong>
+                    </div>
+                    <p style="margin: 0.5rem 0 0 0; color: var(--gray-700);">
+                        You have a remaining balance of <strong>₱${formatNumber(remainingBalance)}</strong>.
+                        Please complete your payment to continue processing your order.
+                    </p>
+                </div>
+                <button class="btn btn-warning" onclick="payRemainingBalance(${order.id})" style="width: 100%; padding: 1rem; font-size: 1rem;">
+                    <span class="material-symbols-rounded">payments</span>
+                    Pay Remaining Balance (₱${formatNumber(remainingBalance)})
+                </button>
+            </div>
+        ` : ''}
     `;
 }
 
@@ -425,6 +459,18 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ==========================================
+// PAY REMAINING BALANCE
+// ==========================================
+function payRemainingBalance(orderId) {
+    if (!orderId) {
+        alert('Invalid order ID');
+        return;
+    }
+    // Redirect to remaining balance payment page with order_id
+    window.location.href = `/RADS-TOOLING/customer/pay_remaining_balance.php?order_id=${orderId}`;
 }
 
 function showError(message) {

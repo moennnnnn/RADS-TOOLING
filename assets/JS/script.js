@@ -1208,20 +1208,22 @@ async function updateDashboardStats() {
             const ordersEl = document.getElementById('dash-orders');
             const salesEl = document.getElementById('dash-sales');
             const customersEl = document.getElementById('dash-customers');
-            const feedbackEl = document.getElementById('dash-feedback');
+            const downPaymentsEl = document.getElementById('dash-down-payments');
+            const incomingSalesEl = document.getElementById('dash-incoming-sales');
 
             if (ordersEl) ordersEl.textContent = result.data.total_orders.toLocaleString();
             if (salesEl) salesEl.textContent = '₱' + result.data.total_sales.toLocaleString();
             if (customersEl) customersEl.textContent = result.data.total_customers.toLocaleString();
-            if (feedbackEl) feedbackEl.textContent = result.data.total_feedback.toLocaleString();
+            if (downPaymentsEl) downPaymentsEl.textContent = '₱' + result.data.total_down_payments.toLocaleString();
+            if (incomingSalesEl) incomingSalesEl.textContent = '₱' + result.data.incoming_sales.toLocaleString();
         }
     } catch (error) {
         console.error('Error updating dashboard stats:', error);
         const ordersEl = document.getElementById('dash-orders');
         const salesEl = document.getElementById('dash-sales');
         const customersEl = document.getElementById('dash-customers');
-        const feedbackEl = document.getElementById('dash-feedback');
-
+        const downPaymentsEl = document.getElementById('dash-down-payments');
+        const incomingSalesEl = document.getElementById('dash-incoming-sales');
         if (ordersEl && ordersEl.textContent === 'Loading...') ordersEl.textContent = '0';
         if (salesEl && salesEl.textContent === 'Loading...') salesEl.textContent = '₱0';
         if (customersEl && customersEl.textContent === 'Loading...') customersEl.textContent = '0';

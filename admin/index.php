@@ -389,13 +389,17 @@ if (!$isLoggedIn) {
                     <div class="card-title">Total Sales</div>
                     <div class="card-value" id="dash-sales">Loading...</div>
                 </div>
+                <div class="dashboard-card card-down-payments">
+                    <div class="card-title">Total Down Payments</div>
+                    <div class="card-value" id="dash-down-payments">Loading...</div>
+                </div>
+                <div class="dashboard-card card-incoming-sales">
+                    <div class="card-title">Incoming Sales</div>
+                    <div class="card-value" id="dash-incoming-sales">Loading...</div>
+                </div>
                 <div class="dashboard-card card-customers">
                     <div class="card-title">Customers</div>
                     <div class="card-value" id="dash-customers">Loading...</div>
-                </div>
-                <div class="dashboard-card card-feedback">
-                    <div class="card-title">Feedback Received</div>
-                    <div class="card-value" id="dash-feedback">Loading...</div>
                 </div>
             </div>
 

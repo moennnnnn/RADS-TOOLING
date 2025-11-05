@@ -797,8 +797,8 @@ CREATE TABLE `product_texture_parts` (
 --
 
 CREATE TABLE `rt_chat_messages` (
-  `id` bigint(20) AUTO_INCREMENT PRIMARY KEY,
-  `thread_id` int(11) NOT NULL,
+  `id` bigint(20) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `thread_id` int(11) NOT NULL,w
   `sender_type` enum('customer','admin','bot') NOT NULL,
   `sender_id` int(11) DEFAULT NULL,
   `body` text NOT NULL,
