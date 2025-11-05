@@ -709,6 +709,8 @@ async function uploadImagesToProductImagesTable(productId, imageFilenames = [], 
     fd.append('display_order', startDisplayOrder + i);
     fd.append('is_primary', (startDisplayOrder === 0 && i === 0 && existingImages.length === 0) ? '1' : '0');
 
+    console.log(`🔍 DEBUG: Inserting image - product_id=${productId}, filename=${filename}, order=${startDisplayOrder + i}`);
+
     try {
       const res = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=insert_direct`, {
         method: 'POST',
@@ -717,9 +719,12 @@ async function uploadImagesToProductImagesTable(productId, imageFilenames = [], 
       });
       // server should return JSON: { success: true/false, message: ..., data: ...}
       const json = await res.json().catch(() => null);
+
+      console.log(`🔍 DEBUG: Insert response for ${filename}:`, json);
+
       if (res.ok && json && json.success) {
         successCount++;
-        console.log(`✅ Inserted ${filename} (order ${startDisplayOrder + i})`);
+        console.log(`✅ Inserted ${filename} (order ${startDisplayOrder + i}) with product_id=${json.data?.product_id}`);
       } else {
         errorCount++;
         console.warn(`❌ Failed to insert ${filename}:`, json?.message || 'Unknown error from insert API');
@@ -922,11 +927,15 @@ async function loadExistingProductImages(productId) {
     // 🔥 FIX: Clear global array FIRST to prevent mixing with other products
     uploadedProductImages = [];
     window.uploadedProductImages = [];
-    
+
+    console.log(`🔍 DEBUG: Loading existing images for product_id=${productId}`);
+
     const response = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${productId}`, {
       credentials: 'same-origin'
     });
     const result = await response.json();
+
+    console.log(`🔍 DEBUG: API response for product_id=${productId}:`, result);
 
     if (!result.success) {
       console.warn('No existing images or error:', result.message);
@@ -944,7 +953,12 @@ async function loadExistingProductImages(productId) {
     }
 
     console.log('🖼️ Loaded existing images for product', productId, ':', images.length, 'images');
-    
+    console.log('🔍 DEBUG: Image details:', images.map(img => ({
+      image_id: img.image_id,
+      product_id: img.product_id,
+      filename: String(img.image_path || '').split('/').pop()
+    })));
+
     if (images.length === 0) {
       console.log('No existing images found for this product');
       return;
