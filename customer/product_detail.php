@@ -353,6 +353,32 @@ function e($val)
             justify-content: center;
         }
 
+        /* Image Modal Styles - FIX: hide by default, show with .active class */
+        .image-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 15000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .image-modal.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content-img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
         @media (max-width:820px) {
             .product-detail-container {
                 grid-template-columns: 1fr;
@@ -806,6 +832,14 @@ function e($val)
             // Defensive: ensure modal hidden on initial load (prevent CSS race)
             document.addEventListener('DOMContentLoaded', function() {
                 if (modal) modal.hidden = true;
+                // FIX: Ensure body overflow is always reset on page load
+                document.body.style.overflow = '';
+                // FIX: Ensure image modal is hidden on page load
+                const imgModal = document.getElementById('imageModal');
+                if (imgModal) {
+                    imgModal.classList.remove('active');
+                    imgModal.setAttribute('aria-hidden', 'true');
+                }
             });
         })();
 
