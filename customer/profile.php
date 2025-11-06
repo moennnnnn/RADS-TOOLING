@@ -26,6 +26,17 @@ $CSRF = $_SESSION['csrf_token'];
 
 <body>
 
+    <!-- Back Button -->
+    <div class="back-button-container">
+        <button class="back-button" onclick="goBack()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+        </button>
+    </div>
+
     <!-- Main Container -->
     <div class="profile-wrapper">
         <div class="profile-layout">
@@ -139,21 +150,34 @@ $CSRF = $_SESSION['csrf_token'];
                 <!-- Address Tab Content -->
                 <div id="address-tab" class="tab-content">
                     <div class="content-header">
-                        <h2>My Address</h2>
-                        <p>Manage your delivery address</p>
+                        <h2>My Addresses</h2>
+                        <p>Manage your delivery addresses</p>
+                        <button class="btn btn-primary" onclick="showAddressForm()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add New Address
+                        </button>
                     </div>
 
                     <div class="content-body">
-                        <form id="address-form" class="address-form" onsubmit="updateAddress(event)">
-                            <div class="form-group">
-                                <label>Complete Address</label>
-                                <textarea id="address" name="address" rows="4" placeholder="House No., Street, Barangay, City, Province"></textarea>
+                        <!-- Address List -->
+                        <div id="address-list-container">
+                            <div id="address-list-loading" class="loading-state" style="display: none;">
+                                <div class="spinner"></div>
+                                <p>Loading addresses...</p>
                             </div>
-
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary">Save Address</button>
+                            <div id="address-list"></div>
+                            <div id="no-addresses" style="display: none; text-align: center; padding: 40px; color: #999;">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px;">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                <p>No saved addresses yet</p>
+                                <button class="btn btn-outline" onclick="showAddressForm()" style="margin-top: 16px;">Add Your First Address</button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
 
@@ -437,6 +461,301 @@ $CSRF = $_SESSION['csrf_token'];
 
         .timeline-text strong {
             color: #2f5b88;
+        }
+
+        /* Back Button Styles */
+        .back-button-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: white;
+            border: 1px solid #e3e3e3;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #333;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-button:hover {
+            background: #f8f9fa;
+            border-color: #2f5b88;
+            color: #2f5b88;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .back-button svg {
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .back-button-container {
+                top: 10px;
+                left: 10px;
+            }
+
+            .back-button {
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Address Card Styles */
+        .address-card {
+            background: white;
+            border: 1px solid #e3e3e3;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .address-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: #2f5b88;
+        }
+
+        .address-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .address-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .address-header-left strong {
+            color: #2f5b88;
+            font-size: 1rem;
+        }
+
+        .address-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            background: transparent;
+            border: 1px solid #e3e3e3;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: #f0f7ff;
+            border-color: #2f5b88;
+        }
+
+        .btn-icon:hover svg {
+            stroke: #2f5b88;
+        }
+
+        .btn-icon.btn-delete:hover {
+            background: #fee;
+            border-color: #dc3545;
+        }
+
+        .btn-icon.btn-delete:hover svg {
+            stroke: #dc3545;
+        }
+
+        .address-card-body p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+        }
+
+        .address-card-body .address-text {
+            color: #666;
+            font-size: 0.95rem;
+            margin-top: 0.75rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-primary {
+            background: #2f5b88;
+            color: white;
+        }
+
+        /* Address List Container */
+        #address-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-card h3 {
+            margin: 0 0 1rem 0;
+            color: #2f5b88;
+        }
+
+        .modal-card .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .modal-card label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .modal-card input,
+        .modal-card select,
+        .modal-card textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e3e3e3;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .modal-card input:focus,
+        .modal-card select:focus,
+        .modal-card textarea:focus {
+            outline: none;
+            border-color: #2f5b88;
+        }
+
+        .modal-card .phone-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-card .phone-prefix {
+            padding: 0.75rem 1rem;
+            background: #f5f5f5;
+            border: 1px solid #e3e3e3;
+            border-radius: 6px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .modal-card .phone-group input {
+            flex: 1;
+        }
+
+        .modal-card .row {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .modal-card .msg {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .modal-card .msg.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .modal-card .msg.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .content-header button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .content-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .content-header button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .address-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .address-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
         }
     </style>
 
@@ -828,6 +1147,90 @@ $CSRF = $_SESSION['csrf_token'];
         </div>
     </div>
 
+    <!-- MODAL: Add/Edit Address with PSGC -->
+    <div id="addressFormModal" class="modal hidden">
+        <div class="modal-card" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <h3 id="addressModalTitle">Add New Address</h3>
+            <form id="addressManageForm">
+                <input type="hidden" id="addressEditId">
+
+                <div class="form-group">
+                    <label>Address Nickname (Optional)</label>
+                    <input type="text" id="addressNickname" placeholder="e.g., Home, Office">
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name <span style="color: red;">*</span></label>
+                    <input type="text" id="addressFullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Mobile Number <span style="color: red;">*</span></label>
+                    <div class="phone-group">
+                        <span class="phone-prefix">+63</span>
+                        <input type="tel" id="addressPhoneLocal" inputmode="numeric" maxlength="10" placeholder="9123456789" required>
+                        <input type="hidden" id="addressPhone">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Email (Optional)</label>
+                    <input type="email" id="addressEmail">
+                </div>
+
+                <div class="form-group">
+                    <label>Province <span style="color: red;">*</span></label>
+                    <select id="addressProvince" required>
+                        <option value="">Select Province</option>
+                    </select>
+                    <input type="hidden" id="addressProvinceCode">
+                </div>
+
+                <div class="form-group">
+                    <label>City/Municipality <span style="color: red;">*</span></label>
+                    <select id="addressCity" required>
+                        <option value="">Select City/Municipality</option>
+                    </select>
+                    <input type="hidden" id="addressCityCode">
+                </div>
+
+                <div class="form-group">
+                    <label>Barangay <span style="color: red;">*</span></label>
+                    <select id="addressBarangay" required>
+                        <option value="">Select Barangay</option>
+                    </select>
+                    <input type="hidden" id="addressBarangayCode">
+                </div>
+
+                <div class="form-group">
+                    <label>Street / Block / Lot <span style="color: red;">*</span></label>
+                    <textarea id="addressStreet" rows="2" placeholder="House No., Street Name, Building, etc." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Postal Code (Optional)</label>
+                    <input type="text" id="addressPostal" pattern="\d{4,5}" placeholder="1234">
+                </div>
+
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="addressIsDefault" style="width: auto;">
+                    <label for="addressIsDefault" style="margin: 0; font-weight: normal;">Set as default address</label>
+                </div>
+
+                <div class="row" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-outline" id="addressFormCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addressFormSubmit">
+                        <span class="btn-text">Save Address</span>
+                        <span class="btn-spinner" style="display: none;">
+                            <div class="mini-spinner"></div>
+                        </span>
+                    </button>
+                </div>
+                <div id="addressFormMsg" class="msg"></div>
+            </form>
+        </div>
+    </div>
+
     <script>
         /***** CHANGE PASSWORD (LOGGED-IN) *****/
         document.getElementById('pwChangeForm')?.addEventListener('submit', changePasswordLoggedIn);
@@ -1058,7 +1461,31 @@ $CSRF = $_SESSION['csrf_token'];
         document.getElementById('phoneLocal')?.addEventListener('input', e => {
             e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
         });
+
+        // Sync phone inputs in address form
+        document.getElementById('addressPhoneLocal')?.addEventListener('input', e => {
+            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+            document.getElementById('addressPhone').value = '+63' + e.target.value;
+        });
     </script>
+
+    <!-- Address Management Script -->
+    <script src="/RADS-TOOLING/assets/JS/address_management.js"></script>
+
+    <script>
+        /***** BACK BUTTON FUNCTIONALITY *****/
+        function goBack() {
+            // Check if there's history
+            if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) {
+                // Internal navigation - go back
+                window.history.back();
+            } else {
+                // External or no history - go to homepage
+                window.location.href = '/RADS-TOOLING/customer/index.php';
+            }
+        }
+    </script>
+
     <script>
         // Tab switching for sidebar menu
         document.querySelectorAll('.menu-item[data-tab]').forEach(link => {

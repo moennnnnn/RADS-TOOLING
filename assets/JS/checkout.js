@@ -79,6 +79,181 @@
     });
   }
 
+  // ===== SAVED ADDRESSES FUNCTIONALITY =====
+  async function loadSavedAddresses() {
+    const container = $('#savedAddressesContainer');
+    const select = $('#savedAddressSelect');
+
+    if (!select) return; // Not on delivery page
+
+    try {
+      const response = await fetch('/RADS-TOOLING/backend/api/customer_addresses.php?action=list', {
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!data.success || !data.addresses || data.addresses.length === 0) {
+        // No saved addresses - hide the container
+        if (container) container.style.display = 'none';
+        return;
+      }
+
+      // Show the container
+      if (container) container.style.display = 'block';
+
+      // Populate select options
+      select.innerHTML = '<option value="">-- Select a saved address --</option>';
+
+      data.addresses.forEach(addr => {
+        const option = document.createElement('option');
+        option.value = addr.id;
+        option.textContent = addr.address_nickname
+          ? `${addr.address_nickname} (${addr.street_block_lot.substring(0, 30)}...)`
+          : `${addr.full_name} - ${addr.city_municipality}`;
+        option.dataset.address = JSON.stringify(addr);
+
+        if (addr.is_default == 1) {
+          option.textContent += ' (Default)';
+        }
+
+        select.appendChild(option);
+      });
+
+      // Handle address selection
+      select.addEventListener('change', (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        if (!selectedOption.value) return;
+
+        const addr = JSON.parse(selectedOption.dataset.address);
+        fillDeliveryForm(addr);
+      });
+
+    } catch (error) {
+      console.error('Failed to load saved addresses:', error);
+      if (container) container.style.display = 'none';
+    }
+  }
+
+  function fillDeliveryForm(addr) {
+    // Split full name into first and last name
+    const nameParts = addr.full_name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    // Fill personal information
+    const firstNameInput = $('input[name="first_name"]');
+    const lastNameInput = $('input[name="last_name"]');
+    if (firstNameInput) firstNameInput.value = firstName;
+    if (lastNameInput) lastNameInput.value = lastName;
+
+    // Fill phone number
+    const phoneLocalInput = $('#phoneLocal');
+    if (phoneLocalInput && addr.mobile_number) {
+      const localNumber = addr.mobile_number.replace('+63', '');
+      phoneLocalInput.value = localNumber;
+      phoneLocalInput.dispatchEvent(new Event('input'));
+    }
+
+    // Fill email
+    const emailInput = $('input[name="email"]');
+    if (emailInput && addr.email) emailInput.value = addr.email;
+
+    // Fill address fields
+    const provinceSelect = $('#province');
+    const citySelect = $('#city');
+    const barangaySelect = $('#barangaySelect');
+    const streetInput = $('input[name="street"]');
+    const postalInput = $('input[name="postal"]');
+
+    if (provinceSelect) {
+      provinceSelect.value = addr.province;
+      provinceSelect.dispatchEvent(new Event('change'));
+
+      // Wait for cities to load, then set city
+      setTimeout(() => {
+        if (citySelect) {
+          citySelect.value = addr.city_municipality;
+          citySelect.dispatchEvent(new Event('change'));
+
+          // Wait for barangays to load, then set barangay
+          setTimeout(() => {
+            if (barangaySelect) {
+              barangaySelect.value = addr.barangay;
+            }
+          }, 500);
+        }
+      }, 500);
+    }
+
+    if (streetInput) streetInput.value = addr.street_block_lot;
+    if (postalInput && addr.postal_code) postalInput.value = addr.postal_code;
+  }
+
+  // Function to clear form and show new address form
+  window.showNewAddressForm = function() {
+    const select = $('#savedAddressSelect');
+    if (select) select.value = '';
+
+    // Clear all form fields
+    const form = $('#deliveryForm');
+    if (form) form.reset();
+  };
+
+  // ===== AUTO-FILL PICKUP FORM FROM PROFILE =====
+  async function autoFillPickupForm() {
+    const pickupForm = $('#pickupForm');
+    if (!pickupForm) return; // Not on pickup page
+
+    try {
+      const response = await fetch('/RADS-TOOLING/backend/api/customer_profile.php', {
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!data.success || !data.customer) {
+        console.log('No customer data available for auto-fill');
+        return;
+      }
+
+      const customer = data.customer;
+
+      // Split full name into first and last name
+      if (customer.full_name) {
+        const nameParts = customer.full_name.trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        const firstNameInput = pickupForm.querySelector('input[name="first_name"]');
+        const lastNameInput = pickupForm.querySelector('input[name="last_name"]');
+
+        if (firstNameInput && !firstNameInput.value) firstNameInput.value = firstName;
+        if (lastNameInput && !lastNameInput.value) lastNameInput.value = lastName;
+      }
+
+      // Fill phone number
+      if (customer.phone) {
+        const phoneLocalInput = pickupForm.querySelector('#phoneLocal');
+        if (phoneLocalInput && !phoneLocalInput.value) {
+          const localNumber = customer.phone.replace('+63', '');
+          phoneLocalInput.value = localNumber;
+          phoneLocalInput.dispatchEvent(new Event('input'));
+        }
+      }
+
+      // Fill email
+      if (customer.email) {
+        const emailInput = pickupForm.querySelector('input[name="email"]');
+        if (emailInput && !emailInput.value) emailInput.value = customer.email;
+      }
+
+      console.log('✅ Pickup form auto-filled from customer profile');
+    } catch (error) {
+      console.error('Failed to auto-fill pickup form:', error);
+    }
+  }
+
   // Close modal handlers
   document.addEventListener('click', (e) => {
     const closeBtn = e.target.closest('[data-close]');
@@ -420,6 +595,7 @@
   let ORDER_ID = null;
   let ORDER_CODE = null;
   let AMOUNT_DUE = 0;
+  let PAYMENT_METHOD = null; // Store payment method (gcash/bpi) for validations
 
   function wirePayment() {
     const btnBuy = $('#inlineBuyBtn');
@@ -467,6 +643,9 @@
         showModalAlert('Selection Required', 'Please select both payment method and deposit amount.', 'warning');
         return;
       }
+
+      // Store payment method for validation later
+      PAYMENT_METHOD = method;
 
       const orderData = window.RT_ORDER || {};
 
@@ -670,29 +849,86 @@
 
       const accountNum = num.value.trim();
       const refNum = ref.value.trim();
-      
+
+      // Validate account number (digits only)
       if (!/^\d+$/.test(accountNum)) {
         showModalAlert('Invalid Account Number', 'Account number must contain only digits.', 'error');
         num.style.borderColor = '#ef4444';
         return;
       }
-      
+
+      // Validate GCash account number (max 11 digits)
+      if (PAYMENT_METHOD === 'gcash' && accountNum.length > 11) {
+        showModalAlert('Invalid GCash Account', 'GCash account number must be maximum 11 digits.', 'error');
+        num.style.borderColor = '#ef4444';
+        return;
+      }
+
+      // Validate reference number (digits only, flexible length)
       if (!/^\d+$/.test(refNum)) {
         showModalAlert('Invalid Reference Number', 'Reference number must contain only digits.', 'error');
         ref.style.borderColor = '#ef4444';
         return;
       }
 
+      // Validate reference number length (reasonable limit)
+      if (refNum.length > 30) {
+        showModalAlert('Invalid Reference Number', 'Reference number too long (max 30 digits).', 'error');
+        ref.style.borderColor = '#ef4444';
+        return;
+      }
+
+      // Validate amount paid (must EXACTLY match the expected amount)
       const amountPaid = parseFloat(amt.value);
       const expectedAmount = AMOUNT_DUE;
-      
-      if (amountPaid < expectedAmount) {
+
+      if (amountPaid !== expectedAmount) {
         showModalAlert(
-          'Insufficient Amount', 
-          `Minimum payment: ₱${expectedAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}.\nYou entered: ₱${amountPaid.toLocaleString('en-PH', {minimumFractionDigits: 2})}.`, 
+          'Amount Mismatch',
+          `Amount paid must equal order total.\n\nExpected: ₱${expectedAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}\nYou entered: ₱${amountPaid.toLocaleString('en-PH', {minimumFractionDigits: 2})}`,
           'error'
         );
         amt.style.borderColor = '#ef4444';
+        return;
+      }
+
+      // Show T&C modal instead of directly submitting
+      showStep('#termsModal');
+
+      // Store form data for later submission
+      window.VERIFICATION_DATA = {
+        account_name: name.value,
+        account_number: num.value,
+        reference_number: ref.value,
+        amount_paid: amt.value,
+        screenshot: shot.files[0] || null
+      };
+
+      console.log('✅ Verification data validated, showing T&C modal');
+    });
+
+    // Handle T&C checkbox
+    const termsCheckbox = $('#acceptTermsCheckbox');
+    const btnAcceptTerms = $('#btnAcceptTerms');
+
+    if (termsCheckbox && btnAcceptTerms) {
+      termsCheckbox.addEventListener('change', (e) => {
+        btnAcceptTerms.disabled = !e.target.checked;
+        if (e.target.checked) {
+          btnAcceptTerms.style.opacity = '1';
+          btnAcceptTerms.style.cursor = 'pointer';
+        } else {
+          btnAcceptTerms.style.opacity = '0.5';
+          btnAcceptTerms.style.cursor = 'not-allowed';
+        }
+      });
+    }
+
+    // Handle final payment submission after T&C acceptance
+    btnAcceptTerms?.addEventListener('click', async () => {
+      const verData = window.VERIFICATION_DATA;
+      if (!verData) {
+        showModalAlert('Error', 'Verification data not found. Please try again.', 'error');
         return;
       }
 
@@ -700,37 +936,54 @@
       form.append('order_id', ORDER_ID);
       form.append('order_code', ORDER_CODE || '');
       form.append('amount_due', AMOUNT_DUE || 0);
-      form.append('account_name', name.value);
-      form.append('account_number', num.value);
-      form.append('reference_number', ref.value);
-      form.append('amount_paid', amt.value);
-      form.append('screenshot', shot.files[0] || null);
+      form.append('account_name', verData.account_name);
+      form.append('account_number', verData.account_number);
+      form.append('reference_number', verData.reference_number);
+      form.append('amount_paid', verData.amount_paid);
+      form.append('screenshot', verData.screenshot);
+      form.append('terms_accepted', '1'); // Flag that T&C was accepted
 
       try {
-        console.log('📤 Submitting payment verification...');
+        console.log('📤 Submitting payment verification with T&C acceptance...');
+
+        // Disable button to prevent double submission
+        btnAcceptTerms.disabled = true;
+        btnAcceptTerms.textContent = 'Submitting...';
+
         const r = await fetch('/RADS-TOOLING/backend/api/payment_submit.php', {
           method: 'POST',
           body: form,
           credentials: 'same-origin'
         });
-        
+
         const result = await r.json();
         console.log('📥 Verification response:', result);
 
         if (!result || !result.success) {
           showModalAlert('Verification Failed', result?.message || 'Payment verification failed.', 'error');
+          // Re-enable button on error
+          btnAcceptTerms.disabled = false;
+          btnAcceptTerms.textContent = 'Accept & Submit Payment';
           return;
         }
 
+        console.log('✅ Payment verification submitted successfully!');
         showModalAlert('Payment Submitted!', 'Your payment is under verification. Check your orders page for approval status.', 'success');
-        
+
         setTimeout(() => {
           showStep('#finalNotice');
+          // Reset T&C checkbox for next time
+          if (termsCheckbox) termsCheckbox.checked = false;
+          btnAcceptTerms.disabled = true;
+          btnAcceptTerms.textContent = 'Accept & Submit Payment';
         }, 2000);
-        
+
       } catch (err) {
         console.error('❌ Payment submit error:', err);
         showModalAlert('Network Error', 'Could not submit payment verification.', 'error');
+        // Re-enable button on error
+        btnAcceptTerms.disabled = false;
+        btnAcceptTerms.textContent = 'Accept & Submit Payment';
       }
     });
 
@@ -811,15 +1064,17 @@
   // ===== Initialize Everything =====
   document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Checkout.js loading...');
-    
+
     wirePhone();
     loadPSGC();
+    loadSavedAddresses(); // Load saved addresses for delivery auto-fill
+    autoFillPickupForm(); // Auto-fill pickup form from customer profile
     wireContinue();
     wireClear();
     wirePayment();
     setupNumericInputs();
-    
+
     console.log('✅ Checkout.js COMPLETE FIXED VERSION loaded!');
-    console.log('✅ Features: NCR support, active states, better errors, proper payload');
+    console.log('✅ Features: NCR support, delivery/pickup auto-fill, active states, better errors, proper payload');
   });
 })();

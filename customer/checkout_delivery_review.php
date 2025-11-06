@@ -751,6 +751,75 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
       <button class="rt-btn main" id="btnGoOrders" style="flex: 2;">View My Orders</button>
     </div>
   </div>
+
+  <!-- Terms & Conditions Modal -->
+  <div class="rt-card rt-step" id="termsModal" hidden>
+    <h3 style="color: #2f5b88; margin-bottom: 16px;">Terms & Conditions</h3>
+    <div style="max-height: 400px; overflow-y: auto; padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+      <h4 style="margin-top: 0;">Payment Verification Terms</h4>
+
+      <h5 style="color: #2f5b88; margin-top: 16px;">1. Payment Verification Processing</h5>
+      <p style="line-height: 1.6; color: #4b5563;">
+        All payment verifications are manually reviewed by our admin team. The verification process typically takes
+        <strong>1-3 business days</strong>. You will be notified via email and can check your order status in your profile.
+      </p>
+
+      <h5 style="color: #2f5b88; margin-top: 16px;">2. Non-Refundable Policy</h5>
+      <p style="line-height: 1.6; color: #4b5563;">
+        All payments are <strong>non-refundable</strong> unless explicitly approved by the admin per our return and refund policy.
+        Please ensure that you have reviewed your order details carefully before submitting payment.
+      </p>
+
+      <h5 style="color: #2f5b88; margin-top: 16px;">3. Accurate Payment Information Required</h5>
+      <p style="line-height: 1.6; color: #4b5563;">
+        You must provide <strong>accurate and complete</strong> payment details including:
+      </p>
+      <ul style="line-height: 1.8; color: #4b5563; padding-left: 20px;">
+        <li>Correct account name</li>
+        <li>Valid account number (max 11 digits for GCash)</li>
+        <li>Accurate reference number</li>
+        <li>Exact amount paid (must match order total)</li>
+        <li>Clear payment screenshot</li>
+      </ul>
+      <p style="line-height: 1.6; color: #4b5563;">
+        <strong>Incorrect or incomplete information may result in delayed verification or order cancellation.</strong>
+      </p>
+
+      <h5 style="color: #2f5b88; margin-top: 16px;">4. Privacy & Data Protection</h5>
+      <p style="line-height: 1.6; color: #4b5563;">
+        Payment screenshots and verification details are used solely for order verification purposes.
+        Please ensure that your payment proof does not contain sensitive personal information beyond transaction details
+        (e.g., do not include full credit card numbers, passwords, or other unrelated account details).
+      </p>
+
+      <h5 style="color: #2f5b88; margin-top: 16px;">5. Order Fulfillment</h5>
+      <p style="line-height: 1.6; color: #4b5563;">
+        Orders will only be processed and fulfilled after payment verification is <strong>approved</strong> by our admin team.
+        Shipping/pickup arrangements will begin once your payment status is marked as "Fully Paid" or "Partially Paid" (for installments).
+      </p>
+
+      <h5 style="color: #2f5b88; margin-top: 16px;">6. 12% VAT</h5>
+      <p style="line-height: 1.6; color: #4b5563;">
+        All prices include <strong>12% Value Added Tax (VAT)</strong> as required by Philippine law.
+        The tax breakdown is shown in your order summary.
+      </p>
+    </div>
+
+    <div style="margin-bottom: 20px; padding: 12px; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px;">
+      <label style="display: flex; align-items: start; gap: 12px; cursor: pointer; margin: 0;">
+        <input type="checkbox" id="acceptTermsCheckbox" style="margin-top: 4px; width: 18px; height: 18px; cursor: pointer;">
+        <span style="flex: 1; font-size: 14px; line-height: 1.6; color: #92400e;">
+          <strong>I have read and agree to the Terms & Conditions above.</strong>
+          I understand that payments are non-refundable and verification may take 1-3 business days.
+        </span>
+      </label>
+    </div>
+
+    <div class="rt-actions" style="display: flex; gap: 12px;">
+      <button class="rt-btn ghost" data-back="#verifyModal">Back</button>
+      <button class="rt-btn main" id="btnAcceptTerms" disabled style="flex: 2;">Accept & Submit Payment</button>
+    </div>
+  </div>
 </div>
 
 <div id="qrZoomModal">

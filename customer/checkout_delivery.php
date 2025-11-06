@@ -330,6 +330,21 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
         <p><strong>Limited to NCR and Calabarzon.</strong> Delivery fee is ₱500. Orders are shipped within 3-5 business days.</p>
       </div>
 
+      <!-- Saved Addresses Dropdown -->
+      <div id="savedAddressesContainer" style="margin-bottom: 24px; display: none;">
+        <div class="form-group">
+          <label style="display: flex; justify-content: space-between; align-items: center;">
+            <span>My Saved Addresses</span>
+            <button type="button" class="btn-link" onclick="showNewAddressForm()" style="font-size: 14px; color: #2f5b88; background: none; border: none; cursor: pointer; text-decoration: underline;">
+              + Add New Address
+            </button>
+          </label>
+          <select id="savedAddressSelect" style="width: 100%; padding: 12px 16px; font-size: 15px; border: 2px solid #e5e7eb; border-radius: 10px;">
+            <option value="">Loading addresses...</option>
+          </select>
+        </div>
+      </div>
+
       <form id="deliveryForm" method="POST" action="checkout_delivery_review.php">
         <input type="hidden" name="mode" value="delivery">
         <input type="hidden" name="pid" value="<?= $pid ?>">
