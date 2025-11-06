@@ -372,6 +372,9 @@ function showAddressForm() {
     openModal(modal);
 }
 
+// Expose to global scope for inline onclick handlers
+window.showAddressForm = showAddressForm;
+
 /**
  * Edit existing address
  */
@@ -447,6 +450,9 @@ async function editAddress(addressId) {
         alert('Failed to load address: ' + error.message);
     }
 }
+
+// Expose to global scope for inline onclick handlers
+window.editAddress = editAddress;
 
 /**
  * Load barangays when editing address
@@ -591,6 +597,9 @@ async function deleteAddress(addressId) {
     }
 }
 
+// Expose to global scope for inline onclick handlers
+window.deleteAddress = deleteAddress;
+
 /**
  * Set address as default
  */
@@ -627,6 +636,9 @@ async function setDefaultAddress(addressId) {
     }
 }
 
+// Expose to global scope for inline onclick handlers
+window.setDefaultAddress = setDefaultAddress;
+
 /**
  * Modal helpers
  */
@@ -657,3 +669,12 @@ function escapeHtml(text) {
     };
     return (text || '').replace(/[&<>"']/g, m => map[m]);
 }
+
+// Debug: Confirm script loaded and functions exposed
+console.log('✅ Address management script loaded');
+console.log('✅ Global functions exposed:', {
+    showAddressForm: typeof window.showAddressForm,
+    editAddress: typeof window.editAddress,
+    deleteAddress: typeof window.deleteAddress,
+    setDefaultAddress: typeof window.setDefaultAddress
+});
