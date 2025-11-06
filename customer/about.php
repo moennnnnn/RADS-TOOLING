@@ -141,15 +141,12 @@ if ($img) {
 <body>
     <div class="page-wrapper">
         <!-- HEADER -->
-        <header class="navbar">
-            <div class="navbar-container">
-                <div class="navbar-brand">
-                    <a href="/RADS-TOOLING/customer/homepage.php" class="logo-link">
-                        <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-                    </a>
-                </div>
+        <?php
+        $currentPage = 'about';
+        require_once __DIR__ . '/../includes/header_customer.php';
+        ?>
 
-                <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+        <!-- Main Content -->
                     <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
                     <button type="submit" class="search-btn" aria-label="Search">
                         <span class="material-symbols-rounded">search</span>
