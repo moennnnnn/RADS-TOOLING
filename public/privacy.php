@@ -35,6 +35,7 @@ if ($isCustomer) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RADS TOOLING - Custom Cabinet Solutions</title>
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />

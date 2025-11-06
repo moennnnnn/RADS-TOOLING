@@ -871,40 +871,300 @@ body {
   .hero-image-content {
     max-width: 100%;
   }
+
+  .carousel-item {
+    flex: 0 0 320px;
+  }
+
+  .features-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  .page-wrapper {
+    overflow-x: hidden;
+  }
+
+  /* Navbar */
   .navbar-container {
     flex-wrap: wrap;
-    padding: 1rem;
+    padding: 0.875rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .navbar-brand .logo-link {
+    font-size: 1.125rem;
+  }
+
+  .logo-text {
+    font-size: 1.375rem;
   }
 
   .search-container {
     order: 3;
     width: 100%;
     max-width: 100%;
+    margin-left: 0;
+    padding: 0.625rem 1rem;
+  }
+
+  .search-input {
+    font-size: 0.875rem;
   }
 
   .navbar-actions {
-    gap: 1rem;
+    gap: 0.75rem;
+  }
+
+  .profile-toggle {
+    padding: 0.375rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .profile-avatar-wrapper {
+    width: 28px;
+    height: 28px;
+  }
+
+  .profile-name {
+    font-size: 0.875rem;
+  }
+
+  .cart-button {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Navbar Menu - Horizontal Scroll */
+  .navbar-menu {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    white-space: nowrap;
+  }
+
+  .navbar-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-menu-item {
+    font-size: 0.875rem;
+    padding: 0.5rem 1.125rem;
+    flex-shrink: 0;
+  }
+
+  /* Hero Section */
+  .hero-section {
+    padding: 2rem 4%;
   }
 
   .hero-text-content h1 {
-    font-size: 2rem;
+    font-size: 1.875rem;
+    line-height: 1.2;
   }
 
-  .section-title {
-    font-size: 1.5rem;
+  .hero-subtitle {
+    font-size: 1rem;
   }
 
+  .hero-actions {
+    flex-direction: column;
+    gap: 0.875rem;
+    width: 100%;
+  }
+
+  .btn-hero-primary,
+  .btn-hero-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 0.875rem 1.5rem;
+    font-size: 0.9375rem;
+  }
+
+  .hero-image-content img {
+    border-radius: 12px;
+  }
+
+  /* Trust Badges */
+  .trust-badges {
+    flex-direction: column;
+    gap: 0.875rem;
+    margin-top: 1.5rem;
+  }
+
+  /* Sections */
+  .quick-actions-section,
+  .featured-section,
+  .features-section,
+  .testimonials-section,
+  .cabinets-section {
+    padding: 2.5rem 4%;
+  }
+
+  .section-title,
+  .section-header h2 {
+    font-size: 1.625rem;
+  }
+
+  .section-header p {
+    font-size: 0.9375rem;
+  }
+
+  /* Action Cards */
   .actions-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .action-card {
+    padding: 1.5rem;
+  }
+
+  .action-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 1.75rem;
+  }
+
+  /* Features */
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .feature-card {
+    padding: 2rem 1.5rem;
+  }
+
+  /* Products Grid */
+  .products-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .product-image {
+    height: 200px;
+  }
+
+  /* Carousel */
+  .carousel-container {
+    padding: 0;
+  }
+
+  .carousel-track {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .carousel-item {
+    flex: 0 0 280px;
+  }
+
+  .carousel-item img {
+    height: 320px;
+  }
+
+  .carousel-caption {
+    padding: 20px 12px 12px;
+  }
+
+  .carousel-caption h4 {
+    font-size: 1.125rem;
+  }
+
+  .carousel-caption p {
+    font-size: 0.875rem;
+  }
+
+  .carousel-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  .carousel-dots {
+    margin-top: 20px;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dot.active {
+    width: 20px;
+  }
+
+  /* Video/Craft Section */
+  .craft-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .craft-text h2 {
+    font-size: 1.75rem;
+  }
+
+  .craft-text p {
+    font-size: 0.9375rem;
+  }
+
+  .craft-media-box {
+    max-width: 100%;
+    margin: 0;
+  }
+
+  /* CTA Banner */
+  .cta-banner {
+    padding: 3rem 4%;
+  }
+
+  .cta-content h2 {
+    font-size: 1.875rem;
+  }
+
+  .cta-content p {
+    font-size: 1rem;
+  }
+
+  .cta-buttons {
+    flex-direction: column;
+    gap: 0.875rem;
+    width: 100%;
+  }
+
+  .btn-cta-primary,
+  .btn-cta-secondary {
+    width: 100%;
+  }
+
+  /* Testimonials */
+  .testimonials-grid {
     grid-template-columns: 1fr;
   }
 
-  .chat-popup {
+  /* Chat Widget */
+  .chat-popup,
+  .rt-chat-popup {
     width: calc(100% - 2rem);
     right: 1rem;
     bottom: 5rem;
+  }
+
+  /* Footer */
+  .footer {
+    padding: 2.5rem 4% 1.25rem;
   }
 
   .footer-content {
@@ -912,9 +1172,105 @@ body {
     gap: 2rem;
   }
 
+  .footer-section h3 {
+    font-size: 1.125rem;
+  }
+
   .footer-bottom {
     flex-direction: column;
     text-align: center;
+    gap: 0.875rem;
+  }
+
+  .footer-legal {
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  /* Modal */
+  .modal-content {
+    width: 95%;
+    max-width: 95%;
+    margin: 1rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .btn-modal-primary,
+  .btn-modal-secondary {
+    width: 100%;
+  }
+}
+
+/* Mobile M (375px-424px) */
+@media (max-width: 424px) {
+  .navbar-brand .logo-link {
+    font-size: 1rem;
+  }
+
+  .logo-text {
+    font-size: 1.25rem;
+  }
+
+  .hero-text-content h1 {
+    font-size: 1.625rem;
+  }
+
+  .section-title,
+  .section-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .carousel-item {
+    flex: 0 0 260px;
+  }
+
+  .carousel-item img {
+    height: 280px;
+  }
+}
+
+/* Mobile S (320px-374px) */
+@media (max-width: 374px) {
+  .navbar-brand .logo-link {
+    font-size: 0.9375rem;
+  }
+
+  .logo-text {
+    font-size: 1.125rem;
+  }
+
+  .hero-text-content h1 {
+    font-size: 1.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.9375rem;
+  }
+
+  .section-title,
+  .section-header h2 {
+    font-size: 1.375rem;
+  }
+
+  .carousel-item {
+    flex: 0 0 240px;
+  }
+
+  .carousel-item img {
+    height: 260px;
+  }
+
+  .carousel-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cta-content h2 {
+    font-size: 1.625rem;
   }
 }
 

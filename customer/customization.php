@@ -58,6 +58,7 @@ $avatarHtml   = $img
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/customize.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
 
     <!-- === Add-to-Cart / Buy-Now minimal CSS from product_detail.php === -->

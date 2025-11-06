@@ -84,6 +84,7 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
 
     <link rel="stylesheet" href="../assets/CSS/Homepage.css">
     <link rel="stylesheet" href="../assets/CSS/checkout.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
 
     <style>

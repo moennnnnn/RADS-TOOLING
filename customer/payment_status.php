@@ -14,6 +14,7 @@ if (!$orderId) {
   <meta charset="utf-8">
   <title>Payment Status</title>
   <link rel="stylesheet" href="/assets/css/checkout.css">
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
 </head>
 
 <body>
