@@ -167,6 +167,7 @@ function public_img_url($raw, $checkExists = true)
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css" />
     <style>

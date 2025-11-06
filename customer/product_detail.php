@@ -133,6 +133,7 @@ function e($val)
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
 
     <style>
         :root {
