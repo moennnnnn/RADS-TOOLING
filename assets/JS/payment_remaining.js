@@ -1,13 +1,16 @@
 // /RADS-TOOLING/assets/JS/payment_remaining.js
-// Payment handler for remaining balance
+// Payment handler for remaining balance with flexible amount options
 
 (function () {
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
   let selectedMethod = null;
+  let selectedAmount = window.RT_PAYMENT?.option_100 || 0;
   const ORDER_ID = window.RT_PAYMENT?.order_id || 0;
   const REMAINING_BALANCE = window.RT_PAYMENT?.remaining_balance || 0;
+
+  console.log('💳 Payment Remaining: Loaded', window.RT_PAYMENT);
 
   // ===== Modal Management =====
   function openModal(id) {
@@ -83,6 +86,12 @@
     });
   }
 
+  // ===== Format Number Helper =====
+  function formatMoney(amount) {
+    const num = parseFloat(amount) || 0;
+    return '₱' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
   // Close modal handlers
   document.addEventListener('click', (e) => {
     const closeBtn = e.target.closest('[data-close]');
@@ -98,12 +107,54 @@
     }
   });
 
+  // ===== PAYMENT AMOUNT SELECTION =====
+  $$('.pay-option').forEach(option => {
+    option.addEventListener('click', () => {
+      // Remove active from all
+      $$('.pay-option').forEach(opt => opt.classList.remove('active'));
+
+      // Mark this one active
+      option.classList.add('active');
+
+      // Get the amount (already rounded to 2 decimals in PHP)
+      selectedAmount = parseFloat(option.getAttribute('data-amount'));
+
+      console.log('✅ Selected amount:', selectedAmount);
+
+      // Update the display
+      const amountDisplay = $('#amountToPay');
+      const btnText = $('#btnText');
+
+      if (amountDisplay) {
+        amountDisplay.textContent = formatMoney(selectedAmount);
+      }
+
+      if (btnText) {
+        btnText.textContent = `Pay ${formatMoney(selectedAmount)}`;
+      }
+
+      // Update the hidden field for form submission
+      const finalAmountField = $('#finalAmountPaid');
+      if (finalAmountField) {
+        finalAmountField.value = selectedAmount.toFixed(2);
+      }
+    });
+  });
+
   // ===== Step 1: Start Payment =====
   $('#btnStartPayment')?.addEventListener('click', () => {
     if (!ORDER_ID || REMAINING_BALANCE <= 0) {
       showModalAlert('Error', 'Invalid order or balance.', 'error');
       return;
     }
+
+    if (!selectedAmount || selectedAmount <= 0) {
+      showModalAlert('Error', 'Please select a payment amount.', 'error');
+      return;
+    }
+
+    console.log('💳 Starting payment for:', formatMoney(selectedAmount));
+
     openModal('#rtModal');
     showStep('#methodModal');
   });
@@ -115,6 +166,7 @@
       chip.classList.add('active');
       selectedMethod = chip.getAttribute('data-pay');
       $('#btnProceedToQR').disabled = false;
+      console.log('✅ Selected method:', selectedMethod);
     });
   });
 
@@ -125,6 +177,12 @@
     }
 
     $('#paymentMethod').value = selectedMethod;
+
+    // Update QR modal amount display
+    const qrAmount = $('#qrAmount');
+    if (qrAmount) {
+      qrAmount.textContent = formatMoney(selectedAmount);
+    }
 
     // Fetch QR code
     try {
@@ -139,7 +197,7 @@
       });
 
       const result = await response.json();
-      console.log('QR code response:', result);
+      console.log('📥 QR code response:', result);
 
       if (!result || !result.success) {
         showModalAlert('QR Code Error', 'Could not load QR code. Please try again.', 'error');
@@ -161,13 +219,19 @@
       showStep('#qrModal');
 
     } catch (err) {
-      console.error('QR fetch error:', err);
+      console.error('❌ QR fetch error:', err);
       showModalAlert('Network Error', 'Could not load QR code.', 'error');
     }
   });
 
   // ===== Step 3: I've Paid =====
   $('#btnIpaid')?.addEventListener('click', () => {
+    // Make sure the hidden field has the correct amount
+    const finalAmountField = $('#finalAmountPaid');
+    if (finalAmountField) {
+      finalAmountField.value = selectedAmount.toFixed(2);
+    }
+
     showStep('#verifyModal');
   });
 
@@ -188,6 +252,17 @@
       return;
     }
 
+    // Ensure amount_paid is set to the selected amount
+    formData.set('amount_paid', selectedAmount.toFixed(2));
+
+    console.log('📤 Submitting payment:', {
+      order_id: ORDER_ID,
+      amount_paid: selectedAmount,
+      method: selectedMethod,
+      account_name: accountName,
+      reference: reference
+    });
+
     // Disable button
     const btn = $('#btnConfirmVerification');
     const originalText = btn.innerHTML;
@@ -202,7 +277,7 @@
       });
 
       const result = await response.json();
-      console.log('Payment submission response:', result);
+      console.log('📥 Payment submission response:', result);
 
       if (!result || !result.success) {
         showModalAlert('Submission Failed', result?.message || 'Payment verification failed.', 'error');
@@ -211,14 +286,14 @@
         return;
       }
 
-      showModalAlert('Payment Submitted!', 'Your payment is under verification. Check your orders page for approval status.', 'success');
+      showModalAlert('Payment Submitted!', `Your payment of ${formatMoney(selectedAmount)} is under verification. Check your orders page for approval status.`, 'success');
 
       setTimeout(() => {
         showStep('#finalNotice');
       }, 2000);
 
     } catch (err) {
-      console.error('Payment submit error:', err);
+      console.error('❌ Payment submit error:', err);
       showModalAlert('Network Error', 'Could not submit payment verification.', 'error');
       btn.disabled = false;
       btn.innerHTML = originalText;
@@ -239,4 +314,5 @@
   }
 
   console.log('✅ Payment remaining balance script loaded');
+  console.log('💰 Default selected amount:', formatMoney(selectedAmount));
 })();
