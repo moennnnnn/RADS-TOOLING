@@ -165,9 +165,9 @@ if (!$isLoggedIn) {
             box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
             width: 100%;
             max-height: 90vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             position: relative;
             z-index: 1;
         }
@@ -176,12 +176,18 @@ if (!$isLoggedIn) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px;
+            padding: 16px 20px;
             border-bottom: 1px solid #eaeaea;
             background: #fff;
-            position: sticky;
-            top: 0;
+            flex-shrink: 0;
             z-index: 10;
+        }
+
+        .modal-body-scrollable {
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1;
+            padding: 20px;
         }
 
         .modal-close,
@@ -196,11 +202,10 @@ if (!$isLoggedIn) {
             display: flex;
             gap: 12px;
             justify-content: flex-end;
-            padding: 16px;
+            padding: 16px 20px;
             border-top: 1px solid #eaeaea;
-            position: relative;
-            bottom: auto;
             background: #fff;
+            flex-shrink: 0;
             z-index: 10;
         }
 
@@ -1081,7 +1086,7 @@ if (!$isLoggedIn) {
                 <div class="modal-header">
                     <h2>Manage Customization Options</h2><button class="close-modal" onclick="closeModal('manageCustomizationModal')">×</button>
                 </div>
-                <div style="padding:16px">
+                <div class="modal-body-scrollable">
                     <input type="hidden" id="customProductId">
                     <div style="background:#e8f4f8;padding:15px;border-radius:8px;margin-bottom:20px">
                         <h3 style="margin:0;color:#2c5f8d">Product: <span id="customProductName"></span></h3>
@@ -1203,10 +1208,10 @@ if (!$isLoggedIn) {
                         <div style="margin-top:15px"><button type="button" class="btn-secondary" onclick="openAddHandleModal()"><span class="material-symbols-rounded">add</span> Add New Handle</button></div>
                     </div>
 
-                    <div class="modal-actions" style="margin-top:12px">
-                        <button type="button" class="btn-secondary" onclick="closeModal('manageCustomizationModal')">Cancel</button>
-                        <button type="button" class="btn-primary" onclick="saveCustomizationOptions()">Save Changes</button>
-                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('manageCustomizationModal')">Cancel</button>
+                    <button type="button" class="btn-primary" onclick="saveCustomizationOptions()">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -1337,7 +1342,15 @@ if (!$isLoggedIn) {
                     <div class="form-group"><label for="handleDescription">Description</label><textarea id="handleDescription" rows="3"></textarea></div>
                     <div class="form-group"><label for="handleBasePrice">Base Price (₱)</label><input type="number" id="handleBasePrice" step="0.01" value="0"></div>
                     <div class="form-group"><label for="handleImage">Handle Image *</label><input type="file" id="handleImage" accept="image/*" required onchange="handleHandleImagePreview(event)"><img id="handleImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
-                    <div class="form-group"><label><input type="checkbox" id="handleIsActive" checked> Active (Available for selection)</label></div>
+                    <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
+                            <input type="checkbox" id="handleIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                        </div>
+                        <div style="flex:1;">
+                            <label for="handleIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
+                            <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the handle from customers.</small>
+                        </div>
+                    </div>
                     <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addHandleModal')">Cancel</button><button type="submit" class="btn-primary">Add Handle</button></div>
                 </form>
             </div>

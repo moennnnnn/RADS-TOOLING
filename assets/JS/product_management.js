@@ -1228,34 +1228,24 @@ async function populateTexturesList(productTextures) {
 
     container.innerHTML += `
       <div style="border:1px solid #e5e7eb; border-radius:8px; margin:8px 0; padding:12px; background: ${checked ? '#f0f9ff' : 'white'}; transition: all 0.2s;">
-        <label style="display:flex; align-items:center; gap:12px; cursor:pointer;" onmouseover="this.parentElement.style.backgroundColor='#f9fafb'" onmouseout="this.parentElement.style.backgroundColor='${checked ? '#f0f9ff' : 'white'}'">
-          <input type="checkbox" value="${texture.id}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0;" onchange="toggleTexturePartOptions(this)">
-          <img src="${imageUrl}"
-               alt="${textureName}"
-               style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db; flex-shrink:0;"
-               onerror="this.src='${placeholderSVG}'">
-          <div style="flex:1; min-width:0;">
-            <div style="font-weight:600; color:#111827; font-size:14px;">${textureName}</div>
-            ${texturePrice > 0 ? `<div style="color:#6b7280; font-size:13px; margin-top:2px;">₱${parseFloat(texturePrice).toFixed(2)}</div>` : ''}
-          </div>
-        </label>
-
-        <div class="texture-parts" data-texture-id="${texture.id}" style="margin-top:12px; padding-left:6px; ${checked ? 'display:block' : 'display:none'};">
-          <div style="font-size:12px; color:#6b7280; margin-bottom:6px; font-weight:500;">Apply to Parts:</div>
-          <div style="display:flex; gap:16px; flex-wrap:wrap;">
-            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
-              <input type="checkbox" class="texture-part-checkbox" data-part="body" ${bodyChecked} style="width:14px; height:14px;">
-              <span style="color:#374151;">Body/Frame</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
-              <input type="checkbox" class="texture-part-checkbox" data-part="door" ${doorChecked} style="width:14px; height:14px;">
-              <span style="color:#374151;">Door</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
-              <input type="checkbox" class="texture-part-checkbox" data-part="interior" ${interiorChecked} style="width:14px; height:14px;">
-              <span style="color:#374151;">Interior</span>
-            </label>
-          </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; flex:1;" onmouseover="this.parentElement.parentElement.style.backgroundColor='#f9fafb'" onmouseout="this.parentElement.parentElement.style.backgroundColor='${checked ? '#f0f9ff' : 'white'}'">
+            <input type="checkbox" value="${texture.id}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+            <img src="${imageUrl}"
+                 alt="${textureName}"
+                 style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db; flex-shrink:0;"
+                 onerror="this.src='${placeholderSVG}'">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:#111827; font-size:14px;">${textureName}</div>
+              ${texturePrice > 0 ? `<div style="color:#6b7280; font-size:13px; margin-top:2px;">₱${parseFloat(texturePrice).toFixed(2)}</div>` : ''}
+            </div>
+          </label>
+          <button type="button" onclick="deleteTexture(${texture.id}, '${textureName.replace(/'/g, "\\'")}')"
+                  style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap;"
+                  onmouseover="this.style.backgroundColor='#dc2626'"
+                  onmouseout="this.style.backgroundColor='#ef4444'">
+            Delete
+          </button>
         </div>
       </div>`;
   });
