@@ -227,13 +227,15 @@ $option100 = $remainingBalance;
 
     .rt-chip:hover {
       border-color: #2f5b88;
-      background: #f0f9ff;
+      background: #f0f7ff;
+      transform: translateY(-2px);
     }
 
-    .rt-chip.active {
-      border-color: #2f5b88;
-      background: #e0f2fe;
-      box-shadow: 0 4px 12px rgba(47, 91, 136, 0.2);
+    .rt-chip.is-active {
+      background: #dbeafe !important;
+      border-color: #2f5b88 !important;
+      box-shadow: 0 0 0 4px rgba(47, 91, 136, 0.1);
+      transform: scale(1.05);
     }
 
     .rt-chip span {
@@ -246,6 +248,11 @@ $option100 = $remainingBalance;
       font-size: 14px;
       color: #6b7280;
       font-weight: 500;
+    }
+
+    .rt-chip.is-active span,
+    .rt-chip.is-active small {
+      color: #2f5b88;
     }
 
     .amount-display {
@@ -404,31 +411,54 @@ $option100 = $remainingBalance;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 12px;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
-      color: #111827;
+      color: #374151;
     }
 
     .rt-list__item:hover {
       border-color: #2f5b88;
-      background: #f0f9ff;
+      background: #f0f7ff;
+      transform: translateX(4px);
     }
 
-    .rt-list__item.active {
-      border-color: #2f5b88;
-      background: #e0f2fe;
+    .rt-list__item.is-active {
+      background: #dbeafe !important;
+      border-color: #2f5b88 !important;
+      box-shadow: 0 0 0 4px rgba(47, 91, 136, 0.1);
+      color: #2f5b88;
+    }
+
+    .rt-list__item.is-active::before {
+      content: '✓';
+      position: absolute;
+      left: 24px;
+      font-weight: 700;
+      font-size: 20px;
+      color: #2f5b88;
+    }
+
+    .rt-list__item.is-active span:first-child {
+      margin-left: 32px;
     }
 
     .rt-arrow {
+      font-size: 24px;
+      color: #9ca3af;
+    }
+
+    .rt-list__item.is-active .rt-arrow {
       color: #2f5b88;
-      font-size: 20px;
-      font-weight: 700;
     }
 
     .rt-actions {
       margin-top: 24px;
       display: flex;
       gap: 12px;
+    }
+
+    .rt-qrwrap {
+      margin: 20px 0;
     }
 
     .rt-qr {
@@ -441,6 +471,7 @@ $option100 = $remainingBalance;
       display: flex;
       align-items: center;
       justify-content: center;
+      color: #6b7280;
     }
 
     .rt-qr img {
@@ -496,23 +527,39 @@ $option100 = $remainingBalance;
 </head>
 
 <body>
-<div class="main-wrapper">
-  <nav class="navbar">
+<div class="page-wrapper">
+  <header class="navbar">
     <div class="navbar-container">
-      <a href="/RADS-TOOLING/customer/homepage.php" class="navbar-logo">
-        <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-      </a>
-      <ul class="navbar-menu">
-        <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
-        <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
-        <li><a href="/RADS-TOOLING/customer/orders.php" class="active">My Orders</a></li>
-      </ul>
-      <div class="navbar-user">
-        <span class="material-symbols-rounded">account_circle</span>
-        <span><?php echo $customerName; ?></span>
+      <div class="navbar-brand">
+        <a href="/RADS-TOOLING/customer/homepage.php" class="logo-link">
+          <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+        </a>
+      </div>
+
+      <div class="navbar-actions">
+        <!-- Profile Menu (non-clickable on payment page) -->
+        <div class="profile-menu">
+          <div class="profile-toggle" style="pointer-events: none; cursor: default;">
+            <div class="profile-avatar-wrapper">
+              <div class="profile-avatar">
+                <?php echo strtoupper(substr($customerName, 0, 1)); ?>
+              </div>
+            </div>
+            <div class="profile-info">
+              <span class="profile-name"><?php echo $customerName; ?></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </nav>
+
+    <nav class="navbar-menu">
+      <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
+      <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
+      <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+      <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+    </nav>
+  </header>
 
   <main>
     <div class="review-wrap">
@@ -583,7 +630,7 @@ $option100 = $remainingBalance;
                 <span>50%</span>
                 <small>₱<?php echo number_format($option50, 2); ?></small>
               </button>
-              <button class="rt-chip pay-option active" data-percent="100" data-amount="<?php echo $option100; ?>">
+              <button class="rt-chip pay-option" data-percent="100" data-amount="<?php echo $option100; ?>">
                 <span>100%</span>
                 <small>₱<?php echo number_format($option100, 2); ?></small>
               </button>
@@ -675,9 +722,11 @@ $option100 = $remainingBalance;
 
   <div class="rt-card rt-step" id="qrModal" hidden>
     <h3>Scan QR Code to Pay</h3>
-    <div class="rt-qr" id="qrBox">Loading QR Code...</div>
+    <div class="rt-qrwrap">
+      <div id="qrBox" class="rt-qr">Loading QR Code...</div>
+    </div>
     <div class="rt-sub" style="font-size: 18px; margin: 16px 0; text-align: center;">
-      Amount to pay: <b style="color: #e74c3c;" id="qrAmount">₱0.00</b>
+      Amount to pay: <b style="color: #2f5b88;" id="qrAmount">₱0.00</b>
     </div>
     <div style="font-size: 14px; color: #6b7280; text-align: center;">Scan with your selected payment app</div>
 

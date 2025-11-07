@@ -149,11 +149,11 @@
 
       console.log('✅ Selected:', selectedPercent + '% = ' + formatMoney(selectedAmount));
 
-      // Remove active from all options
-      $$('[data-percent]').forEach(opt => opt.classList.remove('active'));
+      // Remove is-active from all options
+      $$('[data-percent]').forEach(opt => opt.classList.remove('is-active'));
 
-      // Mark this one active
-      option.classList.add('active');
+      // Mark this one as active
+      option.classList.add('is-active');
 
       // Update display
       updateAmountDisplay();
@@ -164,7 +164,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     const default100 = $('[data-percent="100"]');
     if (default100) {
-      default100.classList.add('active');
+      default100.classList.add('is-active');
     }
     updateAmountDisplay();
   });
@@ -196,8 +196,8 @@
   // ===== Step 2: Select Payment Method =====
   $$('.pay-chip[data-pay]').forEach(chip => {
     chip.addEventListener('click', () => {
-      $$('.pay-chip[data-pay]').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
+      $$('.pay-chip[data-pay]').forEach(c => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
       selectedMethod = chip.getAttribute('data-pay');
       $('#btnProceedToQR').disabled = false;
       console.log('✅ Selected method:', selectedMethod);
@@ -218,7 +218,7 @@
       qrAmount.textContent = formatMoney(selectedAmount);
     }
 
-    // Fetch QR code
+    // Fetch QR code (matching checkout.js logic)
     try {
       const response = await fetch('/RADS-TOOLING/backend/api/content_mgmt.php', {
         method: 'POST',
@@ -233,22 +233,31 @@
       const result = await response.json();
       console.log('📥 QR code response:', result);
 
-      if (!result || !result.success) {
-        showModalAlert('QR Code Error', 'Could not load QR code. Please try again.', 'error');
-        return;
-      }
-
-      const qrUrl = selectedMethod === 'gcash'
-        ? result.data?.gcash_qr
-        : result.data?.bpi_qr;
-
-      if (!qrUrl) {
-        showModalAlert('QR Code Not Found', 'QR code not available. Please contact support.', 'error');
-        return;
-      }
-
       const qrBox = $('#qrBox');
-      qrBox.innerHTML = `<img src="${qrUrl}" alt="${selectedMethod.toUpperCase()} QR" style="max-width: 300px;">`;
+      if (qrBox) {
+        if (result && result.success && result.data) {
+          const qrData = selectedMethod === 'gcash' ? result.data.gcash : result.data.bpi;
+
+          if (qrData && qrData.image_path) {
+            const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
+            console.log(`✅ Displaying ${selectedMethod.toUpperCase()} QR:`, imageUrl);
+
+            qrBox.innerHTML = `
+              <img
+                src="${imageUrl}?v=${Date.now()}"
+                alt="${selectedMethod.toUpperCase()} QR"
+                style="width:100%;height:100%;object-fit:contain;cursor:pointer;padding:8px;"
+                onerror="this.parentElement.innerHTML='<span style=\\'color:#e74c3c;\\'>❌ Failed to load QR</span>'"
+              >`;
+          } else {
+            console.warn(`⚠️ No ${selectedMethod.toUpperCase()} QR configured`);
+            qrBox.innerHTML = '<span style="color:#999">No QR configured for ' + selectedMethod.toUpperCase() + '</span>';
+          }
+        } else {
+          console.error('❌ Invalid QR API response:', result);
+          qrBox.innerHTML = '<span style="color:#999">Failed to load QR</span>';
+        }
+      }
 
       showStep('#qrModal');
 
