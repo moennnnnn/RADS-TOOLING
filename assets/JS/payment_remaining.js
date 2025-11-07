@@ -6,11 +6,15 @@
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
   let selectedMethod = null;
+  let selectedPercent = 100; // Default to 100%
   let selectedAmount = window.RT_PAYMENT?.option_100 || 0;
+
   const ORDER_ID = window.RT_PAYMENT?.order_id || 0;
   const REMAINING_BALANCE = window.RT_PAYMENT?.remaining_balance || 0;
 
   console.log('💳 Payment Remaining: Loaded', window.RT_PAYMENT);
+  console.log('💰 Initial selectedPercent:', selectedPercent);
+  console.log('💰 Initial selectedAmount:', selectedAmount);
 
   // ===== Modal Management =====
   function openModal(id) {
@@ -107,44 +111,74 @@
     }
   });
 
+  // ===== Helper: Round to 2 decimals =====
+  function round2(num) {
+    return Math.round(num * 100) / 100;
+  }
+
+  // ===== Helper: Update UI with selected amount =====
+  function updateAmountDisplay() {
+    const amountDisplay = $('#payNowAmountText');
+    const payBtn = $('#payNowBtn');
+
+    if (amountDisplay) {
+      amountDisplay.textContent = formatMoney(selectedAmount);
+    }
+
+    if (payBtn) {
+      payBtn.innerHTML = `<span class="material-symbols-rounded">payments</span> Pay ${formatMoney(selectedAmount)}`;
+    }
+
+    // Update the hidden field for form submission
+    const finalAmountField = $('#finalAmountPaid');
+    if (finalAmountField) {
+      finalAmountField.value = selectedAmount.toFixed(2);
+    }
+
+    console.log('💰 Updated display: percent=' + selectedPercent + '%, amount=' + formatMoney(selectedAmount));
+  }
+
   // ===== PAYMENT AMOUNT SELECTION =====
-  $$('.pay-option').forEach(option => {
+  $$('[data-percent]').forEach(option => {
     option.addEventListener('click', () => {
-      // Remove active from all
-      $$('.pay-option').forEach(opt => opt.classList.remove('active'));
+      // Get the selected percent
+      selectedPercent = parseInt(option.getAttribute('data-percent'), 10);
+
+      // Calculate payment amount: round to 2 decimals
+      selectedAmount = round2(REMAINING_BALANCE * (selectedPercent / 100));
+
+      console.log('✅ Selected:', selectedPercent + '% = ' + formatMoney(selectedAmount));
+
+      // Remove active from all options
+      $$('[data-percent]').forEach(opt => opt.classList.remove('active'));
 
       // Mark this one active
       option.classList.add('active');
 
-      // Get the amount (already rounded to 2 decimals in PHP)
-      selectedAmount = parseFloat(option.getAttribute('data-amount'));
-
-      console.log('✅ Selected amount:', selectedAmount);
-
-      // Update the display
-      const amountDisplay = $('#amountToPay');
-      const btnText = $('#btnText');
-
-      if (amountDisplay) {
-        amountDisplay.textContent = formatMoney(selectedAmount);
-      }
-
-      if (btnText) {
-        btnText.textContent = `Pay ${formatMoney(selectedAmount)}`;
-      }
-
-      // Update the hidden field for form submission
-      const finalAmountField = $('#finalAmountPaid');
-      if (finalAmountField) {
-        finalAmountField.value = selectedAmount.toFixed(2);
-      }
+      // Update display
+      updateAmountDisplay();
     });
   });
 
+  // ===== Initialize: Set 100% as default =====
+  window.addEventListener('DOMContentLoaded', () => {
+    const default100 = $('[data-percent="100"]');
+    if (default100) {
+      default100.classList.add('active');
+    }
+    updateAmountDisplay();
+  });
+
   // ===== Step 1: Start Payment =====
-  $('#btnStartPayment')?.addEventListener('click', () => {
-    if (!ORDER_ID || REMAINING_BALANCE <= 0) {
-      showModalAlert('Error', 'Invalid order or balance.', 'error');
+  $('#payNowBtn')?.addEventListener('click', () => {
+    // Check if balance is 0 (fully paid)
+    if (REMAINING_BALANCE <= 0) {
+      showModalAlert('Already Paid', 'This order is already fully paid.', 'info');
+      return;
+    }
+
+    if (!ORDER_ID) {
+      showModalAlert('Error', 'Invalid order ID.', 'error');
       return;
     }
 
@@ -153,7 +187,7 @@
       return;
     }
 
-    console.log('💳 Starting payment for:', formatMoney(selectedAmount));
+    console.log('💳 Starting payment for:', selectedPercent + '% = ' + formatMoney(selectedAmount));
 
     openModal('#rtModal');
     showStep('#methodModal');
@@ -255,8 +289,16 @@
     // Ensure amount_paid is set to the selected amount
     formData.set('amount_paid', selectedAmount.toFixed(2));
 
+    // Add payment type and percent for remaining balance payments
+    formData.set('payment_type', 'remaining');
+    formData.set('percent', selectedPercent.toString());
+    formData.set('pay_amount', selectedAmount.toFixed(2));
+
     console.log('📤 Submitting payment:', {
       order_id: ORDER_ID,
+      payment_type: 'remaining',
+      percent: selectedPercent,
+      pay_amount: selectedAmount,
       amount_paid: selectedAmount,
       method: selectedMethod,
       account_name: accountName,

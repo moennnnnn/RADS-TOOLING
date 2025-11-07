@@ -591,12 +591,16 @@ $option100 = $remainingBalance;
 
             <div class="amount-display">
               <div class="label">You will pay now:</div>
-              <div class="value" id="amountToPay">₱<?php echo number_format($option100, 2); ?></div>
+              <div class="value" id="payNowAmountText">₱<?php echo number_format($option100, 2); ?></div>
             </div>
 
-            <button class="rt-btn main" id="btnStartPayment">
+            <!-- Hidden fields for JavaScript -->
+            <input type="hidden" id="orderId" value="<?php echo $orderId; ?>">
+            <input type="hidden" id="remainingBalance" value="<?php echo $remainingBalance; ?>">
+
+            <button class="rt-btn main" id="payNowBtn">
               <span class="material-symbols-rounded">payments</span>
-              <span id="btnText">Pay ₱<?php echo number_format($option100, 2); ?></span>
+              Pay ₱<?php echo number_format($option100, 2); ?>
             </button>
           </div>
           <?php endif; ?>
