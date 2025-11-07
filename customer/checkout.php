@@ -26,6 +26,7 @@ if ($mode === 'pickup') {
   <title>Checkout</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout.css">
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
 </head>
 <body>
   <div class="cz-shell">

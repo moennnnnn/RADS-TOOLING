@@ -104,7 +104,6 @@ $CSRF = $_SESSION['csrf_token'];
                                             <span class="phone-prefix">+63</span>
                                             <input type="tel" id="phoneLocal" inputmode="numeric" maxlength="10" placeholder="9123456789">
                                             <!-- keep hidden for compatibility -->
-                                            <input type="hidden" id="phone" name="phone">
                                         </div>
                                     </div>
 

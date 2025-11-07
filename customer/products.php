@@ -195,6 +195,7 @@ function rt_img_url($raw)
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
     <style>
         /* small utility so grid imgs have a class we can target in JS patch */

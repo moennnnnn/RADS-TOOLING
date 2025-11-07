@@ -68,6 +68,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
   <link rel="stylesheet" href="../assets/CSS/about.css">
   <link rel="stylesheet" href="../assets/CSS/checkout.css">
   <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
+  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
   
   <style>
     /* ✅ Force Poppins everywhere */

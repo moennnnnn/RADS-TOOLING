@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/customer/pay_remaining_balance.php
+// /RADS-TOOLING/customer/payment_remaining_balance.php
 // Payment page for remaining balance on existing orders
 
 declare(strict_types=1);
@@ -46,13 +46,9 @@ try {
 
     $total = (float)($order['total_amount'] ?? 0);
     $amountPaid = (float)($order['amount_paid'] ?? 0);
-    $remainingBalance = max(0, $total - $amountPaid);
+    $remainingBalance = round(max(0, $total - $amountPaid), 2);
 
-    if ($remainingBalance <= 0.01) {
-        // Order is already fully paid
-        header('Location: /RADS-TOOLING/customer/orders.php');
-        exit;
-    }
+    $isFullyPaid = $remainingBalance <= 0.01;
 
     if (strtolower($order['status']) === 'cancelled') {
         // Cannot pay for cancelled order
@@ -67,6 +63,11 @@ try {
 
 $user = $_SESSION['user'] ?? null;
 $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Customer');
+
+// Calculate payment options
+$option30 = round($remainingBalance * 0.30, 2);
+$option50 = round($remainingBalance * 0.50, 2);
+$option100 = $remainingBalance;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -111,7 +112,7 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
         }
 
         .review-wrap {
-            max-width: 1000px !important;
+            max-width: 1400px !important;
             margin: 32px auto;
             padding: 0 24px;
         }
@@ -123,13 +124,25 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
             color: #111827;
         }
 
+        .checkout-grid {
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .checkout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .checkout-card {
             background: #fff;
             border: 2px solid #e5e7eb;
             border-radius: 16px;
             padding: 32px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 24px;
         }
 
         .card-title {
@@ -166,12 +179,6 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
 
         .review-list li:last-child {
             border-bottom: none;
-            padding-top: 16px;
-            margin-top: 8px;
-            border-top: 2px solid #e5e7eb;
-            font-weight: 700;
-            font-size: 18px;
-            color: #111827;
         }
 
         .review-list li span:first-child {
@@ -182,6 +189,134 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
         .review-list li span:last-child {
             color: #111827;
             font-weight: 600;
+        }
+
+        .review-list li.highlight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%);
+            padding: 16px;
+            border-radius: 12px;
+            border: 2px solid #fbbf24;
+            margin-top: 12px;
+        }
+
+        .review-list li.highlight span:last-child {
+            color: #b45309;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .rt-chips {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .rt-chip {
+            flex: 1;
+            padding: 20px 16px;
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .rt-chip:hover {
+            border-color: #2f5b88;
+            background: #f0f7ff;
+            transform: translateY(-2px);
+        }
+
+        .rt-chip.is-active {
+            background: #dbeafe !important;
+            border-color: #2f5b88 !important;
+            box-shadow: 0 0 0 4px rgba(47, 91, 136, 0.1);
+            transform: scale(1.05);
+        }
+
+        .rt-chip span {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .rt-chip small {
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .rt-chip.is-active span,
+        .rt-chip.is-active small {
+            color: #2f5b88;
+        }
+
+        .amount-display {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin: 24px 0;
+        }
+
+        .amount-display .label {
+            font-size: 14px;
+            color: #075985;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .amount-display .value {
+            font-size: 32px;
+            color: #0c4a6e;
+            font-weight: 700;
+        }
+
+        .rt-btn {
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .rt-btn.main {
+            background: linear-gradient(135deg, #2f5b88 0%, #1e3a5f 100%) !important;
+            color: white !important;
+            width: 100%;
+        }
+
+        .rt-btn.main:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(47, 91, 136, 0.4);
+        }
+
+        .rt-btn.main:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .rt-btn.ghost {
+            background: white !important;
+            border: 2px solid #e5e7eb !important;
+            color: #4b5563 !important;
+            margin-bottom: 10px;
+        }
+
+        .rt-btn.ghost:hover {
+            border-color: #2f5b88 !important;
+            color: #2f5b88 !important;
         }
 
         .warning-banner {
@@ -214,42 +349,17 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
             line-height: 1.6;
         }
 
-        .rt-btn {
-            padding: 16px 32px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            justify-content: center;
+        .fully-paid-banner {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid #10b981;
+            color: #065f46;
         }
 
-        .rt-btn.main {
-            background: linear-gradient(135deg, #2f5b88 0%, #1e3a5f 100%) !important;
-            color: white !important;
-            width: 100%;
+        .fully-paid-banner .material-symbols-rounded {
+            color: #059669;
         }
 
-        .rt-btn.main:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(47, 91, 136, 0.4);
-        }
-
-        .rt-btn.ghost {
-            background: white !important;
-            border: 2px solid #e5e7eb !important;
-            color: #4b5563 !important;
-        }
-
-        .rt-btn.ghost:hover {
-            border-color: #2f5b88 !important;
-            color: #2f5b88 !important;
-        }
-
+        /* Modals (reuse existing styles) */
         .rt-modal {
             position: fixed;
             inset: 0;
@@ -302,31 +412,56 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
             align-items: center;
             justify-content: space-between;
             margin-bottom: 12px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
-            color: #111827;
+            color: #374151;
         }
 
         .rt-list__item:hover {
             border-color: #2f5b88;
-            background: #f0f9ff;
+            background: #f0f7ff;
+            transform: translateX(4px);
         }
 
-        .rt-list__item.active {
-            border-color: #2f5b88;
-            background: #e0f2fe;
+        .rt-list__item.is-active {
+            background: #dbeafe !important;
+            border-color: #2f5b88 !important;
+            box-shadow: 0 0 0 4px rgba(47, 91, 136, 0.1);
+            color: #2f5b88;
+        }
+
+        .rt-list__item.is-active::before {
+            content: '✓';
+            position: absolute;
+            left: 24px;
+            font-weight: 700;
+            font-size: 20px;
+            color: #2f5b88;
+        }
+
+        .rt-list__item.is-active span:first-child {
+            margin-left: 32px;
         }
 
         .rt-arrow {
+            font-size: 24px;
+            color: #9ca3af;
+        }
+
+        .rt-list__item.is-active .rt-arrow {
             color: #2f5b88;
-            font-size: 20px;
-            font-weight: 700;
+
+
         }
 
         .rt-actions {
             margin-top: 24px;
             display: flex;
             gap: 12px;
+        }
+
+        .rt-qrwrap {
+            margin: 20px 0;
         }
 
         .rt-qr {
@@ -339,6 +474,7 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #6b7280;
         }
 
         .rt-qr img {
@@ -348,8 +484,7 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
         }
 
         .rt-form input,
-        .rt-form textarea,
-        .rt-form select {
+        .rt-form textarea {
             width: 100%;
             padding: 14px 18px;
             border: 2px solid #e5e7eb;
@@ -386,28 +521,48 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
             .checkout-card {
                 padding: 24px;
             }
+
+            .rt-chips {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="main-wrapper">
-        <nav class="navbar">
+    <div class="page-wrapper">
+        <header class="navbar">
             <div class="navbar-container">
-                <a href="/RADS-TOOLING/customer/homepage.php" class="navbar-logo">
-                    <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-                </a>
-                <ul class="navbar-menu">
-                    <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
-                    <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
-                    <li><a href="/RADS-TOOLING/customer/orders.php" class="active">My Orders</a></li>
-                </ul>
-                <div class="navbar-user">
-                    <span class="material-symbols-rounded">account_circle</span>
-                    <span><?php echo $customerName; ?></span>
+                <div class="navbar-brand">
+                    <a href="/RADS-TOOLING/customer/homepage.php" class="logo-link">
+                        <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+                    </a>
+                </div>
+
+                <div class="navbar-actions">
+                    <!-- Profile Menu (non-clickable on payment page) -->
+                    <div class="profile-menu">
+                        <div class="profile-toggle" style="pointer-events: none; cursor: default;">
+                            <div class="profile-avatar-wrapper">
+                                <div class="profile-avatar">
+                                    <?php echo strtoupper(substr($customerName, 0, 1)); ?>
+                                </div>
+                            </div>
+                            <div class="profile-info">
+                                <span class="profile-name"><?php echo $customerName; ?></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </nav>
+
+            <nav class="navbar-menu">
+                <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
+                <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
+                <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+            </nav>
+        </header>
 
         <main>
             <div class="review-wrap">
@@ -415,50 +570,126 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
                     <span class="material-symbols-rounded" style="vertical-align: middle; font-size: 36px;">payments</span>
                     Pay Remaining Balance
                 </h1>
-
-                <div class="warning-banner">
-                    <span class="material-symbols-rounded">info</span>
-                    <div class="content">
-                        <h4>Remaining Balance Payment</h4>
-                        <p>You are paying the remaining balance for Order #<?php echo htmlspecialchars($order['order_code']); ?>. This payment will be submitted for verification.</p>
-                    </div>
-                </div>
-
-                <div class="checkout-card">
-                    <div class="card-title">
-                        <span class="material-symbols-rounded">receipt</span>
-                        Payment Summary
-                    </div>
-                    <ul class="review-list">
-                        <li>
-                            <span>Order Code:</span>
-                            <span><?php echo htmlspecialchars($order['order_code']); ?></span>
-                        </li>
-                        <li>
-                            <span>Total Order Amount:</span>
-                            <span>₱<?php echo number_format($total, 2); ?></span>
-                        </li>
-                        <li>
-                            <span>Amount Already Paid:</span>
-                            <span style="color: #27ae60;">₱<?php echo number_format($amountPaid, 2); ?></span>
-                        </li>
-                        <li>
-                            <span>Remaining Balance:</span>
-                            <span style="color: #e74c3c;">₱<?php echo number_format($remainingBalance, 2); ?></span>
-                        </li>
-                    </ul>
-                </div>
-
-                <button class="rt-btn main" id="btnStartPayment">
-                    <span class="material-symbols-rounded">payments</span>
-                    Pay Remaining Balance (₱<?php echo number_format($remainingBalance, 2); ?>)
-                </button>
-
-                <div style="margin-top: 16px;">
+                <div style="margin-top: 24px;">
                     <button class="rt-btn ghost" onclick="location.href='/RADS-TOOLING/customer/orders.php'">
                         <span class="material-symbols-rounded">arrow_back</span>
                         Back to Orders
                     </button>
+                </div>
+
+                <?php if ($isFullyPaid): ?>
+                    <div class="warning-banner fully-paid-banner">
+                        <span class="material-symbols-rounded">check_circle</span>
+                        <div class="content">
+                            <h4>Order Fully Paid</h4>
+                            <p>This order has been fully paid. No remaining balance.</p>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="warning-banner">
+                        <span class="material-symbols-rounded">info</span>
+                        <div class="content">
+                            <h4>Remaining Balance Payment</h4>
+                            <p>You are paying the remaining balance for Order #<?php echo htmlspecialchars($order['order_code']); ?>. Choose how much you want to pay now.</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <div class="checkout-grid">
+                    <div>
+                        <div class="checkout-card">
+                            <div class="card-title">
+                                <span class="material-symbols-rounded">receipt</span>
+                                Order Summary
+                            </div>
+                            <ul class="review-list">
+                                <li>
+                                    <span>Order Code:</span>
+                                    <span><?php echo htmlspecialchars($order['order_code']); ?></span>
+                                </li>
+                                <li>
+                                    <span>Total Order Amount:</span>
+                                    <span>₱<?php echo number_format($total, 2); ?></span>
+                                </li>
+                                <li>
+                                    <span>Amount Already Paid:</span>
+                                    <span style="color: #27ae60;">₱<?php echo number_format($amountPaid, 2); ?></span>
+                                </li>
+                                <li class="highlight">
+                                    <span>Remaining Balance:</span>
+                                    <span>₱<?php echo number_format($remainingBalance, 2); ?></span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <?php if (!$isFullyPaid): ?>
+                            <div class="checkout-card" style="margin-top: 24px;">
+                                <div class="card-title">
+                                    <span class="material-symbols-rounded">account_balance_wallet</span>
+                                    Select Payment Amount
+                                </div>
+                                <p class="rt-sub">Choose how much of the remaining balance you want to pay now</p>
+
+                                <div class="rt-chips">
+                                    <button class="rt-chip pay-option" data-percent="30" data-amount="<?php echo $option30; ?>">
+                                        <span>30%</span>
+                                        <small>₱<?php echo number_format($option30, 2); ?></small>
+                                    </button>
+                                    <button class="rt-chip pay-option" data-percent="50" data-amount="<?php echo $option50; ?>">
+                                        <span>50%</span>
+                                        <small>₱<?php echo number_format($option50, 2); ?></small>
+                                    </button>
+                                    <button class="rt-chip pay-option" data-percent="100" data-amount="<?php echo $option100; ?>">
+                                        <span>100%</span>
+                                        <small>₱<?php echo number_format($option100, 2); ?></small>
+                                    </button>
+                                </div>
+
+                                <div class="amount-display">
+                                    <div class="label">You will pay now:</div>
+                                    <div class="value" id="payNowAmountText">₱<?php echo number_format($option100, 2); ?></div>
+                                </div>
+
+                                <!-- Hidden fields for JavaScript -->
+                                <input type="hidden" id="orderId" value="<?php echo $orderId; ?>">
+                                <input type="hidden" id="remainingBalance" value="<?php echo $remainingBalance; ?>">
+
+                                <button class="rt-btn main" id="payNowBtn">
+                                    <span class="material-symbols-rounded">payments</span>
+                                    Pay ₱<?php echo number_format($option100, 2); ?>
+                                </button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <aside>
+                        <div class="checkout-card">
+                            <div class="card-title">
+                                <span class="material-symbols-rounded">help</span>
+                                Payment Guide
+                            </div>
+                            <div style="color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                <strong style="color: #111827; display: block; margin-bottom: 8px;">How to Pay:</strong>
+                                1. Select payment amount (30%, 50%, or 100%)<br>
+                                2. Choose payment method (GCash or BPI)<br>
+                                3. Scan QR code with your app<br>
+                                4. Upload payment screenshot<br>
+                                5. Wait for admin verification
+                            </div>
+                        </div>
+
+                        <div class="checkout-card" style="margin-top: 24px;">
+                            <div class="card-title">
+                                <span class="material-symbols-rounded">lock</span>
+                                Secure Payment
+                            </div>
+                            <div style="color: #6b7280; font-size: 14px; line-height: 1.8;">
+                                • Choose flexible payment options<br>
+                                • Secure payment verification<br>
+                                • Track payment status in orders
+                            </div>
+                        </div>
+                    </aside>
                 </div>
             </div>
         </main>
@@ -493,9 +724,11 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
 
         <div class="rt-card rt-step" id="qrModal" hidden>
             <h3>Scan QR Code to Pay</h3>
-            <div class="rt-qr" id="qrBox">Loading QR Code...</div>
+            <div class="rt-qrwrap">
+                <div id="qrBox" class="rt-qr">Loading QR Code...</div>
+            </div>
             <div class="rt-sub" style="font-size: 18px; margin: 16px 0; text-align: center;">
-                Amount to pay: <b style="color: #e74c3c;">₱<?php echo number_format($remainingBalance, 2); ?></b>
+                Amount to pay: <b style="color: #2f5b88;" id="qrAmount">₱0.00</b>
             </div>
             <div style="font-size: 14px; color: #6b7280; text-align: center;">Scan with your selected payment app</div>
 
@@ -510,7 +743,7 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
             <p class="rt-sub">Please provide your payment details for verification</p>
             <form class="rt-form" id="verifyForm">
                 <input type="hidden" name="order_id" value="<?php echo $orderId; ?>">
-                <input type="hidden" name="amount_paid" value="<?php echo $remainingBalance; ?>">
+                <input type="hidden" name="amount_paid" id="finalAmountPaid" value="<?php echo $option100; ?>">
                 <input type="hidden" id="paymentMethod" name="method" value="">
 
                 <div>
@@ -561,11 +794,15 @@ $customerName = htmlspecialchars($user['full_name'] ?? $user['username'] ?? 'Cus
                                 'order_code' => $order['order_code'],
                                 'remaining_balance' => $remainingBalance,
                                 'total' => $total,
-                                'amount_paid' => $amountPaid
+                                'amount_paid' => $amountPaid,
+                                'is_fully_paid' => $isFullyPaid,
+                                'option_30' => $option30,
+                                'option_50' => $option50,
+                                'option_100' => $option100
                             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         console.log('✅ RT_PAYMENT:', window.RT_PAYMENT);
     </script>
-    <script src="/RADS-TOOLING/assets/JS/payment_remaining.js" defer></script>
+    <script src="/RADS-TOOLING/assets/JS/pay_remaining.js" defer></script>
 </body>
 
 </html>

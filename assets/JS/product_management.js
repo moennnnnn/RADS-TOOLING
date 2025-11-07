@@ -591,7 +591,7 @@ async function handleAddProduct(e) {
             credentials: 'same-origin'
           });
           const existingResult = await existingResponse.json().catch(() => ({ success: false, data: [] }));
-          const existingImages = existingResult.data || [];
+          const existingImages = existingResult.data?.images || existingResult.data || [];
 
           // 2) normalize existing filenames
           const existingFilenames = existingImages.map(img => {

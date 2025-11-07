@@ -169,6 +169,7 @@ function public_img_url($raw, $checkExists = true)
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css" />
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/product.css" />
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <style>
         /* small helper for consistent product img sizing and selector */
         .product-public-img { width:100%; height:180px; object-fit:cover; display:block; border-radius:6px; }

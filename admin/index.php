@@ -408,10 +408,10 @@ if (!$isLoggedIn) {
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
                         <h2>Sales Overview</h2>
                         <div class="chart-period-selector" style="display:flex;gap:.5rem">
-                            <button class="period-btn active" data-period="day">1 Day</button>
-                            <button class="period-btn" data-period="week">1 Week</button>
-                            <button class="period-btn" data-period="month">1 Month</button>
-                            <button class="period-btn" data-period="year">1 Year</button>
+                            <button class="period-btn active" data-period="day">Daily</button>
+                            <button class="period-btn" data-period="week">Weekly</button>
+                            <button class="period-btn" data-period="month">Monthly</button>
+                            <button class="period-btn" data-period="year">Yearly</button>
                         </div>
                     </div>
                     <canvas id="salesChart"></canvas>

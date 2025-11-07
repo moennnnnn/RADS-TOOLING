@@ -59,7 +59,7 @@ $avatarHtml   = $img
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/customize.css">
     <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/checkout_modal.css">
-
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
     <!-- === Add-to-Cart / Buy-Now minimal CSS from product_detail.php === -->
     <style>
         /* Modal shell */
