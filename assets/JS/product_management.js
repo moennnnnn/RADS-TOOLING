@@ -1276,14 +1276,24 @@ function populateColorsList(productColors) {
     const hexCode = color.hex_code || color.hex || color.color || '#cccccc';
 
     container.innerHTML += `
-      <label style="display:flex; align-items:center; gap:12px; margin:8px 0; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor='transparent'">
-        <input type="checkbox" value="${color.id}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
-        <div style="width:50px; height:50px; background:${hexCode}; border:2px solid #d1d5db; border-radius:6px; flex-shrink:0;"></div>
-        <div style="flex:1; min-width:0;">
-          <div style="font-weight:600; color:#111827; font-size:14px;">${colorName}</div>
-          ${colorPrice > 0 ? `<div style="color:#6b7280; font-size:13px; margin-top:2px;">₱${parseFloat(colorPrice).toFixed(2)}</div>` : ''}
+      <div style="border:1px solid #e5e7eb; border-radius:8px; margin:8px 0; padding:12px; background: ${checked ? '#f0f9ff' : 'white'}; transition: all 0.2s;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; flex:1;" onmouseover="this.parentElement.parentElement.style.backgroundColor='#f9fafb'" onmouseout="this.parentElement.parentElement.style.backgroundColor='${checked ? '#f0f9ff' : 'white'}'">
+            <input type="checkbox" value="${color.id}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+            <div style="width:50px; height:50px; background:${hexCode}; border:2px solid #d1d5db; border-radius:6px; flex-shrink:0;"></div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:#111827; font-size:14px;">${colorName}</div>
+              ${colorPrice > 0 ? `<div style="color:#6b7280; font-size:13px; margin-top:2px;">₱${parseFloat(colorPrice).toFixed(2)}</div>` : ''}
+            </div>
+          </label>
+          <button type="button" onclick="deleteColor(${color.id}, '${colorName.replace(/'/g, "\\'")}')"
+                  style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap;"
+                  onmouseover="this.style.backgroundColor='#dc2626'"
+                  onmouseout="this.style.backgroundColor='#ef4444'">
+            Delete
+          </button>
         </div>
-      </label>`;
+      </div>`;
   });
 }
 
@@ -1307,18 +1317,110 @@ function populateHandlesList(productHandles) {
       : placeholderSVG;
 
     container.innerHTML += `
-      <label style="display:flex; align-items:center; gap:12px; margin:8px 0; padding:12px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor='transparent'">
-        <input type="checkbox" value="${handle.id}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
-        <img src="${imageUrl}"
-             alt="${handleName}"
-             style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db; flex-shrink:0;"
-             onerror="this.src='${placeholderSVG}'">
-        <div style="flex:1; min-width:0;">
-          <div style="font-weight:600; color:#111827; font-size:14px;">${handleName}</div>
-          ${handlePrice > 0 ? `<div style="color:#6b7280; font-size:13px; margin-top:2px;">₱${parseFloat(handlePrice).toFixed(2)}</div>` : ''}
+      <div style="border:1px solid #e5e7eb; border-radius:8px; margin:8px 0; padding:12px; background: ${checked ? '#f0f9ff' : 'white'}; transition: all 0.2s;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <label style="display:flex; align-items:center; gap:12px; cursor:pointer; flex:1;" onmouseover="this.parentElement.parentElement.style.backgroundColor='#f9fafb'" onmouseout="this.parentElement.parentElement.style.backgroundColor='${checked ? '#f0f9ff' : 'white'}'">
+            <input type="checkbox" value="${handle.id}" ${checked ? 'checked' : ''} style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+            <img src="${imageUrl}"
+                 alt="${handleName}"
+                 style="width:50px; height:50px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db; flex-shrink:0;"
+                 onerror="this.src='${placeholderSVG}'">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:600; color:#111827; font-size:14px;">${handleName}</div>
+              ${handlePrice > 0 ? `<div style="color:#6b7280; font-size:13px; margin-top:2px;">₱${parseFloat(handlePrice).toFixed(2)}</div>` : ''}
+            </div>
+          </label>
+          <button type="button" onclick="deleteHandle(${handle.id}, '${handleName.replace(/'/g, "\\'")}')"
+                  style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:500; white-space:nowrap;"
+                  onmouseover="this.style.backgroundColor='#dc2626'"
+                  onmouseout="this.style.backgroundColor='#ef4444'">
+            Delete
+          </button>
         </div>
-      </label>`;
+      </div>`;
   });
+}
+
+// ===== Delete functions for texture/color/handle =====
+async function deleteTexture(textureId, textureName) {
+  if (!confirm(`Are you sure you want to delete the texture "${textureName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=delete_texture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texture_id: textureId })
+    });
+
+    if (response.success) {
+      showToast('Texture deleted successfully', 'success');
+      // Reload the customization data for current product
+      if (currentProduct?.id) {
+        await openManageCustomizationModal(currentProduct.id);
+      }
+    } else {
+      showToast(response.message || 'Failed to delete texture', 'error');
+    }
+  } catch (error) {
+    console.error('Delete texture error:', error);
+    showToast('Error deleting texture', 'error');
+  }
+}
+
+async function deleteColor(colorId, colorName) {
+  if (!confirm(`Are you sure you want to delete the color "${colorName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=delete_color', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color_id: colorId })
+    });
+
+    if (response.success) {
+      showToast('Color deleted successfully', 'success');
+      // Reload the customization data for current product
+      if (currentProduct?.id) {
+        await openManageCustomizationModal(currentProduct.id);
+      }
+    } else {
+      showToast(response.message || 'Failed to delete color', 'error');
+    }
+  } catch (error) {
+    console.error('Delete color error:', error);
+    showToast('Error deleting color', 'error');
+  }
+}
+
+async function deleteHandle(handleId, handleName) {
+  if (!confirm(`Are you sure you want to delete the handle "${handleName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=delete_handle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handle_id: handleId })
+    });
+
+    if (response.success) {
+      showToast('Handle deleted successfully', 'success');
+      // Reload the customization data for current product
+      if (currentProduct?.id) {
+        await openManageCustomizationModal(currentProduct.id);
+      }
+    } else {
+      showToast(response.message || 'Failed to delete handle', 'error');
+    }
+  } catch (error) {
+    console.error('Delete handle error:', error);
+    showToast('Error deleting handle', 'error');
+  }
 }
 
 // ===== Size config collector & save customization =====
