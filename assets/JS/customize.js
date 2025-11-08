@@ -401,11 +401,15 @@
 
             const price = parseFloat(tex.base_price || 0);
 
+            // Check if texture has an image
+            const hasImage = tex.image_url && tex.image_url.trim() !== '';
+
             div.innerHTML = `
-            <div class="cz-swatch cz-swatch-texture">
-                <img src="${tex.image_url}"
-                     alt="${tex.texture_name}"
-                     style="width: 100%; height: 100%; object-fit: cover;">
+            <div class="cz-swatch cz-swatch-texture" style="background: ${hasImage ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+                ${hasImage
+                    ? `<img src="${tex.image_url}" alt="${tex.texture_name}" style="width: 100%; height: 100%; object-fit: cover;">`
+                    : `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`
+                }
             </div>
             <div class="cz-item-name">${tex.texture_name}</div>
             ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
@@ -1011,10 +1015,18 @@
             const btn = document.createElement('button');
             btn.className = 'cz-item';
             const surcharge = getSurcharge('textures', t.id);
+
+            // Check if texture file exists
+            const hasFile = t.file && t.file.trim() !== '';
+            const texSrc = hasFile ? (TEX_DIR + t.file) : '';
+
             // NEW: Improved layout matching color section
             btn.innerHTML = `
-        <div class="cz-swatch cz-swatch-texture">
-            <img src="${TEX_DIR + t.file}" alt="${t.name || 'texture'}" style="width:100%;height:100%;object-fit:cover;">
+        <div class="cz-swatch cz-swatch-texture" style="background: ${hasFile ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+            ${hasFile
+                ? `<img src="${texSrc}" alt="${t.name || 'texture'}" style="width:100%;height:100%;object-fit:cover;">`
+                : `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`
+            }
         </div>
         <div class="cz-item-name">${t.name || 'Texture'}</div>
         ${priceBadge(surcharge)}
@@ -1159,12 +1171,17 @@
             if (isActive) div.classList.add('is-active');
 
             const price = parseFloat(h.price || 0);
-            const src = HANDLE_DIR + (h.preview || '');
+
+            // Only build image src if preview exists
+            const hasPreview = h.preview && h.preview.trim() !== '';
+            const src = hasPreview ? (HANDLE_DIR + h.preview) : '';
 
             div.innerHTML = `
-                <div class="cz-swatch">
-                    <img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25"
-                    style="width: 100%; height: 100%; object-fit: contain;">
+                <div class="cz-swatch" style="background: ${hasPreview ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+                    ${hasPreview
+                        ? `<img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25" style="width: 100%; height: 100%; object-fit: contain;">`
+                        : `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`
+                    }
                 </div>
                 <div class="cz-item-name">${h.name || 'Handle'}</div>
                 ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
