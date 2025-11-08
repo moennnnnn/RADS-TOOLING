@@ -1084,7 +1084,7 @@ if (!$isLoggedIn) {
         <div id="manageCustomizationModal" class="modal">
             <div class="modal-content" style="max-width:900px">
                 <div class="modal-header">
-                    <h2>Manage Customization Options</h2><button class="close-modal" onclick="closeModal('manageCustomizationModal')">×</button>
+                    <h2>Manage Customization Options</h2><button class="close-modal" onclick="closeCustomizationModal()">×</button>
                 </div>
                 <div class="modal-body-scrollable">
                     <input type="hidden" id="customProductId">
@@ -1210,7 +1210,7 @@ if (!$isLoggedIn) {
 
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal('manageCustomizationModal')">Cancel</button>
+                    <button type="button" class="btn-secondary" onclick="closeCustomizationModal()">Cancel</button>
                     <button type="button" class="btn-primary" onclick="saveCustomizationOptions()">Save Changes</button>
                 </div>
             </div>

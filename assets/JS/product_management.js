@@ -13,6 +13,9 @@ const MAX_GLB_MB = 80;                 // front-end cap for .glb
 // ===== Image / Model upload state =====
 let uploadedProductImages = [];
 
+// ===== Size config persistence =====
+let savedSizeConfig = null;            // stores last saved size config for revert functionality
+
 // cache for primary images to avoid repeated calls
 const productPrimaryImageCache = new Map(); // productId -> filename (string) or null
 
@@ -1167,6 +1170,9 @@ function populateSizeConfig(sizes) {
   const sizeMap = {};
   sizes.forEach(s => { sizeMap[s.dimension_type] = s; });
 
+  // Save current size config for potential revert (deep copy)
+  savedSizeConfig = JSON.parse(JSON.stringify(sizeMap));
+
   ['width', 'height', 'depth'].forEach(dim => {
     const s = sizeMap[dim];
     if (!s) return;
@@ -1187,11 +1193,47 @@ function populateSizeConfig(sizes) {
   });
 }
 
+// Revert size config to last saved state (called when modal is closed without saving)
+function revertSizeConfig() {
+  if (!savedSizeConfig) return;
+
+  ['width', 'height', 'depth'].forEach(dim => {
+    const s = savedSizeConfig[dim];
+    if (!s) return;
+
+    setField(`${dim}MinCustom`, s.min_value);
+    setField(`${dim}MaxCustom`, s.max_value);
+    setField(`${dim}DefaultCustom`, s.default_value);
+    setField(`${dim}StepCustom`, s.step_value);
+    setField(`${dim}Unit`, s.measurement_unit);
+
+    const mode = s.pricing_mode || 'percm';
+    const radios = document.getElementsByName(`${dim}PricingMode`);
+    radios.forEach(r => { r.checked = (r.value === mode); });
+
+    setField(`${dim}PPU`, s.price_per_unit);
+    setField(`${dim}BlockCM`, s.price_block_cm);
+    setField(`${dim}PerBlock`, s.price_per_block);
+  });
+}
+
+// Custom close function for customization modal (reverts unsaved changes)
+window.closeCustomizationModal = function() {
+  revertSizeConfig();
+  closeModal('manageCustomizationModal');
+};
+
 // ===== Textures, Colors, Handles lists =====
 async function populateTexturesList(productTextures) {
   const container = document.getElementById('texturesListContainer');
   if (!container) return;
   container.innerHTML = '';
+
+  // Show empty state if no textures exist
+  if (!allTextures || allTextures.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No customization options added yet.</div>';
+    return;
+  }
 
   let existingParts = {};
   try {
@@ -1268,6 +1310,12 @@ function populateColorsList(productColors) {
   if (!container) return;
   container.innerHTML = '';
 
+  // Show empty state if no colors exist
+  if (!allColors || allColors.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No customization options added yet.</div>';
+    return;
+  }
+
   const selectedIds = productColors.map(c => +c.color_id);
   allColors.forEach(color => {
     const checked = selectedIds.includes(+color.id);
@@ -1301,6 +1349,12 @@ function populateHandlesList(productHandles) {
   const container = document.getElementById('handlesListContainer');
   if (!container) return;
   container.innerHTML = '';
+
+  // Show empty state if no handles exist
+  if (!allHandles || allHandles.length === 0) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No customization options added yet.</div>';
+    return;
+  }
 
   const placeholderSVG = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"%3E%3Crect fill="%23e5e7eb" width="40" height="40"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="12" fill="%239ca3af"%3ENo Img%3C/text%3E%3C/svg%3E';
 
@@ -1343,8 +1397,16 @@ function populateHandlesList(productHandles) {
 
 // ===== Delete functions for texture/color/handle =====
 async function deleteTexture(textureId, textureName) {
-  if (!confirm(`Are you sure you want to delete the texture "${textureName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`)) {
-    return;
+  // Use universal confirmation modal
+  const confirmed = await showConfirmation(`Are you sure you want to delete the texture "${textureName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`);
+  if (!confirmed) return;
+
+  // Find and disable the delete button to prevent multiple clicks
+  const deleteBtn = event?.target;
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.style.opacity = '0.5';
+    deleteBtn.style.cursor = 'not-allowed';
   }
 
   try {
@@ -1355,23 +1417,58 @@ async function deleteTexture(textureId, textureName) {
     });
 
     if (response.success) {
-      showToast('Texture deleted successfully', 'success');
-      // Reload the customization data for current product
-      if (currentProduct?.id) {
-        await openManageCustomizationModal(currentProduct.id);
+      // Update in-memory array
+      allTextures = allTextures.filter(t => +t.id !== +textureId);
+
+      // Remove from DOM immediately without page refresh
+      const container = document.getElementById('texturesListContainer');
+      if (container) {
+        const itemToRemove = Array.from(container.children).find(child => {
+          const checkbox = child.querySelector('input[type="checkbox"]');
+          return checkbox && +checkbox.value === +textureId;
+        });
+        if (itemToRemove) itemToRemove.remove();
       }
+
+      // Check if container is now empty and add empty state
+      if (container && container.children.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No customization options added yet.</div>';
+      }
+
+      // Show success notification using universal modal
+      showNotification('success', 'Texture deleted successfully!');
     } else {
-      showToast(response.message || 'Failed to delete texture', 'error');
+      // Re-enable button on failure
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+      }
+      showNotification('error', response.message || 'Failed to delete. Please try again.');
     }
   } catch (error) {
     console.error('Delete texture error:', error);
-    showToast('Error deleting texture', 'error');
+    // Re-enable button on error
+    if (deleteBtn) {
+      deleteBtn.disabled = false;
+      deleteBtn.style.opacity = '1';
+      deleteBtn.style.cursor = 'pointer';
+    }
+    showNotification('error', 'Failed to delete. Please try again.');
   }
 }
 
 async function deleteColor(colorId, colorName) {
-  if (!confirm(`Are you sure you want to delete the color "${colorName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`)) {
-    return;
+  // Use universal confirmation modal
+  const confirmed = await showConfirmation(`Are you sure you want to delete the color "${colorName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`);
+  if (!confirmed) return;
+
+  // Find and disable the delete button to prevent multiple clicks
+  const deleteBtn = event?.target;
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.style.opacity = '0.5';
+    deleteBtn.style.cursor = 'not-allowed';
   }
 
   try {
@@ -1382,23 +1479,58 @@ async function deleteColor(colorId, colorName) {
     });
 
     if (response.success) {
-      showToast('Color deleted successfully', 'success');
-      // Reload the customization data for current product
-      if (currentProduct?.id) {
-        await openManageCustomizationModal(currentProduct.id);
+      // Update in-memory array
+      allColors = allColors.filter(c => +c.id !== +colorId);
+
+      // Remove from DOM immediately without page refresh
+      const container = document.getElementById('colorsListContainer');
+      if (container) {
+        const itemToRemove = Array.from(container.children).find(child => {
+          const checkbox = child.querySelector('input[type="checkbox"]');
+          return checkbox && +checkbox.value === +colorId;
+        });
+        if (itemToRemove) itemToRemove.remove();
       }
+
+      // Check if container is now empty and add empty state
+      if (container && container.children.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No customization options added yet.</div>';
+      }
+
+      // Show success notification using universal modal
+      showNotification('success', 'Color deleted successfully!');
     } else {
-      showToast(response.message || 'Failed to delete color', 'error');
+      // Re-enable button on failure
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+      }
+      showNotification('error', response.message || 'Failed to delete. Please try again.');
     }
   } catch (error) {
     console.error('Delete color error:', error);
-    showToast('Error deleting color', 'error');
+    // Re-enable button on error
+    if (deleteBtn) {
+      deleteBtn.disabled = false;
+      deleteBtn.style.opacity = '1';
+      deleteBtn.style.cursor = 'pointer';
+    }
+    showNotification('error', 'Failed to delete. Please try again.');
   }
 }
 
 async function deleteHandle(handleId, handleName) {
-  if (!confirm(`Are you sure you want to delete the handle "${handleName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`)) {
-    return;
+  // Use universal confirmation modal
+  const confirmed = await showConfirmation(`Are you sure you want to delete the handle "${handleName}"?\n\nThis will permanently remove it from the system and unassign it from all products.`);
+  if (!confirmed) return;
+
+  // Find and disable the delete button to prevent multiple clicks
+  const deleteBtn = event?.target;
+  if (deleteBtn) {
+    deleteBtn.disabled = true;
+    deleteBtn.style.opacity = '0.5';
+    deleteBtn.style.cursor = 'not-allowed';
   }
 
   try {
@@ -1409,17 +1541,44 @@ async function deleteHandle(handleId, handleName) {
     });
 
     if (response.success) {
-      showToast('Handle deleted successfully', 'success');
-      // Reload the customization data for current product
-      if (currentProduct?.id) {
-        await openManageCustomizationModal(currentProduct.id);
+      // Update in-memory array
+      allHandles = allHandles.filter(h => +h.id !== +handleId);
+
+      // Remove from DOM immediately without page refresh
+      const container = document.getElementById('handlesListContainer');
+      if (container) {
+        const itemToRemove = Array.from(container.children).find(child => {
+          const checkbox = child.querySelector('input[type="checkbox"]');
+          return checkbox && +checkbox.value === +handleId;
+        });
+        if (itemToRemove) itemToRemove.remove();
       }
+
+      // Check if container is now empty and add empty state
+      if (container && container.children.length === 0) {
+        container.innerHTML = '<div style="padding:20px;text-align:center;color:#666;">No customization options added yet.</div>';
+      }
+
+      // Show success notification using universal modal
+      showNotification('success', 'Handle deleted successfully!');
     } else {
-      showToast(response.message || 'Failed to delete handle', 'error');
+      // Re-enable button on failure
+      if (deleteBtn) {
+        deleteBtn.disabled = false;
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+      }
+      showNotification('error', response.message || 'Failed to delete. Please try again.');
     }
   } catch (error) {
     console.error('Delete handle error:', error);
-    showToast('Error deleting handle', 'error');
+    // Re-enable button on error
+    if (deleteBtn) {
+      deleteBtn.disabled = false;
+      deleteBtn.style.opacity = '1';
+      deleteBtn.style.cursor = 'pointer';
+    }
+    showNotification('error', 'Failed to delete. Please try again.');
   }
 }
 
@@ -1523,6 +1682,9 @@ async function saveCustomizationOptions() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id, handle_ids })
     });
+
+    // Update saved size config after successful save
+    savedSizeConfig = JSON.parse(JSON.stringify(size_config));
 
     showNotification('success', 'Customization options saved successfully');
     closeModal('manageCustomizationModal');
