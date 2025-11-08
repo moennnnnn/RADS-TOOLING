@@ -1222,43 +1222,48 @@ if (!$isLoggedIn) {
                 <div class="modal-header">
                     <h2>Add New Texture</h2><button class="close-modal" onclick="closeModal('addTextureModal')">×</button>
                 </div>
-                <form id="addTextureForm" onsubmit="handleAddTexture(event)" style="padding:16px">
-                    <div class="form-group"><label for="textureName">Texture Name *</label><input type="text" id="textureName" required placeholder="e.g., Oak Wood, Marble White"></div>
-                    <div class="form-group"><label for="textureCode">Texture Code *</label><input type="text" id="textureCode" required placeholder="e.g., WOOD_OAK, MARBLE_WHITE"><small style="color:#666">Use uppercase with underscores</small></div>
-                    <div class="form-group"><label for="textureDescription">Description</label><textarea id="textureDescription" rows="3"></textarea></div>
-                    <div class="form-group"><label for="textureBasePrice">Base Price (₱)</label><input type="number" id="textureBasePrice" step="0.01" value="0"></div>
-                    <div class="form-group" style="margin-top:14px;">
-                        <label style="font-weight:600; display:block; margin-bottom:8px;">Allowed Parts</label>
-                        <div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));gap: 10px;text-align: center;padding: 10px 12px;border: 1px solid #ddd;border-radius: 8px;background: #f9fafb;">
-                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
-                                <input type="checkbox" name="textureParts" value="body" style="margin-bottom:4px;">
-                                Body / Frame
-                            </label>
-                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
-                                <input type="checkbox" name="textureParts" value="door" style="margin-bottom:4px;">
-                                Door
-                            </label>
-                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
-                                <input type="checkbox" name="textureParts" value="interior" style="margin-bottom:4px;">
-                                Interior
-                            </label>
+                <div class="modal-body-scrollable">
+                    <form id="addTextureForm" onsubmit="handleAddTexture(event)">
+                        <div class="form-group"><label for="textureName">Texture Name *</label><input type="text" id="textureName" required placeholder="e.g., Oak Wood, Marble White"></div>
+                        <div class="form-group"><label for="textureCode">Texture Code *</label><input type="text" id="textureCode" required placeholder="e.g., WOOD_OAK, MARBLE_WHITE"><small style="color:#666">Use uppercase with underscores</small></div>
+                        <div class="form-group"><label for="textureDescription">Description</label><textarea id="textureDescription" rows="3"></textarea></div>
+                        <div class="form-group"><label for="textureBasePrice">Base Price (₱)</label><input type="number" id="textureBasePrice" step="0.01" value="0"></div>
+                        <div class="form-group" style="margin-top:14px;">
+                            <label style="font-weight:600; display:block; margin-bottom:8px;">Allowed Parts</label>
+                            <div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));gap: 10px;text-align: center;padding: 10px 12px;border: 1px solid #ddd;border-radius: 8px;background: #f9fafb;">
+                                <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                    <input type="checkbox" name="textureParts" value="body" style="margin-bottom:4px;">
+                                    Body / Frame
+                                </label>
+                                <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                    <input type="checkbox" name="textureParts" value="door" style="margin-bottom:4px;">
+                                    Door
+                                </label>
+                                <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                    <input type="checkbox" name="textureParts" value="interior" style="margin-bottom:4px;">
+                                    Interior
+                                </label>
+                            </div>
+                            <small style="color:#666; display:block; margin-top:6px;">
+                                Select where this texture may be applied.
+                            </small>
                         </div>
-                        <small style="color:#666; display:block; margin-top:6px;">
-                            Select where this texture may be applied.
-                        </small>
-                    </div>
-                    <div class="form-group"><label for="textureImage">Texture Image *</label><input type="file" id="textureImage" accept="image/*" required onchange="handleTextureImagePreview(event)"><img id="textureImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
-                    <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
-                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
-                            <input type="checkbox" id="textureIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                        <div class="form-group"><label for="textureImage">Texture Image *</label><input type="file" id="textureImage" accept="image/*" required onchange="handleTextureImagePreview(event)"><img id="textureImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
+                        <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
+                                <input type="checkbox" id="textureIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                            </div>
+                            <div style="flex:1;">
+                                <label for="textureIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
+                                <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the texture from customers.</small>
+                            </div>
                         </div>
-                        <div style="flex:1;">
-                            <label for="textureIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
-                            <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the texture from customers.</small>
-                        </div>
-                    </div>
-                    <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addTextureModal')">Cancel</button><button type="submit" class="btn-primary">Add Texture</button></div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('addTextureModal')">Cancel</button>
+                    <button type="submit" form="addTextureForm" class="btn-primary">Add Texture</button>
+                </div>
             </div>
         </div>
 
@@ -1268,66 +1273,68 @@ if (!$isLoggedIn) {
                     <h2>Add New Color</h2>
                     <button class="close-modal" onclick="closeModal('addColorModal')">×</button>
                 </div>
-                <form id="addColorForm" onsubmit="handleAddColor(event)" style="padding:16px">
-                    <div class="form-group">
-                        <label for="colorName">Color Name *</label>
-                        <input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White">
-                    </div>
-                    <div class="form-group">
-                        <label for="colorCode">Color Code *</label>
-                        <input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY">
-                        <small style="color:#666">Use uppercase with underscores</small>
-                    </div>
-                    <div class="form-row">
+                <div class="modal-body-scrollable">
+                    <form id="addColorForm" onsubmit="handleAddColor(event)">
                         <div class="form-group">
-                            <label for="colorHex">Hex Color Value *</label>
-                            <input type="color" id="colorHex" value="#000000" required style="height:50px">
+                            <label for="colorName">Color Name *</label>
+                            <input type="text" id="colorName" required placeholder="e.g., Matte Black, Glossy White">
                         </div>
                         <div class="form-group">
-                            <label for="colorHexText">Hex Code</label>
-                            <input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
+                            <label for="colorCode">Color Code *</label>
+                            <input type="text" id="colorCode" required placeholder="e.g., BLACK_MATTE, WHITE_GLOSSY">
+                            <small style="color:#666">Use uppercase with underscores</small>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="colorBasePrice">Base Price (₱)</label>
-                        <input type="number" id="colorBasePrice" step="0.01" value="0">
-                    </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="colorHex">Hex Color Value *</label>
+                                <input type="color" id="colorHex" value="#000000" required style="height:50px">
+                            </div>
+                            <div class="form-group">
+                                <label for="colorHexText">Hex Code</label>
+                                <input type="text" id="colorHexText" value="#000000" pattern="^#[0-9A-Fa-f]{6}$" placeholder="#000000">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="colorBasePrice">Base Price (₱)</label>
+                            <input type="number" id="colorBasePrice" step="0.01" value="0">
+                        </div>
 
-                    <!-- CORRECTED: name="colorParts" -->
-                    <div class="form-group">
-                        <label style="font-weight:600; display:block; margin-bottom:8px;">Allowed Parts</label>
-                        <div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));gap: 10px;text-align: center;padding: 10px 12px;border: 1px solid #ddd;border-radius: 8px;background: #f9fafb;">
-                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
-                                <input type="checkbox" name="colorParts" value="body" checked style="margin-bottom:4px;">
-                                Body / Frame
-                            </label>
-                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
-                                <input type="checkbox" name="colorParts" value="door" checked style="margin-bottom:4px;">
-                                Door
-                            </label>
-                            <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
-                                <input type="checkbox" name="colorParts" value="interior" checked style="margin-bottom:4px;">
-                                Interior
-                            </label>
+                        <!-- CORRECTED: name="colorParts" -->
+                        <div class="form-group">
+                            <label style="font-weight:600; display:block; margin-bottom:8px;">Allowed Parts</label>
+                            <div style="display: grid;grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));gap: 10px;text-align: center;padding: 10px 12px;border: 1px solid #ddd;border-radius: 8px;background: #f9fafb;">
+                                <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                    <input type="checkbox" name="colorParts" value="body" checked style="margin-bottom:4px;">
+                                    Body / Frame
+                                </label>
+                                <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                    <input type="checkbox" name="colorParts" value="door" checked style="margin-bottom:4px;">
+                                    Door
+                                </label>
+                                <label style="display:flex;flex-direction:column;align-items:center;font-size:13px;color:#333;">
+                                    <input type="checkbox" name="colorParts" value="interior" checked style="margin-bottom:4px;">
+                                    Interior
+                                </label>
+                            </div>
+                            <small style="color:#666; display:block; margin-top:6px;">
+                                Select where this color may be applied.
+                            </small>
                         </div>
-                        <small style="color:#666; display:block; margin-top:6px;">
-                            Select where this color may be applied.
-                        </small>
-                    </div>
-                    <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
-                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
-                            <input type="checkbox" id="colorIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                        <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
+                                <input type="checkbox" id="colorIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                            </div>
+                            <div style="flex:1;">
+                                <label for="colorIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
+                                <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the color from customers.</small>
+                            </div>
                         </div>
-                        <div style="flex:1;">
-                            <label for="colorIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
-                            <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the color from customers.</small>
-                        </div>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button>
-                        <button type="submit" class="btn-primary">Add Color</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('addColorModal')">Cancel</button>
+                    <button type="submit" form="addColorForm" class="btn-primary">Add Color</button>
+                </div>
             </div>
         </div>
 
@@ -1336,23 +1343,28 @@ if (!$isLoggedIn) {
                 <div class="modal-header">
                     <h2>Add New Handle Type</h2><button class="close-modal" onclick="closeModal('addHandleModal')">×</button>
                 </div>
-                <form id="addHandleForm" onsubmit="handleAddHandle(event)" style="padding:16px">
-                    <div class="form-group"><label for="handleName">Handle Name *</label><input type="text" id="handleName" required placeholder="e.g., Modern Silver, Classic Brass"></div>
-                    <div class="form-group"><label for="handleCode">Handle Code *</label><input type="text" id="handleCode" required placeholder="e.g., MODERN_SILVER, CLASSIC_BRASS"><small style="color:#666">Use uppercase with underscores</small></div>
-                    <div class="form-group"><label for="handleDescription">Description</label><textarea id="handleDescription" rows="3"></textarea></div>
-                    <div class="form-group"><label for="handleBasePrice">Base Price (₱)</label><input type="number" id="handleBasePrice" step="0.01" value="0"></div>
-                    <div class="form-group"><label for="handleImage">Handle Image *</label><input type="file" id="handleImage" accept="image/*" required onchange="handleHandleImagePreview(event)"><img id="handleImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
-                    <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
-                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
-                            <input type="checkbox" id="handleIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                <div class="modal-body-scrollable">
+                    <form id="addHandleForm" onsubmit="handleAddHandle(event)">
+                        <div class="form-group"><label for="handleName">Handle Name *</label><input type="text" id="handleName" required placeholder="e.g., Modern Silver, Classic Brass"></div>
+                        <div class="form-group"><label for="handleCode">Handle Code *</label><input type="text" id="handleCode" required placeholder="e.g., MODERN_SILVER, CLASSIC_BRASS"><small style="color:#666">Use uppercase with underscores</small></div>
+                        <div class="form-group"><label for="handleDescription">Description</label><textarea id="handleDescription" rows="3"></textarea></div>
+                        <div class="form-group"><label for="handleBasePrice">Base Price (₱)</label><input type="number" id="handleBasePrice" step="0.01" value="0"></div>
+                        <div class="form-group"><label for="handleImage">Handle Image *</label><input type="file" id="handleImage" accept="image/*" required onchange="handleHandleImagePreview(event)"><img id="handleImagePreview" style="max-width:200px;margin-top:10px;display:none;border-radius:8px"></div>
+                        <div class="form-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:14px;">
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-start;">
+                                <input type="checkbox" id="handleIsActive" checked style="transform:scale(1.05);margin:4px 0 0 0;">
+                            </div>
+                            <div style="flex:1;">
+                                <label for="handleIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
+                                <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the handle from customers.</small>
+                            </div>
                         </div>
-                        <div style="flex:1;">
-                            <label for="handleIsActive" style="font-size:14px;color:#333;display:block;margin-top:2px;">Active (Available for selection)</label>
-                            <small style="color:#666;display:block;margin-top:6px;">Uncheck this to temporarily hide the handle from customers.</small>
-                        </div>
-                    </div>
-                    <div class="modal-actions"><button type="button" class="btn-secondary" onclick="closeModal('addHandleModal')">Cancel</button><button type="submit" class="btn-primary">Add Handle</button></div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('addHandleModal')">Cancel</button>
+                    <button type="submit" form="addHandleForm" class="btn-primary">Add Handle</button>
+                </div>
             </div>
         </div>
 
