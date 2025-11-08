@@ -1161,41 +1161,35 @@
             const price = parseFloat(h.price || 0);
             const src = HANDLE_DIR + (h.preview || '');
 
-            (filtered || []).forEach(h => {
-                const btn = document.createElement('button');
-                btn.className = 'cz-item';
-                const src = HANDLE_DIR + (h.preview || '');
-                div.innerHTML = `
+            div.innerHTML = `
                 <div class="cz-swatch">
-                    <img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25" 
+                    <img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25"
                     style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="cz-item-name">${h.name || 'Handle'}</div>
                 ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
             `;
 
-                div.onclick = () => {
-                    const wasActive = div.classList.contains('is-active');
+            div.onclick = () => {
+                const wasActive = div.classList.contains('is-active');
 
-                    // Remove active from all handles
-                    handleList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
+                // Remove active from all handles
+                handleList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
 
-                    if (wasActive) {
-                        // Deselect
-                        chosen.handle.id = null;
-                        chosen.handle.price = 0;
-                    } else {
-                        // Select
-                        div.classList.add('is-active');
-                        chosen.handle.id = h.id;
-                        chosen.handle.price = price;
-                    }
-                    refreshPrice();
-                };
+                if (wasActive) {
+                    // Deselect
+                    chosen.handle.id = null;
+                    chosen.handle.price = 0;
+                } else {
+                    // Select
+                    div.classList.add('is-active');
+                    chosen.handle.id = h.id;
+                    chosen.handle.price = price;
+                }
+                refreshPrice();
+            };
 
-                handleList.appendChild(div);
-            });
-            handleList.appendChild(btn);
+            handleList.appendChild(div);
         });
 
         if (handlesToRender.length === 0) {
