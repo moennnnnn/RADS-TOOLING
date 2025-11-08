@@ -553,6 +553,13 @@
         const colList = document.getElementById('colors');
         if (!colList) return;
 
+        // Safety check: ensure partName is valid
+        if (!partName || !chosen[partName]) {
+            console.error('Invalid partName for displayColors:', partName);
+            colList.innerHTML = '<div style="padding:10px;color:#e11">Error: Invalid part selection</div>';
+            return;
+        }
+
         colList.innerHTML = '';
 
         colors.forEach(color => {
@@ -571,6 +578,12 @@
             `;
 
             div.onclick = () => {
+                // Safety check before modifying chosen
+                if (!chosen[partName]) {
+                    console.error('chosen[partName] is undefined:', partName);
+                    return;
+                }
+
                 const wasActive = div.classList.contains('is-active');
 
                 // Remove active from all
@@ -1084,26 +1097,10 @@
         if (allowHandles && Array.isArray(allowHandles.handles) && allowHandles.handles.length) {
             handlesToRender = allowHandles.handles.slice();
         } else {
-            // fallback: fetch handles list
-            try {
-                if (!PID) throw new Error('PID missing');
-                const resp = await fetch(`/RADS-TOOLING/backend/api/admin_customization.php?action=list_handles`, { credentials: 'same-origin' });
-                if (resp.ok) {
-                    const js = await resp.json();
-                    if (js?.success && Array.isArray(js.data)) {
-                        handlesToRender = js.data.map(h => ({
-                            id: Number(h.id),
-                            name: h.handle_name || h.name || '',
-                            preview: h.handle_image || h.file || '',
-                            price: parseFloat(h.base_price || 0)
-                        }));
-                    }
-                } else {
-                    console.warn('list_handles returned', resp.status);
-                }
-            } catch (err) {
-                console.warn('Could not fetch handles fallback:', err);
-            }
+            // No handles assigned to this product - show message
+            handleList.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">No handles available for this product</div>';
+            console.warn('No handles assigned to this product');
+            return;
         }
 
         handlesToRender.forEach(h => {
