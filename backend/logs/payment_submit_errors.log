@@ -28,3 +28,5 @@
 [2025-11-07 12:46:40] Notification insert skipped or failed: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'rads_tooling.admin_notifications' doesn't exist
 [2025-11-07 13:35:55] payment_submit: no address fields posted for order 55 by user 40
 [2025-11-07 13:35:55] Notification insert skipped or failed: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'rads_tooling.admin_notifications' doesn't exist
+[2025-11-09 07:07:18] payment_submit: no address fields posted for order 56 by user 40
+[2025-11-09 07:07:18] Notification insert skipped or failed: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'rads_tooling.admin_notifications' doesn't exist
