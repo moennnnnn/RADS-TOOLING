@@ -278,6 +278,12 @@
         }
         if (model_url && !(await urlExists(model_url))) model_url = '';
 
+        // image
+        let image = d.image || d.image_path || '';
+        if (image && !image.startsWith('/RADS-TOOLING/') && !image.startsWith('http')) {
+            image = '/RADS-TOOLING/' + image.replace(/^\/+/, '');
+        }
+
         // size_confs
         let size_confs = Array.isArray(d.size_confs) ? d.size_confs : [];
         if (!size_confs.length && Array.isArray(d.size_config)) {
@@ -311,6 +317,7 @@
 
         return {
             title: d.title || d.name || d.product_name || 'Cabinet',
+            image: image,
             model_url,
             size_confs,
             allowed,
@@ -1442,8 +1449,12 @@
         });
         addonsTotal += Number(chosen.handle.price || 0);
 
+        // Get product image from productData
+        const productImage = productData?.image || productData?.image_path || '';
+
         return {
             productName: productData?.title || 'Custom Cabinet',
+            productImage: productImage,
             basePrice: parseFloat(basePrice.toFixed(2)),
             computedTotal: computedTotal,
             computedTotalWithVAT: computedTotalWithVAT,

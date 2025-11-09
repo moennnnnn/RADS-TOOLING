@@ -551,6 +551,19 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
           <li><span>Quantity</span><strong><?= $qty ?></strong></li>
         </ul>
 
+        <!-- ✅ Customization Breakdown (populated by JavaScript) -->
+        <div id="customizationBreakdown" style="display: none; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 10px; border: 2px solid #e5e7eb;">
+          <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-rounded" style="font-size: 20px; color: #3b82f6;">palette</span>
+            Customizations
+          </h4>
+          <ul class="review-list" id="customizationList" style="margin: 0;"></ul>
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 2px solid #e5e7eb; display: flex; justify-content: space-between; font-weight: 700; color: #2f5b88;">
+            <span>Add-ons Total:</span>
+            <span id="addonsTotal">₱ 0.00</span>
+          </div>
+        </div>
+
         <h3 class="card-title" style="margin-top: 32px;">
           <span class="material-symbols-rounded">person</span>
           Contact Information
@@ -797,6 +810,72 @@ window.RT_ORDER = <?= json_encode([
         ]
       ],
 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+// ✅ Load customization data from sessionStorage if available
+(function() {
+    try {
+        const customDataStr = sessionStorage.getItem('customizationData');
+        if (customDataStr) {
+            const customData = JSON.parse(customDataStr);
+            console.log('✅ Found customization data:', customData);
+
+            // Add customization fields to RT_ORDER
+            window.RT_ORDER.selectedCustomizations = customData.selectedCustomizations || [];
+            window.RT_ORDER.computedAddonsTotal = customData.computedAddonsTotal || customData.addonsTotal || 0;
+            window.RT_ORDER.computedTotal = customData.computedTotal || 0;
+
+            // Update totals if customizations exist
+            if (window.RT_ORDER.selectedCustomizations.length > 0) {
+                const basePrice = customData.basePrice || 0;
+                const addonsTotal = window.RT_ORDER.computedAddonsTotal;
+                const itemTotal = basePrice + addonsTotal;
+                const qty = window.RT_ORDER.qty || 1;
+
+                // Recalculate totals
+                const subtotal = itemTotal * qty;
+                const vat = subtotal * 0.12;
+                const shipping = (window.RT_ORDER.mode === 'delivery') ? 500 : 0;
+                const total = subtotal + vat + shipping;
+
+                window.RT_ORDER.subtotal = subtotal;
+                window.RT_ORDER.vat = vat;
+                window.RT_ORDER.total = total;
+
+                // ✅ Display customizations in the UI
+                displayCustomizations(window.RT_ORDER.selectedCustomizations, addonsTotal);
+
+                console.log('✅ Updated RT_ORDER with customizations:', window.RT_ORDER);
+            }
+        } else {
+            console.log('ℹ️ No customization data found');
+        }
+    } catch (err) {
+        console.error('❌ Error loading customization data:', err);
+    }
+
+    function displayCustomizations(customizations, addonsTotal) {
+        const breakdownDiv = document.getElementById('customizationBreakdown');
+        const customList = document.getElementById('customizationList');
+        const addonsTotalSpan = document.getElementById('addonsTotal');
+
+        if (!breakdownDiv || !customList || !addonsTotalSpan) return;
+
+        if (customizations && customizations.length > 0) {
+            // Build list of customizations
+            const html = customizations.map(c => {
+                const label = c.label || c.type;
+                const appliesTo = c.applies_to ? ` (${c.applies_to})` : '';
+                const price = c.price > 0 ? `+₱${c.price.toFixed(2)}` : '';
+                return `<li><span>${label}${appliesTo}</span><strong style="color: #059669;">${price}</strong></li>`;
+            }).join('');
+
+            customList.innerHTML = html;
+            addonsTotalSpan.textContent = '₱ ' + addonsTotal.toFixed(2);
+            breakdownDiv.style.display = 'block';
+        }
+    }
+})();
+
 console.log('✅ RT_ORDER:', window.RT_ORDER);
 </script>
 <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>

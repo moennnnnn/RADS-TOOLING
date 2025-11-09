@@ -763,7 +763,7 @@ $avatarHtml   = $img
                     selectedCustomizations: selectedCustomizations, // API format
                     addonsTotal: customData.addonsTotal,
                     computedTotal: customData.computedTotal,
-                    image: '', // Set if you have product image
+                    image: customData.productImage || '',
                     quantity: 1,
                     isCustomized: true
                 };
