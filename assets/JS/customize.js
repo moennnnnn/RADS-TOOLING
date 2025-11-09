@@ -1134,6 +1134,35 @@
         }
     }
 
+    // Normalize handle data to ensure consistent image URL and price
+    function normalizeHandle(item) {
+        if (!item) return null;
+
+        // Ensure image URL is properly constructed
+        if (!item.imageUrl && !item.preview) {
+            // Try common field names
+            if (item.filename) {
+                item.imageUrl = HANDLE_DIR + item.filename;
+            } else if (item.image) {
+                item.imageUrl = HANDLE_DIR + item.image;
+            } else if (item.handle_image) {
+                item.imageUrl = HANDLE_DIR + item.handle_image;
+            }
+        } else if (item.preview && !item.imageUrl) {
+            item.imageUrl = HANDLE_DIR + item.preview;
+        } else if (item.imageUrl && !item.imageUrl.includes('/')) {
+            // If imageUrl is just a filename, prepend HANDLE_DIR
+            item.imageUrl = HANDLE_DIR + item.imageUrl;
+        }
+
+        // Get price from pricing map if not in item
+        if (!item.price && productData?.pricing?.handles) {
+            item.price = productData.pricing.handles[String(item.id)] || 0;
+        }
+
+        return item;
+    }
+
     async function rebuildHandleOptions() {
         if (!handleList) return;
         handleList.innerHTML = '';
@@ -1143,7 +1172,7 @@
         let handlesToRender = [];
 
         if (allowHandles && Array.isArray(allowHandles.handles) && allowHandles.handles.length) {
-            handlesToRender = allowHandles.handles.slice();
+            handlesToRender = allowHandles.handles.slice().map(normalizeHandle).filter(h => h !== null);
         } else {
             // No handles assigned to this product - show message
             handleList.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">No handles available for this product</div>';
@@ -1159,43 +1188,38 @@
             if (isActive) div.classList.add('is-active');
 
             const price = parseFloat(h.price || 0);
-            const src = HANDLE_DIR + (h.preview || '');
+            // Use normalized imageUrl with fallbacks
+            const imgSrc = h.imageUrl || h.preview || '/assets/IMG/no-image.png';
 
-            (filtered || []).forEach(h => {
-                const btn = document.createElement('button');
-                btn.className = 'cz-item';
-                const src = HANDLE_DIR + (h.preview || '');
-                div.innerHTML = `
+            div.innerHTML = `
                 <div class="cz-swatch">
-                    <img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25" 
+                    <img src="${imgSrc}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25"
                     style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="cz-item-name">${h.name || 'Handle'}</div>
                 ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
             `;
 
-                div.onclick = () => {
-                    const wasActive = div.classList.contains('is-active');
+            div.onclick = () => {
+                const wasActive = div.classList.contains('is-active');
 
-                    // Remove active from all handles
-                    handleList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
+                // Remove active from all handles
+                handleList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
 
-                    if (wasActive) {
-                        // Deselect
-                        chosen.handle.id = null;
-                        chosen.handle.price = 0;
-                    } else {
-                        // Select
-                        div.classList.add('is-active');
-                        chosen.handle.id = h.id;
-                        chosen.handle.price = price;
-                    }
-                    refreshPrice();
-                };
+                if (wasActive) {
+                    // Deselect
+                    chosen.handle.id = null;
+                    chosen.handle.price = 0;
+                } else {
+                    // Select
+                    div.classList.add('is-active');
+                    chosen.handle.id = h.id;
+                    chosen.handle.price = price;
+                }
+                refreshPrice();
+            };
 
-                handleList.appendChild(div);
-            });
-            handleList.appendChild(btn);
+            handleList.appendChild(div);
         });
 
         if (handlesToRender.length === 0) {
