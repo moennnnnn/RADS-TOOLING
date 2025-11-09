@@ -309,6 +309,11 @@
           return;
         }
 
+        // ✅ FIX: Save cart + mode to sessionStorage before redirect
+        sessionStorage.setItem('checkoutCart', JSON.stringify(cart));
+        sessionStorage.setItem('checkoutMode', selectedMode);
+        console.log('✅ Saved to sessionStorage - Mode:', selectedMode, 'Cart:', cart);
+
         // Redirect to checkout with mode
         if (selectedMode === 'delivery') {
           window.location.href = `/RADS-TOOLING/customer/checkout_delivery.php?pid=${firstItem.id}`;
@@ -400,6 +405,10 @@
       showNotification('Your cart is empty', 'error');
       return;
     }
+
+    // ✅ FIX: Store cart in sessionStorage for checkout access
+    sessionStorage.setItem('checkoutCart', JSON.stringify(cart));
+    console.log('✅ Cart saved to sessionStorage for checkout:', cart);
 
     // Show mode selection modal
     const modal = document.getElementById('buyChoiceModal');

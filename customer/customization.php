@@ -639,19 +639,31 @@ $avatarHtml   = $img
                 const pid = b.dataset.pid || window.PID || '';
                 const qty = '1'; // customization page default = 1
 
-                // Store customization data (full format with selectedCustomizations array)
+                // ✅ FIX: Store customization data in cart format (same as cart.js)
                 if (typeof window.getCustomizationData === 'function' && typeof window.getSelectedCustomizationsArray === 'function') {
                     const customData = window.getCustomizationData();
                     const selectedCustomizations = window.getSelectedCustomizationsArray();
 
-                    const fullCustomData = {
-                        ...customData,
-                        selectedCustomizations: selectedCustomizations,
-                        computedAddonsTotal: customData.addonsTotal,
-                        computedTotal: customData.computedTotal
+                    // Create cart item in the same format as cart.js
+                    const cartItem = {
+                        id: parseInt(pid) || 0,
+                        name: customData.productName || 'Custom Cabinet',
+                        type: 'custom',
+                        price: customData.computedTotal,
+                        priceWithVAT: customData.computedTotalWithVAT,
+                        basePrice: customData.basePrice,
+                        customization: customData.selectedOptions,
+                        selectedCustomizations: selectedCustomizations, // API format
+                        addonsTotal: customData.addonsTotal,
+                        computedTotal: customData.computedTotal,
+                        image: customData.productImage || '',
+                        quantity: 1,
+                        isCustomized: true
                     };
 
-                    sessionStorage.setItem('customizationData', JSON.stringify(fullCustomData));
+                    // Save as checkoutCart (single-item array) for checkout compatibility
+                    sessionStorage.setItem('checkoutCart', JSON.stringify([cartItem]));
+                    console.log('✅ Saved customization to checkoutCart:', cartItem);
                 }
 
                 modal.dataset.pid = String(pid);
@@ -697,6 +709,10 @@ $avatarHtml   = $img
                 const qty = modal.dataset.qty || '1';
                 const mode = modal.dataset.mode || '';
                 if (!pid || !mode) return;
+
+                // ✅ FIX: Save mode to sessionStorage
+                sessionStorage.setItem('checkoutMode', mode);
+                console.log('✅ Saved checkout mode:', mode);
 
                 const url = (mode === 'delivery') ?
                     `/RADS-TOOLING/customer/checkout_delivery.php?pid=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}&custom=1` :
