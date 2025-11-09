@@ -685,20 +685,20 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 
     <div class="rt-card rt-step" id="depositModal" hidden>
       <h3>Select Payment Amount</h3>
-      <div class="rt-sub">Total Amount: <b>₱<?= number_format($total, 2) ?></b></div>
+      <div class="rt-sub">Total Amount: <b id="depositModalTotal">₱<?= number_format($total, 2) ?></b></div>
 
       <div class="rt-chips">
         <button class="rt-chip pay-chip" data-dep="30">
           <span>30%</span>
-          <small>₱<?= number_format($total * 0.30, 2) ?></small>
+          <small id="deposit30">₱<?= number_format($total * 0.30, 2) ?></small>
         </button>
         <button class="rt-chip pay-chip" data-dep="50">
           <span>50%</span>
-          <small>₱<?= number_format($total * 0.50, 2) ?></small>
+          <small id="deposit50">₱<?= number_format($total * 0.50, 2) ?></small>
         </button>
         <button class="rt-chip pay-chip" data-dep="100">
           <span>100%</span>
-          <small>₱<?= number_format($total, 2) ?></small>
+          <small id="deposit100">₱<?= number_format($total, 2) ?></small>
         </button>
       </div>
 
@@ -867,6 +867,9 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
           // ✅ Update price summary in the DOM
           updatePriceSummary(subtotal, vat, shipping, total);
 
+          // ✅ Update payment modal deposit amounts
+          updateDepositModal(total);
+
           console.log('✅ Updated RT_ORDER with customizations:', window.RT_ORDER);
         } else {
           console.log('ℹ️ Cart item is not customized');
@@ -922,6 +925,26 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
         });
 
         console.log('✅ Price summary updated in DOM');
+      }
+
+      function updateDepositModal(total) {
+        // Update deposit modal total and percentages
+        const depositModalTotal = document.getElementById('depositModalTotal');
+        const deposit30 = document.getElementById('deposit30');
+        const deposit50 = document.getElementById('deposit50');
+        const deposit100 = document.getElementById('deposit100');
+
+        const fmt = (val) => '₱' + val.toLocaleString('en-PH', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        if (depositModalTotal) depositModalTotal.textContent = fmt(total);
+        if (deposit30) deposit30.textContent = fmt(total * 0.30);
+        if (deposit50) deposit50.textContent = fmt(total * 0.50);
+        if (deposit100) deposit100.textContent = fmt(total);
+
+        console.log('✅ Deposit modal updated with total:', total);
       }
     })();
 
