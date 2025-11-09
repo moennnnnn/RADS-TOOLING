@@ -23,14 +23,14 @@ $street   = $_POST['street'] ?? '';
 
 $product = null;
 if ($pid > 0) {
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND status = 'released'");
-    $stmt->execute([$pid]);
-    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+  $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND status = 'released'");
+  $stmt->execute([$pid]);
+  $product = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
 if (!$product) {
-    header('Location: /RADS-TOOLING/customer/products.php');
-    exit;
+  header('Location: /RADS-TOOLING/customer/products.php');
+  exit;
 }
 
 $qty       = 1;
@@ -40,7 +40,7 @@ $vat       = $subtotal * 0.12;
 $shipping  = 0;
 
 if ($mode === 'delivery') {
-    $shipping = 500;
+  $shipping = 500;
 }
 
 $total = $subtotal + $vat + $shipping;
@@ -50,26 +50,27 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <title>Review & Payment - Rads Tooling</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+
   <!-- ✅ CRITICAL: Fonts MUST load first -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-  
+
   <!-- ✅ FIXED: Proper Material Symbols loading with FILL enabled -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-  
+
   <link rel="stylesheet" href="../assets/CSS/Homepage.css">
   <link rel="stylesheet" href="../assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="../assets/CSS/about.css">
   <link rel="stylesheet" href="../assets/CSS/checkout.css">
   <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
   <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
-  
+
   <style>
     /* ✅ Force Poppins everywhere */
     * {
@@ -512,293 +513,375 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
     }
   </style>
 </head>
+
 <body>
-<div class="page-wrapper">
-  <header class="navbar">
-    <div class="navbar-container">
-      <div class="navbar-brand">
-        <a class="logo-link" href="/RADS-TOOLING/customer/homepage.php">
-          <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-        </a>
-      </div>
-      <div class="navbar-actions">
-        <a class="cart-button" href="/RADS-TOOLING/cart.php">
-          <span class="material-symbols-rounded">shopping_cart</span>
-          <span id="cartCount" class="cart-badge">0</span>
-        </a>
-      </div>
-    </div>
-    <nav class="navbar-menu">
-      <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
-      <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-      <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
-      <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
-    </nav>
-  </header>
-
-  <main class="checkout-main review-wrap">
-    <h1 class="checkout-title">Review & Payment</h1>
-    
-    <div class="checkout-grid">
-      <section class="checkout-card">
-        <h3 class="card-title">
-          <span class="material-symbols-rounded">inventory_2</span>
-          Order Summary
-        </h3>
-        <ul class="review-list">
-          <li><span>Product</span><strong><?= htmlspecialchars($product['name']) ?></strong></li>
-          <li><span>Unit Price</span><strong>₱ <?= number_format($basePrice,2) ?></strong></li>
-          <li><span>Quantity</span><strong><?= $qty ?></strong></li>
-        </ul>
-
-        <h3 class="card-title" style="margin-top: 32px;">
-          <span class="material-symbols-rounded">person</span>
-          Contact Information
-        </h3>
-        <ul class="review-list">
-          <li><span>Name</span><strong><?= htmlspecialchars("$first $last") ?></strong></li>
-          <?php if ($email): ?>
-          <li><span>Email</span><strong><?= htmlspecialchars($email) ?></strong></li>
-          <?php endif; ?>
-          <li><span>Phone</span><strong><?= htmlspecialchars($phone) ?></strong></li>
-        </ul>
-
-        <?php if ($mode === 'delivery'): ?>
-        <h3 class="card-title" style="margin-top: 32px;">
-          <span class="material-symbols-rounded">local_shipping</span>
-          Delivery Address
-        </h3>
-        <div class="delivery-address-banner">
-          <h4>
-            <span class="material-symbols-rounded">location_on</span>
-            Shipping To:
-          </h4>
-          <p>
-            <?php 
-            $addressParts = array_filter([
-              $street ? htmlspecialchars($street) : '',
-              $barangay ? 'Brgy. ' . htmlspecialchars($barangay) : '',
-              $city ? htmlspecialchars($city) : '',
-              $province ? htmlspecialchars($province) : '',
-              $postal ? htmlspecialchars($postal) : ''
-            ]);
-            echo implode(', ', $addressParts);
-            ?>
-          </p>
+  <div class="page-wrapper">
+    <header class="navbar">
+      <div class="navbar-container">
+        <div class="navbar-brand">
+          <a class="logo-link" href="/RADS-TOOLING/customer/homepage.php">
+            <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
+          </a>
         </div>
-        <?php else: ?>
-        <div class="pickup-info-banner">
-          <span class="material-symbols-rounded">store</span>
-          <div class="content">
-            <p>Pick-up Location:</p>
-            <p>Green Breeze, Piela, Dasmariñas, Cavite<br>
-            <strong>Hours:</strong> Mon-Sat, 8:00 AM - 5:00 PM</p>
+        <div class="navbar-actions">
+          <a class="cart-button" href="/RADS-TOOLING/cart.php">
+            <span class="material-symbols-rounded">shopping_cart</span>
+            <span id="cartCount" class="cart-badge">0</span>
+          </a>
+        </div>
+      </div>
+      <nav class="navbar-menu">
+        <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
+        <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
+        <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
+        <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+      </nav>
+    </header>
+
+    <main class="checkout-main review-wrap">
+      <h1 class="checkout-title">Review & Payment</h1>
+
+      <div class="checkout-grid">
+        <section class="checkout-card">
+          <h3 class="card-title">
+            <span class="material-symbols-rounded">inventory_2</span>
+            Order Summary
+          </h3>
+          <ul class="review-list">
+            <li><span>Product</span><strong><?= htmlspecialchars($product['name']) ?></strong></li>
+            <li><span>Unit Price</span><strong>₱ <?= number_format($basePrice, 2) ?></strong></li>
+            <li><span>Quantity</span><strong><?= $qty ?></strong></li>
+          </ul>
+
+          <!-- ✅ Customization Breakdown (populated by JavaScript) -->
+          <div id="customizationBreakdown" style="display: none; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 10px; border: 2px solid #e5e7eb;">
+            <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 8px;">
+              <span class="material-symbols-rounded" style="font-size: 20px; color: #3b82f6;">palette</span>
+              Customizations
+            </h4>
+            <ul class="review-list" id="customizationList" style="margin: 0;"></ul>
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 2px solid #e5e7eb; display: flex; justify-content: space-between; font-weight: 700; color: #2f5b88;">
+              <span>Add-ons Total:</span>
+              <span id="addonsTotal">₱ 0.00</span>
+            </div>
           </div>
-        </div>
-        <?php endif; ?>
 
-        <div class="rt-actions">
-          <button type="button" class="rt-btn main" id="inlineBuyBtn">
-            <span class="material-symbols-rounded">payment</span>
-            Proceed to Payment
-          </button>
-        </div>
-      </section>
+          <h3 class="card-title" style="margin-top: 32px;">
+            <span class="material-symbols-rounded">person</span>
+            Contact Information
+          </h3>
+          <ul class="review-list">
+            <li><span>Name</span><strong><?= htmlspecialchars("$first $last") ?></strong></li>
+            <?php if ($email): ?>
+              <li><span>Email</span><strong><?= htmlspecialchars($email) ?></strong></li>
+            <?php endif; ?>
+            <li><span>Phone</span><strong><?= htmlspecialchars($phone) ?></strong></li>
+          </ul>
 
-      <aside class="checkout-card" style="position: sticky; top: 100px;">
-        <h3 class="card-title">
-          <span class="material-symbols-rounded">payments</span>
-          Price Summary
-        </h3>
-        
-        <div class="sum-row">
-          <span>Subtotal</span>
-          <strong>₱ <?= number_format($subtotal,2) ?></strong>
-        </div>
-        
-        <div class="sum-row">
-          <span>VAT (12%)</span>
-          <span>₱ <?= number_format($vat,2) ?></span>
-        </div>
-        
-        <?php if ($mode === 'delivery'): ?>
-        <div class="sum-row">
-          <span>Shipping Fee</span>
-          <span>₱ <?= number_format($shipping,2) ?></span>
-        </div>
-        <?php endif; ?>
-        
-        <div class="sum-row total">
-          <strong>Total Amount</strong>
-          <strong>₱ <?= number_format($total,2) ?></strong>
-        </div>
+          <?php if ($mode === 'delivery'): ?>
+            <h3 class="card-title" style="margin-top: 32px;">
+              <span class="material-symbols-rounded">local_shipping</span>
+              Delivery Address
+            </h3>
+            <div class="delivery-address-banner">
+              <h4>
+                <span class="material-symbols-rounded">location_on</span>
+                Shipping To:
+              </h4>
+              <p>
+                <?php
+                $addressParts = array_filter([
+                  $street ? htmlspecialchars($street) : '',
+                  $barangay ? 'Brgy. ' . htmlspecialchars($barangay) : '',
+                  $city ? htmlspecialchars($city) : '',
+                  $province ? htmlspecialchars($province) : '',
+                  $postal ? htmlspecialchars($postal) : ''
+                ]);
+                echo implode(', ', $addressParts);
+                ?>
+              </p>
+            </div>
+          <?php else: ?>
+            <div class="pickup-info-banner">
+              <span class="material-symbols-rounded">store</span>
+              <div class="content">
+                <p>Pick-up Location:</p>
+                <p>Green Breeze, Piela, Dasmariñas, Cavite<br>
+                  <strong>Hours:</strong> Mon-Sat, 8:00 AM - 5:00 PM
+                </p>
+              </div>
+            </div>
+          <?php endif; ?>
 
-        <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 10px; font-size: 13px; color: #6b7280; line-height: 1.6;">
-          <strong style="color: #374151; display: block; margin-bottom: 6px;">Payment Options:</strong>
-          • GCash or BPI online transfer<br>
-          • Pay 30%, 50%, or 100% upfront<br>
-          • Secure payment verification
-        </div>
-      </aside>
+          <div class="rt-actions">
+            <button type="button" class="rt-btn main" id="inlineBuyBtn">
+              <span class="material-symbols-rounded">payment</span>
+              Proceed to Payment
+            </button>
+          </div>
+        </section>
+
+        <aside class="checkout-card" style="position: sticky; top: 100px;">
+          <h3 class="card-title">
+            <span class="material-symbols-rounded">payments</span>
+            Price Summary
+          </h3>
+
+          <div class="sum-row">
+            <span>Subtotal</span>
+            <strong>₱ <?= number_format($subtotal, 2) ?></strong>
+          </div>
+
+          <div class="sum-row">
+            <span>VAT (12%)</span>
+            <span>₱ <?= number_format($vat, 2) ?></span>
+          </div>
+
+          <?php if ($mode === 'delivery'): ?>
+            <div class="sum-row">
+              <span>Shipping Fee</span>
+              <span>₱ <?= number_format($shipping, 2) ?></span>
+            </div>
+          <?php endif; ?>
+
+          <div class="sum-row total">
+            <strong>Total Amount</strong>
+            <strong>₱ <?= number_format($total, 2) ?></strong>
+          </div>
+
+          <div style="margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 10px; font-size: 13px; color: #6b7280; line-height: 1.6;">
+            <strong style="color: #374151; display: block; margin-bottom: 6px;">Payment Options:</strong>
+            • GCash or BPI online transfer<br>
+            • Pay 30%, 50%, or 100% upfront<br>
+            • Secure payment verification
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-bottom">
+        <p>© 2025 RADS TOOLING INC. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- PAYMENT WIZARD MODALS -->
+  <div class="rt-modal" id="rtModal" hidden>
+    <div class="rt-card rt-step" id="methodModal" hidden>
+      <h3>Select Payment Method</h3>
+      <p class="rt-sub">Choose your preferred payment option</p>
+      <div class="rt-list">
+        <button class="rt-list__item pay-chip" data-pay="gcash">
+          <span>GCash</span>
+          <span class="rt-arrow">→</span>
+        </button>
+        <button class="rt-list__item pay-chip" data-pay="bpi">
+          <span>BPI</span>
+          <span class="rt-arrow">→</span>
+        </button>
+      </div>
+      <div class="rt-actions" style="display: flex; gap: 12px; margin-top: 24px;">
+        <button class="rt-btn ghost" data-close>Close</button>
+        <button class="rt-btn main" id="btnChooseDeposit" disabled style="flex: 2;">Next</button>
+      </div>
     </div>
-  </main>
 
-  <footer class="footer">
-    <div class="footer-bottom">
-      <p>© 2025 RADS TOOLING INC. All rights reserved.</p>
-    </div>
-  </footer>
-</div>
+    <div class="rt-card rt-step" id="depositModal" hidden>
+      <h3>Select Payment Amount</h3>
+      <div class="rt-sub">Total Amount: <b>₱<?= number_format($total, 2) ?></b></div>
 
-<!-- PAYMENT WIZARD MODALS -->
-<div class="rt-modal" id="rtModal" hidden>
-  <div class="rt-card rt-step" id="methodModal" hidden>
-    <h3>Select Payment Method</h3>
-    <p class="rt-sub">Choose your preferred payment option</p>
-    <div class="rt-list">
-      <button class="rt-list__item pay-chip" data-pay="gcash">
-        <span>GCash</span>
-        <span class="rt-arrow">→</span>
-      </button>
-      <button class="rt-list__item pay-chip" data-pay="bpi">
-        <span>BPI</span>
-        <span class="rt-arrow">→</span>
-      </button>
+      <div class="rt-chips">
+        <button class="rt-chip pay-chip" data-dep="30">
+          <span>30%</span>
+          <small>₱<?= number_format($total * 0.30, 2) ?></small>
+        </button>
+        <button class="rt-chip pay-chip" data-dep="50">
+          <span>50%</span>
+          <small>₱<?= number_format($total * 0.50, 2) ?></small>
+        </button>
+        <button class="rt-chip pay-chip" data-dep="100">
+          <span>100%</span>
+          <small>₱<?= number_format($total, 2) ?></small>
+        </button>
+      </div>
+
+      <div class="rt-actions" style="display: flex; gap: 12px;">
+        <button class="rt-btn ghost" data-back="#methodModal">Back</button>
+        <button class="rt-btn main" id="btnPayNow" disabled style="flex: 2;">Proceed to Pay</button>
+      </div>
     </div>
-    <div class="rt-actions" style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="rt-btn ghost" data-close>Close</button>
-      <button class="rt-btn main" id="btnChooseDeposit" disabled style="flex: 2;">Next</button>
+
+    <div class="rt-card rt-step" id="qrModal" hidden>
+      <h3>Scan QR Code to Pay</h3>
+      <div class="rt-qrwrap">
+        <div id="qrBox" class="rt-qr">Loading QR Code...</div>
+      </div>
+      <div class="rt-sub" style="font-size: 18px; margin: 16px 0;">
+        Amount to pay: <b id="amountDueLabel">₱0.00</b>
+      </div>
+      <div style="font-size: 14px; color: #6b7280;">Scan with your selected payment app</div>
+
+      <div class="rt-actions" style="display: flex; gap: 12px; margin-top: 24px;">
+        <button class="rt-btn ghost" data-back="#depositModal">Back</button>
+        <button class="rt-btn main" id="btnIpaid" style="flex: 2;">I've Completed Payment</button>
+      </div>
+    </div>
+
+    <div class="rt-card rt-step" id="verifyModal" hidden>
+      <h3>Verify Your Payment</h3>
+      <p class="rt-sub">Please provide your payment details for verification</p>
+      <div class="rt-form">
+        <label>Account Name
+          <input type="text" id="vpName" placeholder="Enter your account name" required>
+        </label>
+        <label>Account Number <small style="color: #6b7280;">(digits only)</small>
+          <input type="text" id="vpNum" placeholder="Enter your account number" required inputmode="numeric">
+        </label>
+        <label>Reference Number <small style="color: #6b7280;">(digits only)</small>
+          <input type="text" id="vpRef" placeholder="Enter transaction reference number" required inputmode="numeric">
+        </label>
+        <label>Amount Paid
+          <input type="number" id="vpAmt" step="0.01" placeholder="0.00" required>
+        </label>
+        <label>Payment Screenshot
+          <input type="file" id="vpShot" accept="image/*" required>
+        </label>
+      </div>
+      <div class="rt-actions" style="display: flex; gap: 12px;">
+        <button class="rt-btn ghost" data-back="#qrModal">Back</button>
+        <button class="rt-btn main" id="btnVerify" style="flex: 2;">Submit Verification</button>
+      </div>
+    </div>
+
+    <div class="rt-card rt-step" id="finalNotice" hidden>
+      <div style="text-align: center; padding: 20px 0;">
+        <span class="material-symbols-rounded" style="font-size: 64px; color: #10b981;">check_circle</span>
+        <h3 style="margin: 16px 0 8px 0;">Payment Submitted Successfully!</h3>
+        <p class="rt-sub" style="font-size: 15px; color: #6b7280; line-height: 1.6;">
+          Your payment is <b style="color: #2f5b88;">under verification</b>.
+          Please check <b>Profile → Orders</b> to see the approval status.
+        </p>
+      </div>
+      <div class="rt-actions" style="display: flex; gap: 12px;">
+        <button class="rt-btn ghost" data-close>Close</button>
+        <button class="rt-btn main" id="btnGoOrders" style="flex: 2;">View My Orders</button>
+      </div>
     </div>
   </div>
 
-  <div class="rt-card rt-step" id="depositModal" hidden>
-    <h3>Select Payment Amount</h3>
-    <div class="rt-sub">Total Amount: <b>₱<?= number_format($total,2) ?></b></div>
-
-    <div class="rt-chips">
-      <button class="rt-chip pay-chip" data-dep="30">
-        <span>30%</span>
-        <small>₱<?= number_format($total * 0.30,2) ?></small>
-      </button>
-      <button class="rt-chip pay-chip" data-dep="50">
-        <span>50%</span>
-        <small>₱<?= number_format($total * 0.50,2) ?></small>
-      </button>
-      <button class="rt-chip pay-chip" data-dep="100">
-        <span>100%</span>
-        <small>₱<?= number_format($total,2) ?></small>
-      </button>
-    </div>
-
-    <div class="rt-actions" style="display: flex; gap: 12px;">
-      <button class="rt-btn ghost" data-back="#methodModal">Back</button>
-      <button class="rt-btn main" id="btnPayNow" disabled style="flex: 2;">Proceed to Pay</button>
+  <div id="qrZoomModal">
+    <div class="zoom-container">
+      <button class="zoom-close" onclick="closeQrZoom()">×</button>
+      <div class="zoom-qr">
+        <img id="zoomQrImage" src="" alt="QR Code">
+      </div>
     </div>
   </div>
 
-  <div class="rt-card rt-step" id="qrModal" hidden>
-    <h3>Scan QR Code to Pay</h3>
-    <div class="rt-qrwrap">
-      <div id="qrBox" class="rt-qr">Loading QR Code...</div>
-    </div>
-    <div class="rt-sub" style="font-size: 18px; margin: 16px 0;">
-      Amount to pay: <b id="amountDueLabel">₱0.00</b>
-    </div>
-    <div style="font-size: 14px; color: #6b7280;">Scan with your selected payment app</div>
+  <input type="hidden" id="paymentMethod">
+  <input type="hidden" id="depositRate">
 
-    <div class="rt-actions" style="display: flex; gap: 12px; margin-top: 24px;">
-      <button class="rt-btn ghost" data-back="#depositModal">Back</button>
-      <button class="rt-btn main" id="btnIpaid" style="flex: 2;">I've Completed Payment</button>
-    </div>
-  </div>
+  <script>
+    window.RT_ORDER = <?= json_encode([
+                        'pid'      => (int)($product['id'] ?? 0),
+                        'qty'      => (int)($qty ?? 1),
+                        'subtotal' => (float)($subtotal ?? 0),
+                        'vat'      => (float)($vat ?? 0),
+                        'total'    => (float)($total ?? 0),
+                        'mode'     => $mode ?? 'delivery',
+                        'info'     => (($mode ?? 'delivery') === 'delivery')
+                          ? [
+                            'delivery' => [
+                              'first_name' => $first ?? '',
+                              'last_name'  => $last  ?? '',
+                              'email'      => $email      ?? '',
+                              'phone'      => $phone      ?? '',
+                              'province'   => $province   ?? '',
+                              'city'       => $city       ?? '',
+                              'barangay'   => $barangay   ?? '',
+                              'postal'     => $postal     ?? '',
+                              'street'     => $street     ?? '',
+                            ]
+                          ]
+                          : [
+                            'pickup' => [
+                              'first_name' => $first ?? '',
+                              'last_name'  => $last  ?? '',
+                              'email'      => $email  ?? '',
+                              'phone'      => $phone      ?? '',
+                            ]
+                          ],
+                      ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
-  <div class="rt-card rt-step" id="verifyModal" hidden>
-    <h3>Verify Your Payment</h3>
-    <p class="rt-sub">Please provide your payment details for verification</p>
-    <div class="rt-form">
-      <label>Account Name
-        <input type="text" id="vpName" placeholder="Enter your account name" required>
-      </label>
-      <label>Account Number <small style="color: #6b7280;">(digits only)</small>
-        <input type="text" id="vpNum" placeholder="Enter your account number" required inputmode="numeric">
-      </label>
-      <label>Reference Number <small style="color: #6b7280;">(digits only)</small>
-        <input type="text" id="vpRef" placeholder="Enter transaction reference number" required inputmode="numeric">
-      </label>
-      <label>Amount Paid
-        <input type="number" id="vpAmt" step="0.01" placeholder="0.00" required>
-      </label>
-      <label>Payment Screenshot
-        <input type="file" id="vpShot" accept="image/*" required>
-      </label>
-    </div>
-    <div class="rt-actions" style="display: flex; gap: 12px;">
-      <button class="rt-btn ghost" data-back="#qrModal">Back</button>
-      <button class="rt-btn main" id="btnVerify" style="flex: 2;">Submit Verification</button>
-    </div>
-  </div>
+    // ✅ Load customization data from sessionStorage if available
+    (function() {
+      try {
+        const customDataStr = sessionStorage.getItem('customizationData');
+        if (customDataStr) {
+          const customData = JSON.parse(customDataStr);
+          console.log('✅ Found customization data:', customData);
 
-  <div class="rt-card rt-step" id="finalNotice" hidden>
-    <div style="text-align: center; padding: 20px 0;">
-      <span class="material-symbols-rounded" style="font-size: 64px; color: #10b981;">check_circle</span>
-      <h3 style="margin: 16px 0 8px 0;">Payment Submitted Successfully!</h3>
-      <p class="rt-sub" style="font-size: 15px; color: #6b7280; line-height: 1.6;">
-        Your payment is <b style="color: #2f5b88;">under verification</b>. 
-        Please check <b>Profile → Orders</b> to see the approval status.
-      </p>
-    </div>
-    <div class="rt-actions" style="display: flex; gap: 12px;">
-      <button class="rt-btn ghost" data-close>Close</button>
-      <button class="rt-btn main" id="btnGoOrders" style="flex: 2;">View My Orders</button>
-    </div>
-  </div>
-</div>
+          // Add customization fields to RT_ORDER
+          window.RT_ORDER.selectedCustomizations = customData.selectedCustomizations || [];
+          window.RT_ORDER.computedAddonsTotal = customData.computedAddonsTotal || customData.addonsTotal || 0;
+          window.RT_ORDER.computedTotal = customData.computedTotal || 0;
 
-<div id="qrZoomModal">
-  <div class="zoom-container">
-    <button class="zoom-close" onclick="closeQrZoom()">×</button>
-    <div class="zoom-qr">
-      <img id="zoomQrImage" src="" alt="QR Code">
-    </div>
-  </div>
-</div>
+          // Update totals if customizations exist
+          if (window.RT_ORDER.selectedCustomizations.length > 0) {
+            const basePrice = customData.basePrice || 0;
+            const addonsTotal = window.RT_ORDER.computedAddonsTotal;
+            const itemTotal = basePrice + addonsTotal;
+            const qty = window.RT_ORDER.qty || 1;
 
-<input type="hidden" id="paymentMethod">
-<input type="hidden" id="depositRate">
+            // Recalculate totals
+            const subtotal = itemTotal * qty;
+            const vat = subtotal * 0.12;
+            const shipping = (window.RT_ORDER.mode === 'delivery') ? 500 : 0;
+            const total = subtotal + vat + shipping;
 
-<script>
-window.RT_ORDER = <?= json_encode([
-  'pid'      => (int)($product['id'] ?? 0),
-  'qty'      => (int)($qty ?? 1),
-  'subtotal' => (float)($subtotal ?? 0),
-  'vat'      => (float)($vat ?? 0),
-  'total'    => (float)($total ?? 0),
-  'mode'     => $mode ?? 'delivery',
-  'info'     => (($mode ?? 'delivery') === 'delivery')
-    ? [
-        'delivery' => [
-          'first_name' => $first ?? '',
-          'last_name'  => $last  ?? '',
-          'email'      => $email      ?? '',
-          'phone'      => $phone      ?? '',
-          'province'   => $province   ?? '',
-          'city'       => $city       ?? '',
-          'barangay'   => $barangay   ?? '',
-          'postal'     => $postal     ?? '',
-          'street'     => $street     ?? '',
-        ]
-      ]
-    : [
-        'pickup' => [
-          'first_name' => $first ?? '',
-          'last_name'  => $last  ?? '',
-          'email'      => $email  ?? '',
-          'phone'      => $phone      ?? '',
-        ]
-      ],
-], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-console.log('✅ RT_ORDER:', window.RT_ORDER);
-</script>
-<script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
+            window.RT_ORDER.subtotal = subtotal;
+            window.RT_ORDER.vat = vat;
+            window.RT_ORDER.total = total;
+
+            // ✅ Display customizations in the UI
+            displayCustomizations(window.RT_ORDER.selectedCustomizations, addonsTotal);
+
+            console.log('✅ Updated RT_ORDER with customizations:', window.RT_ORDER);
+          }
+        } else {
+          console.log('ℹ️ No customization data found');
+        }
+      } catch (err) {
+        console.error('❌ Error loading customization data:', err);
+      }
+
+      function displayCustomizations(customizations, addonsTotal) {
+        const breakdownDiv = document.getElementById('customizationBreakdown');
+        const customList = document.getElementById('customizationList');
+        const addonsTotalSpan = document.getElementById('addonsTotal');
+
+        if (!breakdownDiv || !customList || !addonsTotalSpan) return;
+
+        if (customizations && customizations.length > 0) {
+          // Build list of customizations
+          const html = customizations.map(c => {
+            const label = c.label || c.type;
+            const appliesTo = c.applies_to ? ` (${c.applies_to})` : '';
+            const price = c.price > 0 ? `+₱${c.price.toFixed(2)}` : '';
+            return `<li><span>${label}${appliesTo}</span><strong style="color: #059669;">${price}</strong></li>`;
+          }).join('');
+
+          customList.innerHTML = html;
+          addonsTotalSpan.textContent = '₱ ' + addonsTotal.toFixed(2);
+          breakdownDiv.style.display = 'block';
+        }
+      }
+    })();
+    
+    console.log('✅ RT_ORDER:', window.RT_ORDER);
+  </script>
+  <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
 </body>
+
 </html>

@@ -37,6 +37,12 @@ $vat = (float)($body['vat'] ?? 0);
 $total = (float)($body['total'] ?? 0);
 $mode = ($body['mode'] ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
 
+// Extract customization data
+$selectedCustomizations = $body['selectedCustomizations'] ?? [];
+$isCustomized = !empty($selectedCustomizations);
+$clientAddonsTotal = (float)($body['computedAddonsTotal'] ?? 0);
+$clientComputedTotal = (float)($body['computedTotal'] ?? 0);
+
 // ✅ FIXED: Extract info from nested structure
 $rawInfo = (array)($body['info'] ?? []);
 
@@ -97,31 +103,121 @@ $pdo->beginTransaction();
 
 try {
     // ==========================================
-    // STEP 1: GET ACTUAL PRODUCT NAME FROM DATABASE
+    // STEP 1: GET ACTUAL PRODUCT NAME & VALIDATE CUSTOMIZATIONS    
     // ==========================================
     $prodName = 'Selected Cabinet'; // Default fallback
+    $basePrice = 0.00;
+    $serverAddonsTotal = 0.00;
+    $validatedCustomizations = [];
 
     if ($pid > 0) {
-        $nameStmt = $pdo->prepare("SELECT name FROM products WHERE id = :pid LIMIT 1");
+        $nameStmt = $pdo->prepare("SELECT id, name, price FROM products WHERE id = :pid LIMIT 1");
         $nameStmt->execute([':pid' => $pid]);
         $productRow = $nameStmt->fetch(PDO::FETCH_ASSOC);
 
         if ($productRow && !empty($productRow['name'])) {
             $prodName = $productRow['name'];
+            $basePrice = (float)$productRow['price'];
         } else {
             // Product not found
             throw new Exception('Product not found');
         }
     }
 
+    // Validate customizations server-side
+    if ($isCustomized && !empty($selectedCustomizations)) {
+        foreach ($selectedCustomizations as $custom) {
+            $type = $custom['type'] ?? '';
+            $id = (int)($custom['id'] ?? 0);
+            $label = $custom['label'] ?? '';
+            $applies_to = $custom['applies_to'] ?? '';
+            $clientPrice = (float)($custom['price'] ?? 0);
+            $meta = $custom['meta'] ?? null;
+
+            $serverPrice = 0.00;
+
+            // Validate each customization type
+            switch ($type) {
+                case 'texture':
+                    if ($id > 0) {
+                        $stmt = $pdo->prepare("SELECT texture_name, base_price FROM textures WHERE id = ? AND is_active = 1 LIMIT 1");
+                        $stmt->execute([$id]);
+                        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if ($row) {
+                            $serverPrice = (float)$row['base_price'];
+                            $label = $row['texture_name'];
+                        }
+                    }
+                    break;
+
+                case 'color':
+                    if ($id > 0) {
+                        $stmt = $pdo->prepare("SELECT color_name, base_price FROM colors WHERE id = ? AND is_active = 1 LIMIT 1");
+                        $stmt->execute([$id]);
+                        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if ($row) {
+                            $serverPrice = (float)$row['base_price'];
+                            $label = $row['color_name'];
+                        }
+                    }
+                    break;
+
+                case 'handle':
+                    if ($id > 0) {
+                        $stmt = $pdo->prepare("SELECT handle_name, base_price FROM handle_types WHERE id = ? AND is_active = 1 LIMIT 1");
+                        $stmt->execute([$id]);
+                        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                        if ($row) {
+                            $serverPrice = (float)$row['base_price'];
+                            $label = $row['handle_name'];
+                        }
+                    }
+                    break;
+
+                case 'size':
+                    // Accept size adjustments from client
+                    $serverPrice = $clientPrice;
+                    break;
+            }
+
+            // Store validated customization
+            $validatedCustomizations[] = [
+                'type' => $type,
+                'id' => $id,
+                'code' => $custom['code'] ?? '',
+                'label' => $label,
+                'applies_to' => $applies_to,
+                'price' => round($serverPrice, 2),
+                'meta' => $meta
+            ];
+
+            $serverAddonsTotal += $serverPrice;
+        }
+    }
+
+    // Server-computed totals
+    $serverAddonsTotal = round($serverAddonsTotal, 2);
+    $serverBaseTotal = round($basePrice * $qty, 2);
+    $serverGrandTotal = round(($basePrice + $serverAddonsTotal) * $qty, 2);
+
+    // Use server values (reject client manipulation)
+    $subtotal = $serverGrandTotal / 1.12; // Remove VAT to get subtotal
+    $vat = $serverGrandTotal - $subtotal;
+    $total = $serverGrandTotal;
+
     // ==========================================
-    // STEP 2: CREATE ORDER
+    // STEP 2: CREATE ORDER (with customization fields)
     // ==========================================
+
+    $customizationsJson = !empty($validatedCustomizations) ? json_encode($validatedCustomizations) : null;
+
     $stmt = $pdo->prepare("INSERT INTO orders
-        (order_code, customer_id, mode, status, payment_status, subtotal, vat, total_amount, order_date)
+        (order_code, customer_id, mode, status, payment_status, subtotal, vat, total_amount,
+         addons_total, base_total, grand_total, customizations, is_customized, order_date)
         VALUES (
             CONCAT('RT', DATE_FORMAT(NOW(),'%y%m%d'), LPAD(FLOOR(RAND()*9999), 4, '0')),
-            :cid, :mode, 'Pending', 'Pending', :sub, :vat, :tot, NOW()
+            :cid, :mode, 'Pending', 'Pending', :sub, :vat, :tot,
+            :addons, :base, :grand, :customs, :is_custom, NOW()
         )");
 
     $stmt->execute([
@@ -129,7 +225,12 @@ try {
         ':mode' => $mode,
         ':sub'  => $subtotal,
         ':vat'  => $vat,
-        ':tot'  => $total
+        ':tot'  => $total,
+        ':addons' => $serverAddonsTotal,
+        ':base' => $serverBaseTotal,
+        ':grand' => $serverGrandTotal,
+        ':customs' => $customizationsJson,
+        ':is_custom' => $isCustomized ? 1 : 0
     ]);
 
     $order_id = (int)$pdo->lastInsertId();
@@ -144,12 +245,14 @@ try {
     $order_code = (string)($stmt->fetchColumn() ?: '');
 
     // ==========================================
-    // STEP 3: INSERT ORDER ITEM WITH ACTUAL NAME
+    // STEP 3: INSERT ORDER ITEM WITH CUSTOMIZATIONS
     // ==========================================
-    $unitPrice = $subtotal / $qty;
+    $unitPrice = ($basePrice + $serverAddonsTotal);
+    $lineTotal = $unitPrice * $qty;
 
-    $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, name, unit_price, qty, line_total)
-                           VALUES (:oid, :pid, :name, :price, :qty, :lt)");
+    $stmt = $pdo->prepare("INSERT INTO order_items
+        (order_id, product_id, name, unit_price, qty, line_total, item_customizations, addons_price, base_price)
+        VALUES (:oid, :pid, :name, :price, :qty, :lt, :customs, :addons, :base)");
 
     $stmt->execute([
         ':oid' => $order_id,
@@ -157,7 +260,10 @@ try {
         ':name' => $prodName,
         ':price' => $unitPrice,
         ':qty' => $qty,
-        ':lt' => $subtotal
+        ':lt' => $lineTotal,
+        ':customs' => $customizationsJson,
+        ':addons' => $serverAddonsTotal,
+        ':base' => $basePrice
     ]);
 
     // ==========================================

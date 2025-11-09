@@ -1,6 +1,6 @@
 // /RADS-TOOLING/assets/JS/cart.js
 
-(function() {
+(function () {
   'use strict';
 
   // Cart state
@@ -8,7 +8,7 @@
   let selectedMode = null;
 
   // Initialize
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     loadCart();
     renderCart();
     setupEventListeners();
@@ -28,10 +28,10 @@
   }
 
   // Add item to cart (called from product pages)
-  window.addToCart = function(product) {
+  window.addToCart = function (product) {
     // Check if product already exists in cart
     const existingIndex = cart.findIndex(item => item.id === product.id);
-    
+
     if (existingIndex !== -1) {
       // Increment quantity
       cart[existingIndex].quantity += 1;
@@ -48,12 +48,12 @@
       });
       showNotification(`${product.name} added to cart!`, 'success');
     }
-    
+
     saveCart();
-    
+
     // Trigger animation
     animateAddToCart(event.target);
-    
+
     // If on cart page, re-render
     if (window.location.pathname.includes('cart.php')) {
       renderCart();
@@ -79,7 +79,7 @@
     if (!item) return;
 
     const newQty = item.quantity + change;
-    
+
     if (newQty < 1) {
       removeFromCart(productId);
       return;
@@ -101,9 +101,9 @@
     if (!container) return;
 
     const searchTerm = document.getElementById('cartSearch')?.value.toLowerCase() || '';
-    
+
     // Filter cart based on search
-    const filteredCart = cart.filter(item => 
+    const filteredCart = cart.filter(item =>
       item.name.toLowerCase().includes(searchTerm) ||
       item.type.toLowerCase().includes(searchTerm)
     );
@@ -131,41 +131,79 @@
       return;
     }
 
-    const subtotal = filteredCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculate totals
+    const subtotal = filteredCart.reduce((sum, item) => {
+      const itemPrice = item.isCustomized ? (item.computedTotal || item.price) : item.price;
+      return sum + (itemPrice * item.quantity);
+    }, 0);
     const vat = subtotal * 0.12;
     const total = subtotal + vat;
+
+    // Helper function to render customization breakdown
+    function renderCustomizationBreakdown(item) {
+      if (!item.isCustomized || !item.selectedCustomizations) return '';
+
+      const customs = item.selectedCustomizations || [];
+      if (customs.length === 0) return '';
+
+      return `
+        <div class="customization-breakdown" style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 6px; font-size: 0.85rem;">
+          <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">Customizations:</div>
+          ${customs.map(c => `
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; color: #6b7280;">
+              <span>${escapeHtml(c.label || c.type)} ${c.applies_to ? `(${c.applies_to})` : ''}</span>
+              ${c.price > 0 ? `<span>+₱${c.price.toFixed(2)}</span>` : ''}
+            </div>
+          `).join('')}
+          ${item.basePrice ? `
+            <div style="border-top: 1px solid #e5e7eb; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; font-weight: 600; color: #111827;">
+              <span>Item Total:</span>
+              <span>₱${(item.computedTotal || item.price).toFixed(2)}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
 
     container.innerHTML = `
       <div class="cart-container">
         <div class="cart-items">
-          ${filteredCart.map(item => `
-            <div class="cart-item" data-product-id="${item.id}">
-              <img src="${item.image}" alt="${escapeHtml(item.name)}" class="cart-item-image" onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
-              
-              <div class="cart-item-details">
-                <h3 class="cart-item-name">${escapeHtml(item.name)}</h3>
-                <p class="cart-item-type">${escapeHtml(item.type)}</p>
-                <p class="cart-item-price">₱${item.price.toLocaleString('en-PH', {minimumFractionDigits: 2})}</p>
-              </div>
+          ${filteredCart.map(item => {
+      const displayPrice = item.isCustomized ?
+        (item.basePrice ? `Base: ₱${item.basePrice.toFixed(2)}` : `₱${item.price.toFixed(2)}`) :
+        `₱${item.price.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+      const itemTotal = item.isCustomized ? (item.computedTotal || item.price) : item.price;
+      return `
+              <div class="cart-item" data-product-id="${item.id}">
+                <img src="${item.image || '/RADS-TOOLING/assets/images/placeholder.jpg'}" alt="${escapeHtml(item.name)}" class="cart-item-image" onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                <div class="cart-item-details">
+                  <h3 class="cart-item-name">
+                    ${escapeHtml(item.name)}
+                    ${item.isCustomized ? '<span style="margin-left: 8px; background: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">CUSTOMIZED</span>' : ''}
+                  </h3>
+                  <p class="cart-item-type">${escapeHtml(item.type)}</p>
+                  <p class="cart-item-price">${displayPrice}</p>
+                  ${renderCustomizationBreakdown(item)}
+                </div>
 
               <div class="cart-item-actions">
-                <div class="cart-item-quantity">
-                  <button class="qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${item.quantity <= 1 ? 'disabled' : ''}>
-                    <span class="material-symbols-rounded">remove</span>
-                  </button>
-                  <span class="qty-value">${item.quantity}</span>
-                  <button class="qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${item.quantity >= 10 ? 'disabled' : ''}>
-                    <span class="material-symbols-rounded">add</span>
+                  <div class="cart-item-quantity">
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${item.quantity <= 1 ? 'disabled' : ''}>
+                      <span class="material-symbols-rounded">remove</span>
+                    </button>
+                    <span class="qty-value">${item.quantity}</span>
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${item.quantity >= 10 ? 'disabled' : ''}>
+                      <span class="material-symbols-rounded">add</span>
+                    </button>
+                  </div>
+                  <button class="remove-btn" onclick="removeCartItem(${item.id})">
+                    <span class="material-symbols-rounded">delete</span>
+                    Remove
                   </button>
                 </div>
-                
-                <button class="remove-btn" onclick="removeCartItem(${item.id})">
-                  <span class="material-symbols-rounded">delete</span>
-                  Remove
-                </button>
+              `;
+    }).join('')}
               </div>
-            </div>
-          `).join('')}
         </div>
 
         <div class="cart-summary">
@@ -173,17 +211,17 @@
           
           <div class="summary-row">
             <span>Subtotal (${filteredCart.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
-            <span>₱${subtotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
+            <span>₱${subtotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
           </div>
           
           <div class="summary-row">
             <span>VAT (12%)</span>
-            <span>₱${vat.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
+            <span>₱${vat.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
           </div>
           
           <div class="summary-row">
             <strong>Total</strong>
-            <strong>₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong>
+            <strong>₱${total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong>
           </div>
 
           <button class="checkout-btn" onclick="proceedToCheckout()">
@@ -210,15 +248,15 @@
     // Profile dropdown
     const profileToggle = document.getElementById('profileToggle');
     const profileDropdown = document.getElementById('profileDropdown');
-    
+
     if (profileToggle && profileDropdown) {
-      profileToggle.addEventListener('click', function(e) {
+      profileToggle.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         profileDropdown.classList.toggle('show');
       });
 
-      document.addEventListener('click', function(e) {
+      document.addEventListener('click', function (e) {
         if (!profileToggle.contains(e.target) && !profileDropdown.contains(e.target)) {
           profileDropdown.classList.remove('show');
         }
@@ -263,7 +301,7 @@
     if (okBtn) {
       okBtn.addEventListener('click', () => {
         if (!selectedMode) return;
-        
+
         // Get first item from cart (or create multi-item order)
         const firstItem = cart[0];
         if (!firstItem) {
@@ -284,7 +322,7 @@
   // Update all cart count displays
   function updateAllCartCounts() {
     const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-    
+
     // Update navbar cart count
     const navCount = document.getElementById('navCartCount');
     if (navCount) {
@@ -325,7 +363,7 @@
       color: #2f5b88;
       transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     `;
-    
+
     document.body.appendChild(flyingItem);
 
     requestAnimationFrame(() => {
@@ -337,7 +375,7 @@
 
     setTimeout(() => {
       flyingItem.remove();
-      
+
       // Bounce animation on cart icon
       cart.style.animation = 'none';
       setTimeout(() => {
@@ -357,7 +395,7 @@
   document.head.appendChild(style);
 
   // Proceed to checkout
-  window.proceedToCheckout = function() {
+  window.proceedToCheckout = function () {
     if (cart.length === 0) {
       showNotification('Your cart is empty', 'error');
       return;
@@ -371,11 +409,11 @@
   };
 
   // Global functions for inline onclick handlers
-  window.updateCartQuantity = function(productId, change) {
+  window.updateCartQuantity = function (productId, change) {
     updateQuantity(productId, change);
   };
 
-  window.removeCartItem = function(productId) {
+  window.removeCartItem = function (productId) {
     removeFromCart(productId);
   };
 
@@ -384,7 +422,7 @@
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
-    
+
     notification.style.cssText = `
       position: fixed;
       top: 100px;
@@ -440,12 +478,12 @@
   }
 
   // Get cart (for external use)
-  window.getCart = function() {
+  window.getCart = function () {
     return [...cart];
   };
 
   // Clear cart
-  window.clearCart = function() {
+  window.clearCart = function () {
     if (confirm('Are you sure you want to clear your cart?')) {
       cart = [];
       saveCart();

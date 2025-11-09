@@ -9,7 +9,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 // Accept ?pid= or ?id=
 $pid = (int)($_GET['pid'] ?? ($_GET['id'] ?? 0));
 if ($pid <= 0) {
-    header('Location: /RADS-TOOLING /customer/products.php');
+    header('Location: /RADS-TOOLING/customer/products.php');
     exit;
 }
 
@@ -427,7 +427,7 @@ $avatarHtml   = $img
         window.PID = <?= (int)$pid ?>;
     </script>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/customize.js" defer></script>
+    <script src="/RADS-TOOLING/assets/JS/customize.js?v=<?= time() ?>" defer></script>
     <script>
         (function() {
             'use strict';
@@ -639,10 +639,19 @@ $avatarHtml   = $img
                 const pid = b.dataset.pid || window.PID || '';
                 const qty = '1'; // customization page default = 1
 
-                // Store customization data
-                if (typeof window.getCustomizationData === 'function') {
+                // Store customization data (full format with selectedCustomizations array)
+                if (typeof window.getCustomizationData === 'function' && typeof window.getSelectedCustomizationsArray === 'function') {
                     const customData = window.getCustomizationData();
-                    sessionStorage.setItem('customizationData', JSON.stringify(customData));
+                    const selectedCustomizations = window.getSelectedCustomizationsArray();
+
+                    const fullCustomData = {
+                        ...customData,
+                        selectedCustomizations: selectedCustomizations,
+                        computedAddonsTotal: customData.addonsTotal,
+                        computedTotal: customData.computedTotal
+                    };
+
+                    sessionStorage.setItem('customizationData', JSON.stringify(fullCustomData));
                 }
 
                 modal.dataset.pid = String(pid);
@@ -735,12 +744,13 @@ $avatarHtml   = $img
 
                 e.preventDefault();
                 // Get customization data from customize.js
-                if (typeof window.getCustomizationData !== 'function') {
+                if (typeof window.getCustomizationData !== 'function' || typeof window.getSelectedCustomizationsArray !== 'function') {
                     showToast('Error: Customization data not available', 'error');
                     return;
                 }
 
                 const customData = window.getCustomizationData();
+                const selectedCustomizations = window.getSelectedCustomizationsArray();
                 const product = {
                     id: window.PID || 0,
                     name: customData.productName || 'Custom Cabinet',
@@ -749,8 +759,10 @@ $avatarHtml   = $img
                     priceWithVAT: customData.computedTotalWithVAT,
                     basePrice: customData.basePrice,
                     customization: customData.selectedOptions,
+                    selectedCustomizations: selectedCustomizations, // API format
                     addonsTotal: customData.addonsTotal,
-                    image: '', // Set if you have product image
+                    computedTotal: customData.computedTotal,
+                    image: customData.productImage || '',
                     quantity: 1,
                     isCustomized: true
                 };

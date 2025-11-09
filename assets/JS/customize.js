@@ -278,6 +278,12 @@
         }
         if (model_url && !(await urlExists(model_url))) model_url = '';
 
+        // image
+        let image = d.image || d.image_path || '';
+        if (image && !image.startsWith('/RADS-TOOLING/') && !image.startsWith('http')) {
+            image = '/RADS-TOOLING/' + image.replace(/^\/+/, '');
+        }
+
         // size_confs
         let size_confs = Array.isArray(d.size_confs) ? d.size_confs : [];
         if (!size_confs.length && Array.isArray(d.size_config)) {
@@ -311,6 +317,7 @@
 
         return {
             title: d.title || d.name || d.product_name || 'Cabinet',
+            image: image,
             model_url,
             size_confs,
             allowed,
@@ -401,11 +408,15 @@
 
             const price = parseFloat(tex.base_price || 0);
 
+            // Check if texture has an image
+            const hasImage = tex.image_url && tex.image_url.trim() !== '';
+
             div.innerHTML = `
-            <div class="cz-swatch cz-swatch-texture">
-                <img src="${tex.image_url}"
-                     alt="${tex.texture_name}"
-                     style="width: 100%; height: 100%; object-fit: cover;">
+            <div class="cz-swatch cz-swatch-texture" style="background: ${hasImage ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+                ${hasImage
+                    ? `<img src="${tex.image_url}" alt="${tex.texture_name}" style="width: 100%; height: 100%; object-fit: cover;">`
+                    : `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`
+                }
             </div>
             <div class="cz-item-name">${tex.texture_name}</div>
             ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
@@ -678,7 +689,7 @@
         console.log(`getMaterialsForPart(${part}) → [${found.map(m => m.name).join(', ')}]`);
         return found;
     }
-    
+
     function getThreeMaterial(mv, materialName) {
         if (!mv?.model?.scene) return null;
 
@@ -1011,10 +1022,16 @@
             const btn = document.createElement('button');
             btn.className = 'cz-item';
             const surcharge = getSurcharge('textures', t.id);
+            // Check if texture file exists
+            const hasFile = t.file && t.file.trim() !== '';
+            const texSrc = hasFile ? (TEX_DIR + t.file) : '';
             // NEW: Improved layout matching color section
             btn.innerHTML = `
-        <div class="cz-swatch cz-swatch-texture">
-            <img src="${TEX_DIR + t.file}" alt="${t.name || 'texture'}" style="width:100%;height:100%;object-fit:cover;">
+        <div class="cz-swatch cz-swatch-texture" style="background: ${hasFile ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+            ${hasFile
+                    ? `<img src="${texSrc}" alt="${t.name || 'texture'}" style="width:100%;height:100%;object-fit:cover;">`
+                    : `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`
+                }
         </div>
         <div class="cz-item-name">${t.name || 'Texture'}</div>
         ${priceBadge(surcharge)}
@@ -1158,44 +1175,55 @@
             const isActive = chosen.handle.id == h.id;
             if (isActive) div.classList.add('is-active');
 
-            const price = parseFloat(h.price || 0);
-            const src = HANDLE_DIR + (h.preview || '');
+            // Look up price from pricing map (not directly on handle object)
+            const price = parseFloat(getSurcharge('handles', h.id) || 0);
+            const handleName = h.name || 'Handle';
+            const handlePreview = h.preview || '';
 
-            (filtered || []).forEach(h => {
-                const btn = document.createElement('button');
-                btn.className = 'cz-item';
-                const src = HANDLE_DIR + (h.preview || '');
-                div.innerHTML = `
-                <div class="cz-swatch">
-                    <img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25" 
-                    style="width: 100%; height: 100%; object-fit: contain;">
+            // Build HTML parts
+            let swatchContent = '';
+            let priceContent = '';
+
+            if (handlePreview && handlePreview.trim() !== '') {
+                const imgSrc = HANDLE_DIR + handlePreview;
+                swatchContent = `<img src="${imgSrc}" alt="${handleName}" onerror="this.style.opacity=.25" style="width: 100%; height: 100%; object-fit: contain;">`;
+            } else {
+                swatchContent = `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`;
+            }
+
+            if (price > 0) {
+                priceContent = `<div class="cz-price-badge">+ ₱${fmt(price)}</div>`;
+            }
+
+            const src = HANDLE_DIR + (h.preview || '');
+            div.innerHTML = `
+                <div class="cz-swatch" style="background: ${handlePreview && handlePreview.trim() ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+                    ${swatchContent}
                 </div>
-                <div class="cz-item-name">${h.name || 'Handle'}</div>
-                ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
+                <div class="cz-item-name">${handleName}</div>
+                ${priceContent}
             `;
 
-                div.onclick = () => {
-                    const wasActive = div.classList.contains('is-active');
+            div.onclick = () => {
+                const wasActive = div.classList.contains('is-active');
 
-                    // Remove active from all handles
-                    handleList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
+                // Remove active from all handles
+                handleList.querySelectorAll('.cz-item').forEach(opt => opt.classList.remove('is-active'));
 
-                    if (wasActive) {
-                        // Deselect
-                        chosen.handle.id = null;
-                        chosen.handle.price = 0;
-                    } else {
-                        // Select
-                        div.classList.add('is-active');
-                        chosen.handle.id = h.id;
-                        chosen.handle.price = price;
-                    }
-                    refreshPrice();
-                };
+                if (wasActive) {
+                    // Deselect
+                    chosen.handle.id = null;
+                    chosen.handle.price = 0;
+                } else {
+                    // Select
+                    div.classList.add('is-active');
+                    chosen.handle.id = h.id;
+                    chosen.handle.price = price;
+                }
+                refreshPrice();
+            };
 
-                handleList.appendChild(div);
-            });
-            handleList.appendChild(btn);
+            handleList.appendChild(div);
         });
 
         if (handlesToRender.length === 0) {
@@ -1442,8 +1470,12 @@
         });
         addonsTotal += Number(chosen.handle.price || 0);
 
+        // Get product image from productData
+        const productImage = productData?.image || productData?.image_path || '';
+
         return {
             productName: productData?.title || 'Custom Cabinet',
+            productImage: productImage,
             basePrice: parseFloat(basePrice.toFixed(2)),
             computedTotal: computedTotal,
             computedTotalWithVAT: computedTotalWithVAT,
@@ -1474,6 +1506,77 @@
                 }
             }
         };
+    };
+
+    // ======= Format Customizations for API (Backend Expected Format) =======
+    window.getSelectedCustomizationsArray = function () {
+        const customizations = [];
+
+        // Add textures
+        ['door', 'body', 'inside'].forEach(part => {
+            if (chosen[part].textureId) {
+                customizations.push({
+                    type: 'texture',
+                    id: chosen[part].textureId,
+                    code: `TEXTURE_${chosen[part].textureId}`,
+                    label: `Texture for ${part}`,
+                    applies_to: part,
+                    price: chosen[part].texturePrice || 0,
+                    meta: null
+                });
+            }
+        });
+
+        // Add colors
+        ['door', 'body', 'inside'].forEach(part => {
+            if (chosen[part].colorId) {
+                customizations.push({
+                    type: 'color',
+                    id: chosen[part].colorId,
+                    code: `COLOR_${chosen[part].colorId}`,
+                    label: `Color for ${part}`,
+                    applies_to: part,
+                    price: chosen[part].colorPrice || 0,
+                    meta: null
+                });
+            }
+        });
+
+        // Add handle
+        if (chosen.handle.id) {
+            customizations.push({
+                type: 'handle',
+                id: chosen.handle.id,
+                code: `HANDLE_${chosen.handle.id}`,
+                label: 'Handle',
+                applies_to: 'all',
+                price: chosen.handle.price || 0,
+                meta: null
+            });
+        }
+
+        // Add size if different from base
+        const baseW = baseSize.w || 80;
+        const baseH = baseSize.h || 180;
+        const baseD = baseSize.d || 45;
+        if (chosen.size.w !== baseW || chosen.size.h !== baseH || chosen.size.d !== baseD) {
+            customizations.push({
+                type: 'size',
+                id: 0,
+                code: 'SIZE_CUSTOM',
+                label: `Custom Size: ${chosen.size.w}×${chosen.size.h}×${chosen.size.d} cm`,
+                applies_to: 'all',
+                price: 0, // Size pricing handled separately in computePrice
+                meta: {
+                    width: chosen.size.w,
+                    height: chosen.size.h,
+                    depth: chosen.size.d,
+                    unit: 'cm'
+                }
+            });
+        }
+
+        return customizations;
     };
 
 })();

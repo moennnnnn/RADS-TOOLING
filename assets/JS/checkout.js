@@ -205,9 +205,9 @@
       // Try local API first
       let j = await getJSON('/RADS-TOOLING/backend/api/psgc.php?action=provinces');
       if (Array.isArray(j) && j.length) {
-        const filtered = j.map(x => x.name || x).filter(name => 
-          ALLOWED_PROVINCES.some(allowed => 
-            name.toLowerCase().includes(allowed.toLowerCase()) || 
+        const filtered = j.map(x => x.name || x).filter(name =>
+          ALLOWED_PROVINCES.some(allowed =>
+            name.toLowerCase().includes(allowed.toLowerCase()) ||
             allowed.toLowerCase().includes(name.toLowerCase())
           )
         );
@@ -217,9 +217,9 @@
       // Try cloud API
       j = await getJSON('https://psgc.cloud/api/provinces');
       if (Array.isArray(j) && j.length) {
-        const filtered = j.map(x => x.name).filter(name => 
-          ALLOWED_PROVINCES.some(allowed => 
-            name.toLowerCase().includes(allowed.toLowerCase()) || 
+        const filtered = j.map(x => x.name).filter(name =>
+          ALLOWED_PROVINCES.some(allowed =>
+            name.toLowerCase().includes(allowed.toLowerCase()) ||
             allowed.toLowerCase().includes(name.toLowerCase())
           )
         );
@@ -299,7 +299,7 @@
     // ✅ BOOTSTRAP PROVINCES
     console.log('🔄 Loading PSGC data...');
     const provinces = await fetchProvinces();
-    
+
     if (!provinces.length) {
       console.warn('⚠️ No provinces loaded, showing text inputs');
       showText('province', true);
@@ -474,8 +474,26 @@
       if (!ORDER_ID) {
         try {
           const url = `${location.origin}/RADS-TOOLING/backend/api/order_create.php`;
-          
+
           // ✅ FIXED: Proper payload structure matching backend expectations
+          // ✅ NEW: Include customization data from sessionStorage if available
+          let selectedCustomizations = [];
+          let computedAddonsTotal = 0;
+          let computedTotal = 0;
+
+          try {
+            const customData = sessionStorage.getItem('customizationData');
+            if (customData) {
+              const parsed = JSON.parse(customData);
+              selectedCustomizations = parsed.selectedCustomizations || [];
+              computedAddonsTotal = parsed.computedAddonsTotal || parsed.addonsTotal || 0;
+              computedTotal = parsed.computedTotal || 0;
+              console.log('✅ Including customizations in order:', selectedCustomizations);
+            }
+          } catch (e) {
+            console.warn('⚠️ Could not parse customization data:', e);
+          }
+
           const payload = {
             pid: orderData.pid || 0,
             qty: orderData.qty || 1,
@@ -483,7 +501,11 @@
             vat: orderData.vat || 0,
             total: orderData.total || 0,
             mode: orderData.mode || 'pickup',
-            info: orderData.info || {}
+            info: orderData.info || {},
+            // Customization fields
+            selectedCustomizations: selectedCustomizations,
+            computedAddonsTotal: computedAddonsTotal,
+            computedTotal: computedTotal
           };
 
           console.log('📤 Sending order_create payload:', JSON.stringify(payload, null, 2));
@@ -516,8 +538,8 @@
           }
 
           let result;
-          try { 
-            result = JSON.parse(raw1); 
+          try {
+            result = JSON.parse(raw1);
           } catch {
             showModalAlert('Invalid Response', 'Server returned invalid data. Please contact support.', 'error');
             return;
@@ -559,25 +581,25 @@
           credentials: 'same-origin',
           body: JSON.stringify({ order_id: ORDER_ID, method: method, deposit_rate: dep })
         });
-        
+
         const raw2 = await r2.text();
         console.log('📥 Payment decision response:', r2.status, raw2);
-        
+
         if (!r2.ok) {
           showModalAlert('Payment Setup Error', `Could not setup payment terms (Status ${r2.status}).`, 'error');
           return;
         }
-        
+
         const result2 = JSON.parse(raw2);
 
         if (!result2 || !result2.success) {
           showModalAlert('Payment Failed', result2?.message || 'Could not set payment terms.', 'error');
           return;
         }
-        
+
         AMOUNT_DUE = result2.data.amount_due || 0;
         console.log('✅ Payment decision saved. Amount due:', AMOUNT_DUE);
-        
+
       } catch (err) {
         console.error('❌ Payment decision error:', err);
         showModalAlert('Network Error', 'Could not set payment terms.', 'error');
@@ -597,10 +619,10 @@
           credentials: 'same-origin',
           body: 'action=get_payment_qr'
         });
-        
+
         const raw3 = await r3.text();
         console.log('📥 QR fetch response:', r3.status, raw3);
-        
+
         let result3;
         try { result3 = JSON.parse(raw3); } catch { result3 = null; }
 
@@ -608,11 +630,11 @@
         if (qrBox) {
           if (result3 && result3.success && result3.data) {
             const qrData = method === 'gcash' ? result3.data.gcash : result3.data.bpi;
-            
+
             if (qrData && qrData.image_path) {
               const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
               console.log(`✅ Displaying ${method.toUpperCase()} QR:`, imageUrl);
-              
+
               qrBox.innerHTML = `
                 <img 
                   src="${imageUrl}?v=${Date.now()}" 
@@ -670,13 +692,13 @@
 
       const accountNum = num.value.trim();
       const refNum = ref.value.trim();
-      
+
       if (!/^\d+$/.test(accountNum)) {
         showModalAlert('Invalid Account Number', 'Account number must contain only digits.', 'error');
         num.style.borderColor = '#ef4444';
         return;
       }
-      
+
       if (!/^\d+$/.test(refNum)) {
         showModalAlert('Invalid Reference Number', 'Reference number must contain only digits.', 'error');
         ref.style.borderColor = '#ef4444';
@@ -685,11 +707,11 @@
 
       const amountPaid = parseFloat(amt.value);
       const expectedAmount = AMOUNT_DUE;
-      
+
       if (amountPaid < expectedAmount) {
         showModalAlert(
-          'Insufficient Amount', 
-          `Minimum payment: ₱${expectedAmount.toLocaleString('en-PH', {minimumFractionDigits: 2})}.\nYou entered: ₱${amountPaid.toLocaleString('en-PH', {minimumFractionDigits: 2})}.`, 
+          'Insufficient Amount',
+          `Minimum payment: ₱${expectedAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}.\nYou entered: ₱${amountPaid.toLocaleString('en-PH', { minimumFractionDigits: 2 })}.`,
           'error'
         );
         amt.style.borderColor = '#ef4444';
@@ -713,7 +735,7 @@
           body: form,
           credentials: 'same-origin'
         });
-        
+
         const result = await r.json();
         console.log('📥 Verification response:', result);
 
@@ -723,11 +745,11 @@
         }
 
         showModalAlert('Payment Submitted!', 'Your payment is under verification. Check your orders page for approval status.', 'success');
-        
+
         setTimeout(() => {
           showStep('#finalNotice');
         }, 2000);
-        
+
       } catch (err) {
         console.error('❌ Payment submit error:', err);
         showModalAlert('Network Error', 'Could not submit payment verification.', 'error');
@@ -767,33 +789,33 @@
   }
 
   // ===== QR Zoom Functions =====
-  window.openQrZoom = function(qrUrl) {
+  window.openQrZoom = function (qrUrl) {
     const modal = $('#qrZoomModal');
     const img = $('#zoomQrImage');
-    
+
     if (!modal || !img) {
       console.warn('⚠️ QR Zoom elements not found');
       return;
     }
-    
+
     img.src = qrUrl;
     modal.classList.add('show');
     document.body.style.overflow = 'hidden';
-    
+
     const handleBackdropClick = (e) => {
       if (e.target === modal) {
         window.closeQrZoom();
       }
     };
     modal.addEventListener('click', handleBackdropClick);
-    
+
     console.log('🔍 QR Zoom opened:', qrUrl);
   };
 
-  window.closeQrZoom = function() {
+  window.closeQrZoom = function () {
     const modal = $('#qrZoomModal');
     if (!modal) return;
-    
+
     modal.classList.remove('show');
     document.body.style.overflow = '';
     console.log('✅ QR Zoom closed');
@@ -811,14 +833,14 @@
   // ===== Initialize Everything =====
   document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Checkout.js loading...');
-    
+
     wirePhone();
     loadPSGC();
     wireContinue();
     wireClear();
     wirePayment();
     setupNumericInputs();
-    
+
     console.log('✅ Checkout.js COMPLETE FIXED VERSION loaded!');
     console.log('✅ Features: NCR support, active states, better errors, proper payload');
   });

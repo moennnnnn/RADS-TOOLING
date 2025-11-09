@@ -69,7 +69,7 @@ try {
 function requireStaffAuth(): void
 {
     // Check new session format
-    if (!empty($_SESSION['user']) && in_array($_SESSION['user']['aud'] ?? '', ['staff','admin'], true)) {
+    if (!empty($_SESSION['user']) && in_array($_SESSION['user']['aud'] ?? '', ['staff', 'admin'], true)) {
         return;
     }
     // Check staff-specific session
@@ -322,7 +322,8 @@ function viewProduct(PDO $conn): void
             $allowed['handle']['handles'][] = [
                 'id'      => (int)$h['handle_id'],
                 'name'    => $h['handle_name'],
-                'preview' => $h['handle_image'] // front-end will prefix with HANDLE_DIR
+                'preview' => $h['handle_image'], // front-end will prefix with HANDLE_DIR
+                'price'   => (float)($h['handle_base_price'] ?? 0) // include price directly
             ];
         }
 
@@ -360,7 +361,7 @@ function viewProduct(PDO $conn): void
             'handles'    => $handleMap,
         ];
 
-               // ----------------------------
+        // ----------------------------
         // Attach normalized fields for frontend (IMPROVED)
         // ----------------------------
         // Defensive: ensure $product is array
@@ -445,7 +446,7 @@ function viewProduct(PDO $conn): void
                 'filename'     => basename($rel),
                 'image_path'   => $rel,
                 'public_path'  => $publicPath,
-                'display_order'=> (int)$ir['display_order'],
+                'display_order' => (int)$ir['display_order'],
                 'is_primary'   => (int)$ir['is_primary'],
             ];
         }
@@ -468,7 +469,6 @@ function viewProduct(PDO $conn): void
         // Finally send response
         sendJSON(true, 'Product details retrieved successfully', $product);
         return;
-
     } catch (Throwable $e) {
         error_log("View product error: " . $e->getMessage());
         sendJSON(false, 'Failed to retrieve product details', null, 500);
