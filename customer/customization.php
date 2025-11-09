@@ -427,7 +427,7 @@ $avatarHtml   = $img
         window.PID = <?= (int)$pid ?>;
     </script>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/customize.js" defer></script>
+    <script src="/RADS-TOOLING/assets/JS/customize.js?v=<?= time() ?>" defer></script>
     <script>
         (function() {
             'use strict';
