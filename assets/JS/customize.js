@@ -1171,20 +1171,30 @@
             if (isActive) div.classList.add('is-active');
 
             const price = parseFloat(h.price || 0);
+            const handleName = h.name || 'Handle';
+            const handlePreview = h.preview || '';
 
-            // Only build image src if preview exists
-            const hasPreview = h.preview && h.preview.trim() !== '';
-            const src = hasPreview ? (HANDLE_DIR + h.preview) : '';
+            // Build HTML parts
+            let swatchContent = '';
+            let priceContent = '';
+
+            if (handlePreview && handlePreview.trim() !== '') {
+                const imgSrc = HANDLE_DIR + handlePreview;
+                swatchContent = `<img src="${imgSrc}" alt="${handleName}" onerror="this.style.opacity=.25" style="width: 100%; height: 100%; object-fit: contain;">`;
+            } else {
+                swatchContent = `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`;
+            }
+
+            if (price > 0) {
+                priceContent = `<div class="cz-price-badge">+ ₱${fmt(price)}</div>`;
+            }
 
             div.innerHTML = `
-                <div class="cz-swatch" style="background: ${hasPreview ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
-                    ${hasPreview
-                        ? `<img src="${src}" alt="${h.name || 'Handle'}" onerror="this.style.opacity=.25" style="width: 100%; height: 100%; object-fit: contain;">`
-                        : `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`
-                    }
+                <div class="cz-swatch" style="background: ${handlePreview && handlePreview.trim() ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+                    ${swatchContent}
                 </div>
-                <div class="cz-item-name">${h.name || 'Handle'}</div>
-                ${price > 0 ? `<div class="cz-price-badge">+ ₱${fmt(price)}</div>` : ''}
+                <div class="cz-item-name">${handleName}</div>
+                ${priceContent}
             `;
 
             div.onclick = () => {
