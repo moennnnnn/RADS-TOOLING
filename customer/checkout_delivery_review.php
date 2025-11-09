@@ -33,9 +33,10 @@ if (!$product) {
   exit;
 }
 
+// ✅ FIX: Use base price as fallback, JavaScript will update with cart customizations
 $qty       = 1;
 $basePrice = (float)($product['base_price'] ?? $product['price'] ?? 0);
-$subtotal  = $basePrice * $qty;
+$subtotal  = $basePrice * $qty; // Fallback value
 $vat       = $subtotal * 0.12;
 $shipping  = 0;
 
@@ -44,6 +45,8 @@ if ($mode === 'delivery') {
 }
 
 $total = $subtotal + $vat + $shipping;
+
+// Note: If cart has customizations, JavaScript will update these values immediately on page load
 
 $user = $_SESSION['user'] ?? null;
 $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer');
