@@ -639,10 +639,19 @@ $avatarHtml   = $img
                 const pid = b.dataset.pid || window.PID || '';
                 const qty = '1'; // customization page default = 1
 
-                // Store customization data
-                if (typeof window.getCustomizationData === 'function') {
+                // Store customization data (full format with selectedCustomizations array)
+                if (typeof window.getCustomizationData === 'function' && typeof window.getSelectedCustomizationsArray === 'function') {
                     const customData = window.getCustomizationData();
-                    sessionStorage.setItem('customizationData', JSON.stringify(customData));
+                    const selectedCustomizations = window.getSelectedCustomizationsArray();
+
+                    const fullCustomData = {
+                        ...customData,
+                        selectedCustomizations: selectedCustomizations,
+                        computedAddonsTotal: customData.addonsTotal,
+                        computedTotal: customData.computedTotal
+                    };
+
+                    sessionStorage.setItem('customizationData', JSON.stringify(fullCustomData));
                 }
 
                 modal.dataset.pid = String(pid);
@@ -732,15 +741,17 @@ $avatarHtml   = $img
 
             // Add to Cart button (customization-specific)
             document.getElementById('toCart')?.addEventListener('click', function(e) {
-
                 e.preventDefault();
+
                 // Get customization data from customize.js
-                if (typeof window.getCustomizationData !== 'function') {
+                if (typeof window.getCustomizationData !== 'function' || typeof window.getSelectedCustomizationsArray !== 'function') {
                     showToast('Error: Customization data not available', 'error');
                     return;
                 }
 
                 const customData = window.getCustomizationData();
+                const selectedCustomizations = window.getSelectedCustomizationsArray();
+
                 const product = {
                     id: window.PID || 0,
                     name: customData.productName || 'Custom Cabinet',
@@ -749,7 +760,9 @@ $avatarHtml   = $img
                     priceWithVAT: customData.computedTotalWithVAT,
                     basePrice: customData.basePrice,
                     customization: customData.selectedOptions,
+                    selectedCustomizations: selectedCustomizations, // API format
                     addonsTotal: customData.addonsTotal,
+                    computedTotal: customData.computedTotal,
                     image: '', // Set if you have product image
                     quantity: 1,
                     isCustomized: true

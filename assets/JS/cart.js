@@ -101,9 +101,9 @@
     if (!container) return;
 
     const searchTerm = document.getElementById('cartSearch')?.value.toLowerCase() || '';
-    
+
     // Filter cart based on search
-    const filteredCart = cart.filter(item => 
+    const filteredCart = cart.filter(item =>
       item.name.toLowerCase().includes(searchTerm) ||
       item.type.toLowerCase().includes(searchTerm)
     );
@@ -131,56 +131,97 @@
       return;
     }
 
-    const subtotal = filteredCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculate totals
+    const subtotal = filteredCart.reduce((sum, item) => {
+      const itemPrice = item.isCustomized ? (item.computedTotal || item.price) : item.price;
+      return sum + (itemPrice * item.quantity);
+    }, 0);
     const vat = subtotal * 0.12;
     const total = subtotal + vat;
+
+    // Helper function to render customization breakdown
+    function renderCustomizationBreakdown(item) {
+      if (!item.isCustomized || !item.selectedCustomizations) return '';
+
+      const customs = item.selectedCustomizations || [];
+      if (customs.length === 0) return '';
+
+      return `
+        <div class="customization-breakdown" style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 6px; font-size: 0.85rem;">
+          <div style="font-weight: 600; color: #374151; margin-bottom: 4px;">Customizations:</div>
+          ${customs.map(c => `
+            <div style="display: flex; justify-content: space-between; padding: 2px 0; color: #6b7280;">
+              <span>${escapeHtml(c.label || c.type)} ${c.applies_to ? `(${c.applies_to})` : ''}</span>
+              ${c.price > 0 ? `<span>+₱${c.price.toFixed(2)}</span>` : ''}
+            </div>
+          `).join('')}
+          ${item.basePrice ? `
+            <div style="border-top: 1px solid #e5e7eb; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; font-weight: 600; color: #111827;">
+              <span>Item Total:</span>
+              <span>₱${(item.computedTotal || item.price).toFixed(2)}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
 
     container.innerHTML = `
       <div class="cart-container">
         <div class="cart-items">
-          ${filteredCart.map(item => `
-            <div class="cart-item" data-product-id="${item.id}">
-              <img src="${item.image}" alt="${escapeHtml(item.name)}" class="cart-item-image" onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
-              
-              <div class="cart-item-details">
-                <h3 class="cart-item-name">${escapeHtml(item.name)}</h3>
-                <p class="cart-item-type">${escapeHtml(item.type)}</p>
-                <p class="cart-item-price">₱${item.price.toLocaleString('en-PH', {minimumFractionDigits: 2})}</p>
-              </div>
+          ${filteredCart.map(item => {
+            const displayPrice = item.isCustomized ?
+              (item.basePrice ? `Base: ₱${item.basePrice.toFixed(2)}` : `₱${item.price.toFixed(2)}`) :
+              `₱${item.price.toLocaleString('en-PH', {minimumFractionDigits: 2})}`;
+            const itemTotal = item.isCustomized ? (item.computedTotal || item.price) : item.price;
 
-              <div class="cart-item-actions">
-                <div class="cart-item-quantity">
-                  <button class="qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${item.quantity <= 1 ? 'disabled' : ''}>
-                    <span class="material-symbols-rounded">remove</span>
-                  </button>
-                  <span class="qty-value">${item.quantity}</span>
-                  <button class="qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${item.quantity >= 10 ? 'disabled' : ''}>
-                    <span class="material-symbols-rounded">add</span>
+            return `
+              <div class="cart-item" data-product-id="${item.id}">
+                <img src="${item.image || '/RADS-TOOLING/assets/images/placeholder.jpg'}" alt="${escapeHtml(item.name)}" class="cart-item-image" onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+
+                <div class="cart-item-details">
+                  <h3 class="cart-item-name">
+                    ${escapeHtml(item.name)}
+                    ${item.isCustomized ? '<span style="margin-left: 8px; background: #3b82f6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600;">CUSTOMIZED</span>' : ''}
+                  </h3>
+                  <p class="cart-item-type">${escapeHtml(item.type)}</p>
+                  <p class="cart-item-price">${displayPrice}</p>
+                  ${renderCustomizationBreakdown(item)}
+                </div>
+
+                <div class="cart-item-actions">
+                  <div class="cart-item-quantity">
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.id}, -1)" ${item.quantity <= 1 ? 'disabled' : ''}>
+                      <span class="material-symbols-rounded">remove</span>
+                    </button>
+                    <span class="qty-value">${item.quantity}</span>
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.id}, 1)" ${item.quantity >= 10 ? 'disabled' : ''}>
+                      <span class="material-symbols-rounded">add</span>
+                    </button>
+                  </div>
+
+                  <button class="remove-btn" onclick="removeCartItem(${item.id})">
+                    <span class="material-symbols-rounded">delete</span>
+                    Remove
                   </button>
                 </div>
-                
-                <button class="remove-btn" onclick="removeCartItem(${item.id})">
-                  <span class="material-symbols-rounded">delete</span>
-                  Remove
-                </button>
               </div>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
 
         <div class="cart-summary">
           <h3>Order Summary</h3>
-          
+
           <div class="summary-row">
             <span>Subtotal (${filteredCart.reduce((sum, item) => sum + item.quantity, 0)} items)</span>
             <span>₱${subtotal.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
           </div>
-          
+
           <div class="summary-row">
             <span>VAT (12%)</span>
             <span>₱${vat.toLocaleString('en-PH', {minimumFractionDigits: 2})}</span>
           </div>
-          
+
           <div class="summary-row">
             <strong>Total</strong>
             <strong>₱${total.toLocaleString('en-PH', {minimumFractionDigits: 2})}</strong>

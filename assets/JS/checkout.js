@@ -476,6 +476,24 @@
           const url = `${location.origin}/RADS-TOOLING/backend/api/order_create.php`;
           
           // ✅ FIXED: Proper payload structure matching backend expectations
+          // ✅ NEW: Include customization data from sessionStorage if available
+          let selectedCustomizations = [];
+          let computedAddonsTotal = 0;
+          let computedTotal = 0;
+
+          try {
+            const customData = sessionStorage.getItem('customizationData');
+            if (customData) {
+              const parsed = JSON.parse(customData);
+              selectedCustomizations = parsed.selectedCustomizations || [];
+              computedAddonsTotal = parsed.computedAddonsTotal || parsed.addonsTotal || 0;
+              computedTotal = parsed.computedTotal || 0;
+              console.log('✅ Including customizations in order:', selectedCustomizations);
+            }
+          } catch (e) {
+            console.warn('⚠️ Could not parse customization data:', e);
+          }
+
           const payload = {
             pid: orderData.pid || 0,
             qty: orderData.qty || 1,
@@ -483,7 +501,11 @@
             vat: orderData.vat || 0,
             total: orderData.total || 0,
             mode: orderData.mode || 'pickup',
-            info: orderData.info || {}
+            info: orderData.info || {},
+            // Customization fields
+            selectedCustomizations: selectedCustomizations,
+            computedAddonsTotal: computedAddonsTotal,
+            computedTotal: computedTotal
           };
 
           console.log('📤 Sending order_create payload:', JSON.stringify(payload, null, 2));

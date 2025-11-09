@@ -1476,4 +1476,75 @@
         };
     };
 
+    // ======= Format Customizations for API (Backend Expected Format) =======
+    window.getSelectedCustomizationsArray = function () {
+        const customizations = [];
+
+        // Add textures
+        ['door', 'body', 'inside'].forEach(part => {
+            if (chosen[part].textureId) {
+                customizations.push({
+                    type: 'texture',
+                    id: chosen[part].textureId,
+                    code: `TEXTURE_${chosen[part].textureId}`,
+                    label: `Texture for ${part}`,
+                    applies_to: part,
+                    price: chosen[part].texturePrice || 0,
+                    meta: null
+                });
+            }
+        });
+
+        // Add colors
+        ['door', 'body', 'inside'].forEach(part => {
+            if (chosen[part].colorId) {
+                customizations.push({
+                    type: 'color',
+                    id: chosen[part].colorId,
+                    code: `COLOR_${chosen[part].colorId}`,
+                    label: `Color for ${part}`,
+                    applies_to: part,
+                    price: chosen[part].colorPrice || 0,
+                    meta: null
+                });
+            }
+        });
+
+        // Add handle
+        if (chosen.handle.id) {
+            customizations.push({
+                type: 'handle',
+                id: chosen.handle.id,
+                code: `HANDLE_${chosen.handle.id}`,
+                label: 'Handle',
+                applies_to: 'all',
+                price: chosen.handle.price || 0,
+                meta: null
+            });
+        }
+
+        // Add size if different from base
+        const baseW = baseSize.w || 80;
+        const baseH = baseSize.h || 180;
+        const baseD = baseSize.d || 45;
+        if (chosen.size.w !== baseW || chosen.size.h !== baseH || chosen.size.d !== baseD) {
+            customizations.push({
+                type: 'size',
+                id: 0,
+                code: 'SIZE_CUSTOM',
+                label: `Custom Size: ${chosen.size.w}×${chosen.size.h}×${chosen.size.d} cm`,
+                applies_to: 'all',
+                price: 0, // Size pricing handled separately in computePrice
+                meta: {
+                    width: chosen.size.w,
+                    height: chosen.size.h,
+                    depth: chosen.size.d,
+                    unit: 'cm'
+                }
+            });
+        }
+
+        return customizations;
+    };
+
 })();
