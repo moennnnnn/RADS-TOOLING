@@ -74,7 +74,7 @@
         door: { textureId: null, colorId: null, texturePrice: 0, colorPrice: 0 },
         body: { textureId: null, colorId: null, texturePrice: 0, colorPrice: 0 },
         inside: { textureId: null, colorId: null, texturePrice: 0, colorPrice: 0 },
-        handle: { id: null, price: 0 }
+        handle: { id: null, price: 0, name: '', image: '' }
     };
 
     // ======= Steps UI =======
@@ -1214,11 +1214,15 @@
                     // Deselect
                     chosen.handle.id = null;
                     chosen.handle.price = 0;
+                    chosen.handle.name = '';
+                    chosen.handle.image = '';
                 } else {
                     // Select
                     div.classList.add('is-active');
                     chosen.handle.id = h.id;
                     chosen.handle.price = price;
+                    chosen.handle.name = handleName;
+                    chosen.handle.image = handlePreview;
                 }
                 refreshPrice();
             };
@@ -1462,13 +1466,21 @@
         const computedTotal = computePrice();
         const computedTotalWithVAT = getComputedTotalWithVAT();
 
-        // Calculate addons total (everything except base and size)
+        // ✅ FIX: Calculate addons total (ALL customizations including size)
         let addonsTotal = 0;
         ['door', 'body', 'inside'].forEach(part => {
             addonsTotal += Number(chosen[part].texturePrice || 0);
             addonsTotal += Number(chosen[part].colorPrice || 0);
         });
         addonsTotal += Number(chosen.handle.price || 0);
+
+        // ✅ FIX: Include size price in addons total
+        const sizeSurcharge = computedTotal - basePrice;
+        if (sizeSurcharge > 0) {
+            // addonsTotal already includes texture/color/handle, just add remaining size surcharge
+            const otherAddons = addonsTotal;
+            addonsTotal = sizeSurcharge; // This includes ALL: textures + colors + handles + size
+        }
 
         // Get product image from productData
         const productImage = productData?.image || productData?.image_path || '';
@@ -1502,7 +1514,9 @@
                 },
                 handle: {
                     id: chosen.handle.id,
-                    price: chosen.handle.price
+                    price: chosen.handle.price,
+                    name: chosen.handle.name,
+                    image: chosen.handle.image
                 }
             }
         };
@@ -1542,16 +1556,19 @@
             }
         });
 
-        // Add handle
+        // ✅ FIX: Add handle with name and image metadata
         if (chosen.handle.id) {
             customizations.push({
                 type: 'handle',
                 id: chosen.handle.id,
                 code: `HANDLE_${chosen.handle.id}`,
-                label: 'Handle',
+                label: chosen.handle.name || 'Handle',
                 applies_to: 'all',
                 price: chosen.handle.price || 0,
-                meta: null
+                meta: {
+                    name: chosen.handle.name || '',
+                    image: chosen.handle.image || ''
+                }
             });
         }
 

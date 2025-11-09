@@ -202,9 +202,9 @@ if ($action === 'list') {
 
         // Process each order
         foreach ($orders as &$order) {
-            // Get items
+            // Get items with customization data
             $itemsSql = "
-                SELECT 
+                SELECT
                     id,
                     order_id,
                     name,
@@ -212,8 +212,11 @@ if ($action === 'list') {
                     unit_price as price,
                     subtotal,
                     line_total,
-                    image
-                FROM order_items 
+                    image,
+                    item_customizations,
+                    addons_price,
+                    base_price
+                FROM order_items
                 WHERE order_id = ?
             ";
             
@@ -340,17 +343,20 @@ elseif ($action === 'details') {
             exit;
         }
 
-        // Get items
+        // Get items with customization data
         $itemsSql = "
-            SELECT 
+            SELECT
                 id,
                 name,
                 quantity,
                 unit_price as price,
                 subtotal,
                 line_total,
-                image
-            FROM order_items 
+                image,
+                item_customizations,
+                addons_price,
+                base_price
+            FROM order_items
             WHERE order_id = ?
         ";
         $itemsStmt = $conn->prepare($itemsSql);

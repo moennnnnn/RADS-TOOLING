@@ -433,6 +433,14 @@ class AuthAPI
         $token = bin2hex(random_bytes(32));
         $_SESSION['session_token'] = $token;
 
+        // ✅ FIX: Merge session cart into database
+        try {
+            require_once __DIR__ . '/../helpers/cart_helper.php';
+            merge_session_cart_to_db($this->conn, (int)$user['id']);
+        } catch (Throwable $e) {
+            error_log("Cart merge failed during login: " . $e->getMessage());
+        }
+
         // -- LOG: customer login --
         try {
             log_action_pdo($this->conn, 'customer', (int)$user['id'], 'login', 'Customer login (shop)');

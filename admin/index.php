@@ -164,7 +164,7 @@ if (!$isLoggedIn) {
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, .12);
             width: 100%;
-            max-height: 90vh;
+            max-height: calc(100vh - 80px);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -188,6 +188,14 @@ if (!$isLoggedIn) {
             overflow-x: hidden;
             flex: 1;
             padding: 20px;
+        }
+
+        /* ✅ FIX: Make payment details modal scrollable */
+        #paymentDetailsContent {
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1 1 auto;
+            max-height: calc(90vh - 200px);
         }
 
         .modal-close,

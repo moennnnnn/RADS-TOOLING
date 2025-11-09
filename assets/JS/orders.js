@@ -230,10 +230,40 @@ function renderOrderDetails(order) {
     // Calculate tax percentage
     const taxPercentage = itemsSubtotal > 0 ? ((taxAmount / itemsSubtotal) * 100) : 0;
 
-    // Build table rows with new format
+    // Build table rows with new format and customizations
     const itemsRows = items.map(item => {
         const itemPrice = parseFloat(item.price || 0);
         const itemQty = parseInt(item.quantity || 0);
+
+        // ✅ FIX: Parse and display customizations if available
+        let customizationsHTML = '';
+        if (item.item_customizations) {
+            try {
+                const customizations = typeof item.item_customizations === 'string'
+                    ? JSON.parse(item.item_customizations)
+                    : item.item_customizations;
+
+                if (Array.isArray(customizations) && customizations.length > 0) {
+                    customizationsHTML = `
+                        <tr>
+                            <td colspan="4" style="padding-left: 2rem; background: #f9fafb;">
+                                <div style="font-size: 0.875rem; color: #6b7280; padding: 0.5rem 0;">
+                                    <strong style="color: #374151;">Customizations:</strong><br/>
+                                    ${customizations.map(c => {
+                                        const label = c.label || c.type || 'Customization';
+                                        const appliesTo = c.applies_to ? ` (${c.applies_to})` : '';
+                                        const price = c.price > 0 ? `+₱${parseFloat(c.price).toFixed(2)}` : '';
+                                        return `<span style="display: inline-block; margin-right: 1rem;">• ${escapeHtml(label)}${appliesTo} ${price}</span>`;
+                                    }).join('<br/>')}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            } catch (e) {
+                console.error('Error parsing customizations:', e);
+            }
+        }
 
         return `
             <tr>
@@ -242,6 +272,7 @@ function renderOrderDetails(order) {
                 <td>₱${formatNumber(itemPrice)}</td>
                 <td>${taxPercentage.toFixed(0)}%</td>
             </tr>
+            ${customizationsHTML}
         `;
     }).join('');
 
