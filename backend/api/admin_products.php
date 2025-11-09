@@ -322,7 +322,8 @@ function viewProduct(PDO $conn): void
             $allowed['handle']['handles'][] = [
                 'id'      => (int)$h['handle_id'],
                 'name'    => $h['handle_name'],
-                'preview' => $h['handle_image'] // front-end will prefix with HANDLE_DIR
+                'preview' => $h['handle_image'], // front-end will prefix with HANDLE_DIR
+                'price'   => (float)($h['handle_base_price'] ?? 0) // include price directly
             ];
         }
 

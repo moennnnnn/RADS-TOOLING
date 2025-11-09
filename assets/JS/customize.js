@@ -1170,7 +1170,8 @@
             const isActive = chosen.handle.id == h.id;
             if (isActive) div.classList.add('is-active');
 
-            const price = parseFloat(h.price || 0);
+            // Look up price from pricing map (not directly on handle object)
+            const price = parseFloat(getSurcharge('handles', h.id) || 0);
             const handleName = h.name || 'Handle';
             const handlePreview = h.preview || '';
 
