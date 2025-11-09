@@ -33,9 +33,10 @@ if (!$product) {
   exit;
 }
 
+// ✅ FIX: Use base price as fallback, JavaScript will update with cart customizations
 $qty       = 1;
 $basePrice = (float)($product['base_price'] ?? $product['price'] ?? 0);
-$subtotal  = $basePrice * $qty;
+$subtotal  = $basePrice * $qty; // Fallback value
 $vat       = $subtotal * 0.12;
 $shipping  = 0;
 
@@ -45,6 +46,7 @@ if ($mode === 'delivery') {
 
 $total = $subtotal + $vat + $shipping;
 
+// Note: If cart has customizations, JavaScript will update these values immediately on page load
 $user = $_SESSION['user'] ?? null;
 $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer');
 ?>
@@ -523,12 +525,6 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
             <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
           </a>
         </div>
-        <div class="navbar-actions">
-          <a class="cart-button" href="/RADS-TOOLING/cart.php">
-            <span class="material-symbols-rounded">shopping_cart</span>
-            <span id="cartCount" class="cart-badge">0</span>
-          </a>
-        </div>
       </div>
       <nav class="navbar-menu">
         <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
@@ -814,46 +810,69 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
                           ],
                       ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
-    // ✅ Load customization data from sessionStorage if available
+    // ✅ FIX: Load cart data from sessionStorage (saved by cart.js)   
+
     (function() {
       try {
-        const customDataStr = sessionStorage.getItem('customizationData');
-        if (customDataStr) {
-          const customData = JSON.parse(customDataStr);
-          console.log('✅ Found customization data:', customData);
+        // Read cart from sessionStorage (saved when Proceed to Checkout was clicked)
+        const checkoutCartStr = sessionStorage.getItem('checkoutCart');
+
+        if (!checkoutCartStr) {
+          console.log('ℹ️ No checkout cart found in sessionStorage');
+          return;
+        }
+
+        const cart = JSON.parse(checkoutCartStr);
+        console.log('✅ Found checkout cart:', cart);
+
+        // Find the cart item matching the current product ID
+        const currentPid = window.RT_ORDER.pid;
+        const cartItem = cart.find(item => item.id === currentPid);
+
+        if (!cartItem) {
+          console.log(`ℹ️ No cart item found for PID ${currentPid}`);
+          return;
+        }
+
+        console.log('✅ Found cart item:', cartItem);
+
+        // If cart item is customized, use its data
+        if (cartItem.isCustomized && cartItem.selectedCustomizations) {
+          const customizations = cartItem.selectedCustomizations || [];
+          const basePrice = parseFloat(cartItem.basePrice || 0);
+          const addonsTotal = parseFloat(cartItem.addonsTotal || 0);
+          const computedTotal = parseFloat(cartItem.computedTotal || (basePrice + addonsTotal));
 
           // Add customization fields to RT_ORDER
-          window.RT_ORDER.selectedCustomizations = customData.selectedCustomizations || [];
-          window.RT_ORDER.computedAddonsTotal = customData.computedAddonsTotal || customData.addonsTotal || 0;
-          window.RT_ORDER.computedTotal = customData.computedTotal || 0;
+          window.RT_ORDER.selectedCustomizations = customizations;
+          window.RT_ORDER.computedAddonsTotal = addonsTotal;
+          window.RT_ORDER.computedTotal = computedTotal;
+          window.RT_ORDER.basePrice = basePrice;
 
-          // Update totals if customizations exist
-          if (window.RT_ORDER.selectedCustomizations.length > 0) {
-            const basePrice = customData.basePrice || 0;
-            const addonsTotal = window.RT_ORDER.computedAddonsTotal;
-            const itemTotal = basePrice + addonsTotal;
-            const qty = window.RT_ORDER.qty || 1;
+          // Recalculate totals using customized prices
+          const qty = window.RT_ORDER.qty || 1;
+          const subtotal = computedTotal * qty;
+          const vat = subtotal * 0.12;
+          const shipping = (window.RT_ORDER.mode === 'delivery') ? 500 : 0;
+          const total = subtotal + vat + shipping;
 
-            // Recalculate totals
-            const subtotal = itemTotal * qty;
-            const vat = subtotal * 0.12;
-            const shipping = (window.RT_ORDER.mode === 'delivery') ? 500 : 0;
-            const total = subtotal + vat + shipping;
+          // Update RT_ORDER with correct totals
+          window.RT_ORDER.subtotal = subtotal;
+          window.RT_ORDER.vat = vat;
+          window.RT_ORDER.total = total;
 
-            window.RT_ORDER.subtotal = subtotal;
-            window.RT_ORDER.vat = vat;
-            window.RT_ORDER.total = total;
+          // ✅ Display customizations in the UI
+          displayCustomizations(customizations, addonsTotal);
 
-            // ✅ Display customizations in the UI
-            displayCustomizations(window.RT_ORDER.selectedCustomizations, addonsTotal);
+          // ✅ Update price summary in the DOM
+          updatePriceSummary(subtotal, vat, shipping, total);
 
-            console.log('✅ Updated RT_ORDER with customizations:', window.RT_ORDER);
-          }
+          console.log('✅ Updated RT_ORDER with customizations:', window.RT_ORDER);
         } else {
-          console.log('ℹ️ No customization data found');
+          console.log('ℹ️ Cart item is not customized');
         }
       } catch (err) {
-        console.error('❌ Error loading customization data:', err);
+        console.error('❌ Error loading cart data:', err);
       }
 
       function displayCustomizations(customizations, addonsTotal) {
@@ -877,8 +896,35 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
           breakdownDiv.style.display = 'block';
         }
       }
+
+      function updatePriceSummary(subtotal, vat, shipping, total) {
+        // Update the DOM elements displaying prices
+        const subtotalEl = document.querySelector('.sum-row:nth-of-type(1) strong');
+        const vatEl = document.querySelector('.sum-row:nth-of-type(2) span:last-child');
+        const shippingEl = document.querySelector('.sum-row:nth-of-type(3) span:last-child');
+        const totalEl = document.querySelector('.sum-row.total strong:last-child');
+
+        if (subtotalEl) subtotalEl.textContent = '₱ ' + subtotal.toLocaleString('en-PH', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        if (vatEl) vatEl.textContent = '₱ ' + vat.toLocaleString('en-PH', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        if (shippingEl) shippingEl.textContent = '₱ ' + shipping.toLocaleString('en-PH', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        if (totalEl) totalEl.textContent = '₱ ' + total.toLocaleString('en-PH', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        console.log('✅ Price summary updated in DOM');
+      }
     })();
-    
+
     console.log('✅ RT_ORDER:', window.RT_ORDER);
   </script>
   <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>

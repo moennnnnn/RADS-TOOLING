@@ -475,23 +475,13 @@
         try {
           const url = `${location.origin}/RADS-TOOLING/backend/api/order_create.php`;
 
-          // ✅ FIXED: Proper payload structure matching backend expectations
-          // ✅ NEW: Include customization data from sessionStorage if available
-          let selectedCustomizations = [];
-          let computedAddonsTotal = 0;
-          let computedTotal = 0;
+          // ✅ FIX: Use customization data from RT_ORDER (already populated by checkout_delivery_review.php)
+          const selectedCustomizations = orderData.selectedCustomizations || [];
+          const computedAddonsTotal = orderData.computedAddonsTotal || 0;
+          const computedTotal = orderData.computedTotal || 0;
 
-          try {
-            const customData = sessionStorage.getItem('customizationData');
-            if (customData) {
-              const parsed = JSON.parse(customData);
-              selectedCustomizations = parsed.selectedCustomizations || [];
-              computedAddonsTotal = parsed.computedAddonsTotal || parsed.addonsTotal || 0;
-              computedTotal = parsed.computedTotal || 0;
-              console.log('✅ Including customizations in order:', selectedCustomizations);
-            }
-          } catch (e) {
-            console.warn('⚠️ Could not parse customization data:', e);
+          if (selectedCustomizations.length > 0) {
+            console.log('✅ Including customizations in order:', selectedCustomizations);
           }
 
           const payload = {
@@ -502,7 +492,7 @@
             total: orderData.total || 0,
             mode: orderData.mode || 'pickup',
             info: orderData.info || {},
-            // Customization fields
+            // Customization fields (from RT_ORDER which was populated by checkout page)
             selectedCustomizations: selectedCustomizations,
             computedAddonsTotal: computedAddonsTotal,
             computedTotal: computedTotal

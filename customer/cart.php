@@ -962,17 +962,28 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
                 updateSummary();
             };
 
-            // Setup checkbox listeners
-            function setupCheckboxListeners() {
-                const selectAll = document.getElementById('selectAll');
-                const itemCheckboxes = document.querySelectorAll('.item-select');
+            // ✅ FIX: Use event delegation to prevent duplicate event listeners
+            // Flag to ensure we only attach listeners once
+            let listenersAttached = false;
 
-                if (selectAll) {
-                    selectAll.addEventListener('change', function() {
+            function setupCheckboxListeners() {
+                if (listenersAttached) return; // Prevent duplicate attachment
+                listenersAttached = true;
+
+                const container = document.getElementById('cartContent');
+                if (!container) return;
+
+                // Use event delegation on the container instead of individual checkboxes
+                container.addEventListener('change', function(e) {
+                    const target = e.target;
+
+                    // Handle "Select All" checkbox
+                    if (target.id === 'selectAll') {
+                        const itemCheckboxes = document.querySelectorAll('.item-select');
                         itemCheckboxes.forEach(cb => {
-                            cb.checked = this.checked;
+                            cb.checked = target.checked;
                             const id = parseInt(cb.dataset.id);
-                            if (this.checked) {
+                            if (target.checked) {
                                 selectedItems.add(id);
                             } else {
                                 selectedItems.delete(id);
@@ -980,17 +991,21 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
                         });
                         updateSelectionUI();
                         updateSummary();
-                    });
-                }
+                        return;
+                    }
 
-                itemCheckboxes.forEach(cb => {
-                    cb.addEventListener('change', function() {
-                        const id = parseInt(this.dataset.id);
-                        if (this.checked) {
+                    // Handle individual item checkboxes
+                    if (target.classList.contains('item-select')) {
+                        const id = parseInt(target.dataset.id);
+                        if (target.checked) {
                             selectedItems.add(id);
                         } else {
                             selectedItems.delete(id);
                         }
+
+                        // Update "Select All" state
+                        const selectAll = document.getElementById('selectAll');
+                        const itemCheckboxes = document.querySelectorAll('.item-select');
 
                         if (selectAll) {
                             selectAll.checked = itemCheckboxes.length === selectedItems.size;
@@ -998,7 +1013,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 
                         updateSelectionUI();
                         updateSummary();
-                    });
+                    }
                 });
             }
 
@@ -1136,11 +1151,22 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 
                 const cart = JSON.parse(localStorage.getItem('cart') || '[]');
                 const checkoutItems = cart.filter(item => selectedItems.has(item.id));
-                localStorage.setItem('checkoutItems', JSON.stringify(checkoutItems));
+                // ✅ FIX: Store selected items in sessionStorage for checkout (same format as cart.js)
+                sessionStorage.setItem('checkoutCart', JSON.stringify(checkoutItems));
+                sessionStorage.setItem('checkoutMode', selectedMode);
+                console.log('✅ Saved selected items to sessionStorage:', checkoutItems);
 
+                // ✅ FIX: Include pid parameter (first selected item) to prevent redirect to products.php
+                const firstItem = checkoutItems[0];
+                if (!firstItem) {
+                    alert('No items selected');
+                    return;
+                }
+
+                const pid = firstItem.id;
                 const url = selectedMode === 'delivery' ?
-                    '/RADS-TOOLING/customer/checkout_delivery.php' :
-                    '/RADS-TOOLING/customer/checkout_pickup.php';
+                    `/RADS-TOOLING/customer/checkout_delivery.php?pid=${pid}` :
+                    `/RADS-TOOLING/customer/checkout_pickup.php?pid=${pid}`;
 
                 window.location.href = url;
             });

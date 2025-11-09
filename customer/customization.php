@@ -639,19 +639,46 @@ $avatarHtml   = $img
                 const pid = b.dataset.pid || window.PID || '';
                 const qty = '1'; // customization page default = 1
 
-                // Store customization data (full format with selectedCustomizations array)
+                // ✅ FIX: Store customization data in cart format (same as cart.js)                
                 if (typeof window.getCustomizationData === 'function' && typeof window.getSelectedCustomizationsArray === 'function') {
                     const customData = window.getCustomizationData();
-                    const selectedCustomizations = window.getSelectedCustomizationsArray();
+                    console.log('🔍 DEBUG - Buy Now Payload:');
+                    console.log('  Base Price:', customData.basePrice);
+                    console.log('  Add-ons Total:', customData.addonsTotal);
+                    console.log('  Computed Total:', customData.computedTotal);
+                    console.log('  Selected Customizations:', selectedCustomizations);
 
-                    const fullCustomData = {
-                        ...customData,
-                        selectedCustomizations: selectedCustomizations,
-                        computedAddonsTotal: customData.addonsTotal,
-                        computedTotal: customData.computedTotal
+                    // ✅ Verify all customizations have price deltas
+                    selectedCustomizations.forEach(c => {
+                        if (c.type === 'size' && c.price === 0) {
+                            console.warn('⚠️ SIZE PRICE DELTA IS ZERO! Check getSelectedCustomizationsArray()');
+                        }
+                        console.log(`  - ${c.type}: ${c.label} = ₱${c.price}`);
+                    });
+
+                    // Create cart item in the same format as cart.js
+                    const cartItem = {
+                        id: parseInt(pid) || 0,
+                        name: customData.productName || 'Custom Cabinet',
+                        type: 'custom',
+                        price: customData.computedTotal,
+                        priceWithVAT: customData.computedTotalWithVAT,
+                        basePrice: customData.basePrice,
+                        customization: customData.selectedOptions,
+                        selectedCustomizations: selectedCustomizations, // API format
+                        addonsTotal: customData.addonsTotal,
+                        computedTotal: customData.computedTotal,
+                        image: customData.productImage || '',
+                        quantity: 1,
+                        isCustomized: true
                     };
 
-                    sessionStorage.setItem('customizationData', JSON.stringify(fullCustomData));
+                    // Save as checkoutCart (single-item array) for checkout compatibility
+                    sessionStorage.setItem('checkoutCart', JSON.stringify([cartItem]));
+                    console.log('✅ Saved customization to sessionStorage checkoutCart');
+                    console.log('📦 Full Cart Item:', JSON.stringify(cartItem, null, 2));
+                } else {
+                    console.error('❌ ERROR: getCustomizationData or getSelectedCustomizationsArray not available!');
                 }
 
                 modal.dataset.pid = String(pid);
@@ -697,6 +724,10 @@ $avatarHtml   = $img
                 const qty = modal.dataset.qty || '1';
                 const mode = modal.dataset.mode || '';
                 if (!pid || !mode) return;
+
+                // ✅ FIX: Save mode to sessionStorage
+                sessionStorage.setItem('checkoutMode', mode);
+                console.log('✅ Saved checkout mode:', mode);
 
                 const url = (mode === 'delivery') ?
                     `/RADS-TOOLING/customer/checkout_delivery.php?pid=${encodeURIComponent(pid)}&qty=${encodeURIComponent(qty)}&custom=1` :
@@ -751,6 +782,19 @@ $avatarHtml   = $img
 
                 const customData = window.getCustomizationData();
                 const selectedCustomizations = window.getSelectedCustomizationsArray();
+                console.log('🛒 DEBUG - Add to Cart Payload:');
+                console.log('  Base Price:', customData.basePrice);
+                console.log('  Add-ons Total:', customData.addonsTotal);
+                console.log('  Computed Total:', customData.computedTotal);
+                console.log('  Selected Customizations:', selectedCustomizations);
+
+                // ✅ Verify all customizations have price deltas
+                selectedCustomizations.forEach(c => {
+                    if (c.type === 'size' && c.price === 0) {
+                        console.warn('⚠️ SIZE PRICE DELTA IS ZERO! Check getSelectedCustomizationsArray()');
+                    }
+                    console.log(`  - ${c.type}: ${c.label} = ₱${c.price}`);
+                });
                 const product = {
                     id: window.PID || 0,
                     name: customData.productName || 'Custom Cabinet',
@@ -770,6 +814,8 @@ $avatarHtml   = $img
                 let cart = JSON.parse(localStorage.getItem('cart') || '[]');
                 // For customized items, always add as new (don't merge)
                 cart.push(product);
+                console.log('✅ Added to localStorage cart:', product);
+                console.log('📦 Full Cart Item:', JSON.stringify(product, null, 2));
                 showToast(product.name + ' added to cart!', 'success');
                 localStorage.setItem('cart', JSON.stringify(cart));
                 updateCartCount();

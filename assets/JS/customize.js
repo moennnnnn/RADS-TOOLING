@@ -1555,25 +1555,40 @@
             });
         }
 
-        // Add size if different from base
+        // ✅ FIX: Add size WITH price delta if different from base        
         const baseW = baseSize.w || 80;
         const baseH = baseSize.h || 180;
         const baseD = baseSize.d || 45;
         if (chosen.size.w !== baseW || chosen.size.h !== baseH || chosen.size.d !== baseD) {
+            // Calculate size price delta using same logic as computePrice()
+            const wCfg = dimCfg('width'), hCfg = dimCfg('height'), dCfg = dimCfg('depth');
+            const baseWcm = wCfg.min * (UNIT_TO_CM[wCfg.unit] || 1);
+            const baseHcm = hCfg.min * (UNIT_TO_CM[hCfg.unit] || 1);
+            const baseDcm = dCfg.min * (UNIT_TO_CM[dCfg.unit] || 1);
+
+            const wDelta = dimSurcharge(chosen.size.w, baseWcm, wCfg);
+            const hDelta = dimSurcharge(chosen.size.h, baseHcm, hCfg);
+            const dDelta = dimSurcharge(chosen.size.d, baseDcm, dCfg);
+            const totalSizeDelta = wDelta + hDelta + dDelta;
             customizations.push({
                 type: 'size',
                 id: 0,
                 code: 'SIZE_CUSTOM',
                 label: `Custom Size: ${chosen.size.w}×${chosen.size.h}×${chosen.size.d} cm`,
                 applies_to: 'all',
-                price: 0, // Size pricing handled separately in computePrice
+                price: parseFloat(totalSizeDelta.toFixed(2)), // ✅ FIX: Include actual size delta                
                 meta: {
                     width: chosen.size.w,
                     height: chosen.size.h,
                     depth: chosen.size.d,
-                    unit: 'cm'
+                    unit: 'cm',
+                    width_delta: parseFloat(wDelta.toFixed(2)),
+                    height_delta: parseFloat(hDelta.toFixed(2)),
+                    depth_delta: parseFloat(dDelta.toFixed(2))
+
                 }
             });
+            console.log(`💰 Size price delta: W+₱${wDelta.toFixed(2)}, H+₱${hDelta.toFixed(2)}, D+₱${dDelta.toFixed(2)} = ₱${totalSizeDelta.toFixed(2)}`);
         }
 
         return customizations;
