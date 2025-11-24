@@ -102,35 +102,35 @@ const CM = {
         console.log(`Switching to: ${page}`);
         this.currentPage = this.normalizePageKey(page);
 
-        // Special handling for payment tab
-        if (page === 'payment') {
+        // Special handling for tabs without traditional preview
+        if (page === 'payment' || page === 'logo_settings' || page === 'footer_settings') {
             // Hide preview section
             const previewCard = document.getElementById('previewCard');
             if (previewCard) {
                 previewCard.style.display = 'none';
             }
 
-            // Hide Edit Content button
+            // Show Edit Content button (they can edit directly)
             const btnEdit = document.getElementById('btnEditContent');
             if (btnEdit) {
-                btnEdit.style.display = 'none';
+                btnEdit.style.display = 'block';
             }
 
-            // Show payment settings section
+            // Show payment settings section only for payment tab
             const paymentSection = document.getElementById('paymentSettingsSection');
             if (paymentSection) {
-                paymentSection.style.display = 'block';
+                paymentSection.style.display = page === 'payment' ? 'block' : 'none';
             }
 
             // Update active tab
             this.updateActiveTab();
 
-            // Load payment QR data
-            if (CM.Payment) {
+            // Load payment QR data for payment tab
+            if (page === 'payment' && CM.Payment) {
                 CM.Payment.loadPaymentQR();
             }
 
-            return; // Don't load preview for payment tab
+            return; // Don't load iframe preview for these tabs
         }
 
         // For other tabs, show preview and hide payment section
@@ -455,43 +455,58 @@ const CM = {
 
     getLogoSettingsEditor() {
         return `
-        <div class="editor-section">
-            <h3><span class="material-symbols-rounded">image</span> Logo Configuration</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Edit Section -->
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">image</span> Logo Configuration</h3>
 
-            <label>Logo Type</label>
-            <div style="margin-bottom: 20px;">
-                <label style="display: inline-flex; align-items: center; margin-right: 20px;">
-                    <input type="radio" name="logo_type" value="text" id="logo-type-text" checked style="margin-right: 8px;">
-                    Text Logo
-                </label>
-                <label style="display: inline-flex; align-items: center;">
-                    <input type="radio" name="logo_type" value="image" id="logo-type-image" style="margin-right: 8px;">
-                    Image Logo
-                </label>
-            </div>
+                <label>Logo Type</label>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: inline-flex; align-items: center; margin-right: 20px; cursor: pointer;">
+                        <input type="radio" name="logo_type" value="text" id="logo-type-text" checked style="margin-right: 8px;">
+                        Text Logo
+                    </label>
+                    <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="logo_type" value="image" id="logo-type-image" style="margin-right: 8px;">
+                        Image Logo
+                    </label>
+                </div>
 
-            <!-- Text Logo Section -->
-            <div id="text-logo-section">
-                <label>Logo Text</label>
-                <input type="text" id="logo-text" class="form-input" placeholder="RADS TOOLING" value="RADS TOOLING">
-            </div>
+                <!-- Text Logo Section -->
+                <div id="text-logo-section">
+                    <label>Logo Text</label>
+                    <input type="text" id="logo-text" class="form-input" placeholder="RADS TOOLING" value="RADS TOOLING">
+                </div>
 
-            <!-- Image Logo Section -->
-            <div id="image-logo-section" style="display: none;">
-                <label>Logo Image</label>
-                <button type="button" class="btn-upload" onclick="document.getElementById('logoImageUpload').click()">
-                    <span class="material-symbols-rounded">upload</span> Upload Logo Image
-                </button>
-                <input type="file" id="logoImageUpload" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="CM.handleLogoImageUpload(event)">
-
-                <div id="logo-image-preview" style="margin-top: 15px; display: none;">
-                    <p style="font-weight: 500; margin-bottom: 8px;">Current Logo:</p>
-                    <img id="logo-image-preview-img" src="" alt="Logo Preview" style="max-width: 300px; max-height: 150px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
-                    <input type="hidden" id="logo-image-path" value="">
-                    <br>
-                    <button type="button" class="btn-secondary" onclick="CM.removeLogoImage()" style="margin-top: 10px;">
-                        <span class="material-symbols-rounded">delete</span> Remove Image
+                <!-- Image Logo Section -->
+                <div id="image-logo-section" style="display: none;">
+                    <label>Logo Image</label>
+                    <button type="button" class="btn-upload" onclick="document.getElementById('logoImageUpload').click()">
+                        <span class="material-symbols-rounded">upload</span> Upload Logo Image
                     </button>
+                    <input type="file" id="logoImageUpload" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="CM.handleLogoImageUpload(event)">
+
+                    <div id="logo-image-upload-preview" style="margin-top: 15px; display: none;">
+                        <p style="font-weight: 500; margin-bottom: 8px;">Uploaded Image:</p>
+                        <img id="logo-image-preview-img" src="" alt="Logo Preview" style="max-width: 250px; max-height: 120px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+                        <input type="hidden" id="logo-image-path" value="">
+                        <br>
+                        <button type="button" class="btn-secondary" onclick="CM.removeLogoImage()" style="margin-top: 10px;">
+                            <span class="material-symbols-rounded">delete</span> Remove Image
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="editor-section" style="background: #f5f8fa; padding: 20px; border-radius: 8px;">
+                <h3><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your logo will appear:</p>
+
+                <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+                    <div id="logo-live-preview" style="font-size: 24px; font-weight: 600; font-family: Arial, sans-serif;">
+                        <span style="color: #2563eb;">R</span>ADS TOOLING
+                    </div>
                 </div>
             </div>
         </div>
@@ -500,32 +515,57 @@ const CM = {
 
     getFooterSettingsEditor() {
         return `
-        <div class="editor-section">
-            <h3><span class="material-symbols-rounded">contact_mail</span> Footer Configuration</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Edit Section -->
+            <div class="editor-section">
+                <h3><span class="material-symbols-rounded">contact_mail</span> Footer Configuration</h3>
 
-            <label>Company Name</label>
-            <input type="text" id="footer-company-name" class="form-input" placeholder="About RADS TOOLING">
+                <label>Company Name</label>
+                <input type="text" id="footer-company-name" class="form-input" placeholder="About RADS TOOLING">
 
-            <label>Company Description</label>
-            <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
+                <label>Company Description</label>
+                <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
 
-            <label>Email Address</label>
-            <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
+                <label>Email Address</label>
+                <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
 
-            <label>Phone Number</label>
-            <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
+                <label>Phone Number</label>
+                <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
 
-            <label>Physical Address</label>
-            <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
+                <label>Physical Address</label>
+                <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
 
-            <label>Business Hours</label>
-            <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+                <label>Business Hours</label>
+                <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
 
-            <label>Facebook Page URL</label>
-            <input type="url" id="footer-facebook" class="form-input" placeholder="https://facebook.com/radstooling">
+                <label>Facebook Page URL</label>
+                <input type="url" id="footer-facebook" class="form-input" placeholder="https://facebook.com/radstooling">
 
-            <label>Copyright Text</label>
-            <input type="text" id="footer-copyright" class="form-input" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+                <label>Copyright Text</label>
+                <input type="text" id="footer-copyright" class="form-input" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+            </div>
+
+            <!-- Preview Section -->
+            <div class="editor-section" style="background: #f5f8fa; padding: 20px; border-radius: 8px;">
+                <h3><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your footer will appear:</p>
+
+                <div id="footer-live-preview" style="background: #1e293b; color: white; padding: 20px; border-radius: 6px; font-size: 13px;">
+                    <div style="margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 8px 0; font-size: 14px;">About RADS TOOLING</h4>
+                        <p style="margin: 0; color: #cbd5e1; font-size: 12px;">Premium custom cabinet manufacturer serving clients since 2007.</p>
+                    </div>
+                    <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
+                        <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>RadsTooling@gmail.com</div>
+                        <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>+63 976 228 4270</div>
+                        <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>Green Breeze, Piela, Dasmariñas, Cavite</div>
+                        <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>Mon-Sat: 8:00 AM - 5:00 PM</div>
+                    </div>
+                    <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
+                        © 2025 RADS TOOLING INC. All rights reserved.
+                    </div>
+                </div>
+            </div>
         </div>
     `;
     },
@@ -720,13 +760,17 @@ const CM = {
             }
 
             const logoText = document.getElementById('logo-text');
-            if (logoText && content.logo_text) {
-                logoText.value = content.logo_text;
+            if (logoText) {
+                if (content.logo_text) {
+                    logoText.value = content.logo_text;
+                }
+                // Update live preview when text changes
+                logoText.addEventListener('input', () => this.updateLogoPreview());
             }
 
             if (content.logo_image && content.logo_image !== '') {
                 const logoImagePath = document.getElementById('logo-image-path');
-                const logoImagePreview = document.getElementById('logo-image-preview');
+                const logoImagePreview = document.getElementById('logo-image-upload-preview');
                 const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
 
                 if (logoImagePath) logoImagePath.value = content.logo_image;
@@ -736,11 +780,20 @@ const CM = {
 
             // Add event listeners for logo type radio buttons
             if (logoTextRadio) {
-                logoTextRadio.addEventListener('change', () => this.toggleLogoType('text'));
+                logoTextRadio.addEventListener('change', () => {
+                    this.toggleLogoType('text');
+                    this.updateLogoPreview();
+                });
             }
             if (logoImageRadio) {
-                logoImageRadio.addEventListener('change', () => this.toggleLogoType('image'));
+                logoImageRadio.addEventListener('change', () => {
+                    this.toggleLogoType('image');
+                    this.updateLogoPreview();
+                });
             }
+
+            // Initial preview update
+            this.updateLogoPreview();
         }
 
         // Footer Settings
@@ -758,10 +811,17 @@ const CM = {
 
             Object.keys(footerInputs).forEach(id => {
                 const input = document.getElementById(id);
-                if (input && footerInputs[id]) {
-                    input.value = footerInputs[id];
+                if (input) {
+                    if (footerInputs[id]) {
+                        input.value = footerInputs[id];
+                    }
+                    // Add event listener to update live preview
+                    input.addEventListener('input', () => this.updateFooterPreview());
                 }
             });
+
+            // Initial preview update
+            this.updateFooterPreview();
         }
 
         // Populate form inputs
@@ -1266,6 +1326,65 @@ const CM = {
         }
     },
 
+    updateLogoPreview() {
+        const preview = document.getElementById('logo-live-preview');
+        if (!preview) return;
+
+        const logoTypeImage = document.getElementById('logo-type-image');
+        const isImageLogo = logoTypeImage && logoTypeImage.checked;
+
+        if (isImageLogo) {
+            const logoImagePath = document.getElementById('logo-image-path');
+            const imageSrc = logoImagePath ? logoImagePath.value : '';
+
+            if (imageSrc) {
+                preview.innerHTML = `<img src="${imageSrc}" alt="Logo" style="max-height: 50px; height: auto;">`;
+            } else {
+                preview.innerHTML = '<p style="color: #999; font-size: 14px;">No logo image uploaded yet</p>';
+            }
+        } else {
+            const logoText = document.getElementById('logo-text');
+            const text = logoText ? logoText.value : 'RADS TOOLING';
+
+            if (text) {
+                const firstLetter = text.charAt(0);
+                const restOfText = text.substring(1);
+                preview.innerHTML = `<span style="color: #2563eb;">${firstLetter}</span>${restOfText}`;
+            } else {
+                preview.innerHTML = '<span style="color: #2563eb;">R</span>ADS TOOLING';
+            }
+        }
+    },
+
+    updateFooterPreview() {
+        const companyName = document.getElementById('footer-company-name')?.value || 'About RADS TOOLING';
+        const description = document.getElementById('footer-description')?.value || 'Premium custom cabinet manufacturer serving clients since 2007.';
+        const email = document.getElementById('footer-email')?.value || 'RadsTooling@gmail.com';
+        const phone = document.getElementById('footer-phone')?.value || '+63 976 228 4270';
+        const address = document.getElementById('footer-address')?.value || 'Green Breeze, Piela, Dasmariñas, Cavite';
+        const hours = document.getElementById('footer-hours')?.value || 'Mon-Sat: 8:00 AM - 5:00 PM';
+        const copyright = document.getElementById('footer-copyright')?.value || '© 2025 RADS TOOLING INC. All rights reserved.';
+
+        const preview = document.getElementById('footer-live-preview');
+        if (!preview) return;
+
+        preview.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 14px;">${companyName}</h4>
+                <p style="margin: 0; color: #cbd5e1; font-size: 12px;">${description}</p>
+            </div>
+            <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>${email}</div>
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>${phone}</div>
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>${address}</div>
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>${hours}</div>
+            </div>
+            <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
+                ${copyright}
+            </div>
+        `;
+    },
+
     async handleLogoImageUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1303,14 +1422,17 @@ const CM = {
             if (data.success) {
                 const imgPath = '/' + data.file_path.replace(/^\/+/, '');
 
-                // Update preview
+                // Update upload preview
                 const logoImagePath = document.getElementById('logo-image-path');
-                const logoImagePreview = document.getElementById('logo-image-preview');
+                const logoImagePreview = document.getElementById('logo-image-upload-preview');
                 const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
 
                 if (logoImagePath) logoImagePath.value = imgPath;
                 if (logoImagePreviewImg) logoImagePreviewImg.src = imgPath;
                 if (logoImagePreview) logoImagePreview.style.display = 'block';
+
+                // Update live preview
+                this.updateLogoPreview();
 
                 this.showToast('Logo uploaded successfully!', 'success');
             } else {
@@ -1326,12 +1448,15 @@ const CM = {
 
     removeLogoImage() {
         const logoImagePath = document.getElementById('logo-image-path');
-        const logoImagePreview = document.getElementById('logo-image-preview');
+        const logoImagePreview = document.getElementById('logo-image-upload-preview');
         const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
 
         if (logoImagePath) logoImagePath.value = '';
         if (logoImagePreviewImg) logoImagePreviewImg.src = '';
         if (logoImagePreview) logoImagePreview.style.display = 'none';
+
+        // Update live preview
+        this.updateLogoPreview();
 
         this.showToast('Logo image removed', 'info');
     },
