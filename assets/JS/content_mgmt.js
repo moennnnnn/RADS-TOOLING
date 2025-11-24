@@ -192,7 +192,9 @@ const CM = {
             home_customer: 'Edit Customer Homepage',
             about: 'Edit About Us',
             privacy: 'Edit Privacy Policy',
-            terms: 'Edit Terms & Conditions'
+            terms: 'Edit Terms & Conditions',
+            logo_settings: 'Logo Settings',
+            footer_settings: 'Footer Settings'
         };
         document.getElementById('modalTitle').textContent = titles[this.currentPage] || 'Edit Content';
 
@@ -226,6 +228,10 @@ const CM = {
             container.innerHTML = this.getHomeCustomerEditor();
         } else if (this.currentPage === 'about') {
             container.innerHTML = this.getAboutPageEditor();
+        } else if (this.currentPage === 'logo_settings') {
+            container.innerHTML = this.getLogoSettingsEditor();
+        } else if (this.currentPage === 'footer_settings') {
+            container.innerHTML = this.getFooterSettingsEditor();
         } else {
             container.innerHTML = this.getSimplePageEditor();
         }
@@ -447,6 +453,83 @@ const CM = {
     `;
     },
 
+    getLogoSettingsEditor() {
+        return `
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">image</span> Logo Configuration</h3>
+
+            <label>Logo Type</label>
+            <div style="margin-bottom: 20px;">
+                <label style="display: inline-flex; align-items: center; margin-right: 20px;">
+                    <input type="radio" name="logo_type" value="text" id="logo-type-text" checked style="margin-right: 8px;">
+                    Text Logo
+                </label>
+                <label style="display: inline-flex; align-items: center;">
+                    <input type="radio" name="logo_type" value="image" id="logo-type-image" style="margin-right: 8px;">
+                    Image Logo
+                </label>
+            </div>
+
+            <!-- Text Logo Section -->
+            <div id="text-logo-section">
+                <label>Logo Text</label>
+                <input type="text" id="logo-text" class="form-input" placeholder="RADS TOOLING" value="RADS TOOLING">
+            </div>
+
+            <!-- Image Logo Section -->
+            <div id="image-logo-section" style="display: none;">
+                <label>Logo Image</label>
+                <button type="button" class="btn-upload" onclick="document.getElementById('logoImageUpload').click()">
+                    <span class="material-symbols-rounded">upload</span> Upload Logo Image
+                </button>
+                <input type="file" id="logoImageUpload" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="CM.handleLogoImageUpload(event)">
+
+                <div id="logo-image-preview" style="margin-top: 15px; display: none;">
+                    <p style="font-weight: 500; margin-bottom: 8px;">Current Logo:</p>
+                    <img id="logo-image-preview-img" src="" alt="Logo Preview" style="max-width: 300px; max-height: 150px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+                    <input type="hidden" id="logo-image-path" value="">
+                    <br>
+                    <button type="button" class="btn-secondary" onclick="CM.removeLogoImage()" style="margin-top: 10px;">
+                        <span class="material-symbols-rounded">delete</span> Remove Image
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    },
+
+    getFooterSettingsEditor() {
+        return `
+        <div class="editor-section">
+            <h3><span class="material-symbols-rounded">contact_mail</span> Footer Configuration</h3>
+
+            <label>Company Name</label>
+            <input type="text" id="footer-company-name" class="form-input" placeholder="About RADS TOOLING">
+
+            <label>Company Description</label>
+            <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
+
+            <label>Email Address</label>
+            <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
+
+            <label>Phone Number</label>
+            <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
+
+            <label>Physical Address</label>
+            <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
+
+            <label>Business Hours</label>
+            <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+
+            <label>Facebook Page URL</label>
+            <input type="url" id="footer-facebook" class="form-input" placeholder="https://facebook.com/radstooling">
+
+            <label>Copyright Text</label>
+            <input type="text" id="footer-copyright" class="form-input" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+        </div>
+    `;
+    },
+
     initQuillEditors() {
         this.quillEditors = {};
 
@@ -620,6 +703,65 @@ const CM = {
             if (this.quillEditors['quill-about-story'] && content.about_story) {
                 this.quillEditors['quill-about-story'].root.innerHTML = content.about_story;
             }
+        }
+
+        // Logo Settings
+        if (this.currentPage === 'logo_settings') {
+            const logoType = content.logo_type || 'text';
+            const logoTextRadio = document.getElementById('logo-type-text');
+            const logoImageRadio = document.getElementById('logo-type-image');
+
+            if (logoType === 'image') {
+                if (logoImageRadio) logoImageRadio.checked = true;
+                this.toggleLogoType('image');
+            } else {
+                if (logoTextRadio) logoTextRadio.checked = true;
+                this.toggleLogoType('text');
+            }
+
+            const logoText = document.getElementById('logo-text');
+            if (logoText && content.logo_text) {
+                logoText.value = content.logo_text;
+            }
+
+            if (content.logo_image && content.logo_image !== '') {
+                const logoImagePath = document.getElementById('logo-image-path');
+                const logoImagePreview = document.getElementById('logo-image-preview');
+                const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
+
+                if (logoImagePath) logoImagePath.value = content.logo_image;
+                if (logoImagePreviewImg) logoImagePreviewImg.src = content.logo_image;
+                if (logoImagePreview) logoImagePreview.style.display = 'block';
+            }
+
+            // Add event listeners for logo type radio buttons
+            if (logoTextRadio) {
+                logoTextRadio.addEventListener('change', () => this.toggleLogoType('text'));
+            }
+            if (logoImageRadio) {
+                logoImageRadio.addEventListener('change', () => this.toggleLogoType('image'));
+            }
+        }
+
+        // Footer Settings
+        if (this.currentPage === 'footer_settings') {
+            const footerInputs = {
+                'footer-company-name': content.footer_company_name,
+                'footer-description': content.footer_description,
+                'footer-email': content.footer_email,
+                'footer-phone': content.footer_phone,
+                'footer-address': content.footer_address,
+                'footer-hours': content.footer_hours,
+                'footer-facebook': content.footer_facebook,
+                'footer-copyright': content.footer_copyright
+            };
+
+            Object.keys(footerInputs).forEach(id => {
+                const input = document.getElementById(id);
+                if (input && footerInputs[id]) {
+                    input.value = footerInputs[id];
+                }
+            });
         }
 
         // Populate form inputs
@@ -931,6 +1073,32 @@ const CM = {
             }
         });
 
+        // Logo Settings specific fields
+        if (this.currentPage === 'logo_settings') {
+            const logoTypeText = document.getElementById('logo-type-text');
+            const logoTypeImage = document.getElementById('logo-type-image');
+            content.logo_type = logoTypeImage && logoTypeImage.checked ? 'image' : 'text';
+
+            const logoText = document.getElementById('logo-text');
+            if (logoText) content.logo_text = logoText.value;
+
+            const logoImagePath = document.getElementById('logo-image-path');
+            if (logoImagePath) content.logo_image = logoImagePath.value;
+        }
+
+        // Footer Settings specific fields
+        if (this.currentPage === 'footer_settings') {
+            const footerFields = ['footer-company-name', 'footer-description', 'footer-email', 'footer-phone',
+                                  'footer-address', 'footer-hours', 'footer-facebook', 'footer-copyright'];
+            footerFields.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    const fieldName = id.replace(/-/g, '_');
+                    content[fieldName] = input.value;
+                }
+            });
+        }
+
         return content;
     },
 
@@ -1082,6 +1250,90 @@ const CM = {
             console.error('Discard error:', error);
             this.showToast('Error discarding', 'error');
         }
+    },
+
+    // Logo Settings helper functions
+    toggleLogoType(type) {
+        const textSection = document.getElementById('text-logo-section');
+        const imageSection = document.getElementById('image-logo-section');
+
+        if (type === 'text') {
+            if (textSection) textSection.style.display = 'block';
+            if (imageSection) imageSection.style.display = 'none';
+        } else {
+            if (textSection) textSection.style.display = 'none';
+            if (imageSection) imageSection.style.display = 'block';
+        }
+    },
+
+    async handleLogoImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+        if (!validTypes.includes(file.type)) {
+            this.showToast('Please upload a valid image file (PNG, JPG, SVG)', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        // Validate file size (2MB max)
+        if (file.size > 2 * 1024 * 1024) {
+            this.showToast('Image must be less than 2MB', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'logo');
+        formData.append('action', 'upload_image');
+
+        try {
+            this.showToast('Uploading logo...', 'info');
+
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const imgPath = '/' + data.file_path.replace(/^\/+/, '');
+
+                // Update preview
+                const logoImagePath = document.getElementById('logo-image-path');
+                const logoImagePreview = document.getElementById('logo-image-preview');
+                const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
+
+                if (logoImagePath) logoImagePath.value = imgPath;
+                if (logoImagePreviewImg) logoImagePreviewImg.src = imgPath;
+                if (logoImagePreview) logoImagePreview.style.display = 'block';
+
+                this.showToast('Logo uploaded successfully!', 'success');
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showToast('Upload failed: ' + error.message, 'error');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    removeLogoImage() {
+        const logoImagePath = document.getElementById('logo-image-path');
+        const logoImagePreview = document.getElementById('logo-image-preview');
+        const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
+
+        if (logoImagePath) logoImagePath.value = '';
+        if (logoImagePreviewImg) logoImagePreviewImg.src = '';
+        if (logoImagePreview) logoImagePreview.style.display = 'none';
+
+        this.showToast('Logo image removed', 'info');
     },
 
     showToast(message, type = 'info') {

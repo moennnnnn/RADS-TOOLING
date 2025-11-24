@@ -41,3 +41,38 @@ function cmsTokens(string $html, array $vars = []): string {
     ];
     return strtr($html, $map);
 }
+
+/**
+ * Get global logo settings from CMS
+ * Returns logo configuration including type (text/image), text, and image path
+ */
+function getLogoSettings(bool $preferDraft = false): array {
+    $settings = getCMSContent('logo_settings', $preferDraft);
+
+    // Provide defaults if settings don't exist
+    return array_merge([
+        'logo_type' => 'text',
+        'logo_text' => 'RADS TOOLING',
+        'logo_image' => ''
+    ], $settings);
+}
+
+/**
+ * Get global footer settings from CMS
+ * Returns footer configuration including contact info, social links, etc.
+ */
+function getFooterSettings(bool $preferDraft = false): array {
+    $settings = getCMSContent('footer_settings', $preferDraft);
+
+    // Provide defaults if settings don't exist
+    return array_merge([
+        'footer_company_name' => 'About RADS TOOLING',
+        'footer_description' => 'Premium custom cabinet manufacturer serving clients since 2007.',
+        'footer_email' => 'RadsTooling@gmail.com',
+        'footer_phone' => '+63 976 228 4270',
+        'footer_address' => 'Green Breeze, Piela, Dasmariñas, Cavite',
+        'footer_hours' => 'Mon-Sat: 8:00 AM - 5:00 PM',
+        'footer_facebook' => '',
+        'footer_copyright' => '© 2025 RADS TOOLING INC. All rights reserved.'
+    ], $settings);
+}
