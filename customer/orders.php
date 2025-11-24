@@ -36,7 +36,7 @@ $customerId = $_SESSION['user']['id'] ?? 0;
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/css/orders.css">
+    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/orders.css">
     
     <style>
         /* Navigation Header */
@@ -144,20 +144,10 @@ $customerId = $_SESSION['user']['id'] ?? 0;
          ========================================== -->
     <nav class="orders-navbar">
         <div class="navbar-left">
-            <button class="navbar-menu-btn" onclick="window.location.href='/RADS-TOOLING/customer/homepage.php'" title="Back to Home">
-                <span class="material-symbols-rounded">menu</span>
-            </button>
             <a href="/RADS-TOOLING/customer/homepage.php" class="navbar-brand">
                 <span class="material-symbols-rounded">home</span>
                 <span>RADS Tooling</span>
             </a>
-        </div>
-        
-        <div class="navbar-right">
-            <div class="navbar-user">
-                <span class="material-symbols-rounded">account_circle</span>
-                <span class="navbar-username"><?php echo htmlspecialchars($customerName); ?></span>
-            </div>
         </div>
     </nav>
 

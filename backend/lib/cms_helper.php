@@ -6,6 +6,8 @@
  * - published by default
  * - when $preferDraft=true, tries draft then falls back to published
  */
+
+require_once __DIR__ . '/../backend/config/app.php';
 function getCMSContent(string $pageKey, bool $preferDraft = false): array {
     global $pdo; // from backend/config/app.php
 

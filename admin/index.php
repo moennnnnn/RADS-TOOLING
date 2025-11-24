@@ -877,14 +877,21 @@ if (!$isLoggedIn) {
         </section>
 
         <!-- Payment Details Modal -->
-        <div class="modal" id="paymentDetailsModal">
-            <div class="modal-content" style="max-width:900px;">
+        <div id="paymentDetailsModal" class="modal">
+            <div class="modal-content" style="max-width:900px">
+
+                <!-- Header -->
                 <div class="modal-header">
-                    <h2>Payment Verification Details</h2><button class="modal-close" onclick="closeModal('paymentDetailsModal')">×</button>
+                    <h2>Payment Verification Details</h2>
+                    <button class="close-modal" onclick="closeModal('paymentDetailsModal')">×</button>
                 </div>
-                <div id="paymentDetailsContent" style="display:grid;gap:1.5rem;padding:16px">
-                    <!-- populated by JS -->
+
+                <!-- Scrollable Body -->
+                <div class="modal-body-scrollable" id="paymentDetailsContent" style="display:grid;gap:1.5rem;padding:16px;">
+                    <!-- Populated dynamically by JS -->
                 </div>
+
+                <!-- Footer / Actions -->
                 <div class="modal-actions">
                     <button class="btn-secondary" onclick="closeModal('paymentDetailsModal')">Close</button>
                     <button id="btnRejectPayment" class="btn-danger">Reject</button>
@@ -892,6 +899,7 @@ if (!$isLoggedIn) {
                 </div>
             </div>
         </div>
+
 
         <!-- Reject Reason Modal -->
         <div class="modal" id="rejectReasonModal">

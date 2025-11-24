@@ -284,16 +284,31 @@ body {
     font-size: 15px;
 }
 
-.badge{display:inline-block;
-    padding:4px 10px;
-    border-radius:999px;
-    font-weight:600;
-    font-size:.85rem;
-    line-height:1;color:#012e5c}
-.badge-pending{background:#f7b731}
-.badge-processing{background:#3da0ff}
-.badge-completed{background:#3db36b}
-.badge-cancelled{background:#e14d4d}
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: .85rem;
+    line-height: 1;
+    color: #012e5c
+}
+
+.badge-pending {
+    background: #f7b731
+}
+
+.badge-processing {
+    background: #3da0ff
+}
+
+.badge-completed {
+    background: #3db36b
+}
+
+.badge-cancelled {
+    background: #e14d4d
+}
 
 .badge-active {
     background: var(--green);
@@ -950,13 +965,14 @@ body {
     display: flex;
     flex-direction: column;
     padding: 2rem 1.2rem 1.2rem 1.2rem;
-    
+
     /* ✅ NEW: Fixed positioning */
     position: fixed;
     top: 0;
     left: 0;
     height: 100vh;
-    overflow-y: auto; /* Allow scroll if content is too long */
+    overflow-y: auto;
+    /* Allow scroll if content is too long */
     overflow-x: hidden;
     z-index: 1000;
 }
@@ -996,7 +1012,7 @@ body {
     .sidebar {
         width: 200px;
     }
-    
+
     .main-content {
         margin-left: 200px;
         width: calc(100% - 200px);
@@ -1006,16 +1022,67 @@ body {
 @media (max-width: 576px) {
     .sidebar {
         position: fixed;
-        left: -250px; /* Hide by default on mobile */
+        left: -250px;
+        /* Hide by default on mobile */
         transition: left 0.3s ease;
     }
-    
+
     .sidebar.mobile-open {
         left: 0;
     }
-    
+
     .main-content {
         margin-left: 0;
         width: 100%;
     }
+}
+
+/* Payment Details Modal styling (same pattern as Add Texture) */
+#paymentDetailsModal .modal-content {
+    width: 95%;
+    max-width: 900px;
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #fff;
+}
+
+/* Header */
+#paymentDetailsModal .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Scrollable Body */
+#paymentDetailsModal .modal-body-scrollable {
+    padding: 16px 24px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    max-height: calc(100vh - 240px);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Footer actions */
+#paymentDetailsModal .modal-actions {
+    padding: 12px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #fff;
+}
+
+/* Optional: consistent close button style */
+#paymentDetailsModal .close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
 }

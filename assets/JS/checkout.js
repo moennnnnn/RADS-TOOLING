@@ -470,6 +470,18 @@
 
       const orderData = window.RT_ORDER || {};
 
+      // ✅ FIX: Use TOTAL (includes VAT + shipping) instead of subtotal
+      const totalAmount = orderData.total || 0;
+      const depositAmount = Math.round(totalAmount * (dep / 100) * 100) / 100; // Round to 2 decimals
+
+      console.log('💰 Payment Calculation:');
+      console.log('  - Subtotal:', orderData.subtotal);
+      console.log('  - VAT:', orderData.vat);
+      console.log('  - Shipping:', orderData.mode === 'delivery' ? 500 : 0);
+      console.log('  - TOTAL (with VAT):', totalAmount);
+      console.log('  - Deposit Rate:', dep + '%');
+      console.log('  - Amount to Pay:', depositAmount);
+
       // ✅ STEP 1: Create order
       if (!ORDER_ID) {
         try {
@@ -489,7 +501,7 @@
             qty: orderData.qty || 1,
             subtotal: orderData.subtotal || 0,
             vat: orderData.vat || 0,
-            total: orderData.total || 0,
+            total: totalAmount, // ✅ Use calculated total
             mode: orderData.mode || 'pickup',
             info: orderData.info || {},
             // Customization fields (from RT_ORDER which was populated by checkout page)
@@ -587,7 +599,8 @@
           return;
         }
 
-        AMOUNT_DUE = result2.data.amount_due || 0;
+        // ✅ FIX: Use calculated deposit amount instead of server value
+        AMOUNT_DUE = depositAmount;
         console.log('✅ Payment decision saved. Amount due:', AMOUNT_DUE);
 
       } catch (err) {
@@ -626,13 +639,13 @@
               console.log(`✅ Displaying ${method.toUpperCase()} QR:`, imageUrl);
 
               qrBox.innerHTML = `
-                <img 
-                  src="${imageUrl}?v=${Date.now()}" 
-                  alt="${method.toUpperCase()} QR" 
-                  style="width:100%;height:100%;object-fit:contain;cursor:pointer;padding:8px;" 
-                  onclick="window.openQrZoom('${imageUrl}')"
-                  onerror="this.parentElement.innerHTML='<span style=\\'color:#e74c3c;\\'>❌ Failed to load QR</span>'"
-                >`;
+            <img 
+              src="${imageUrl}?v=${Date.now()}" 
+              alt="${method.toUpperCase()} QR" 
+              style="width:100%;height:100%;object-fit:contain;cursor:pointer;padding:8px;" 
+              onclick="window.openQrZoom('${imageUrl}')"
+              onerror="this.parentElement.innerHTML='<span style=\\'color:#e74c3c;\\'>❌ Failed to load QR</span>'"
+            >`;
             } else {
               console.warn(`⚠️ No ${method.toUpperCase()} QR configured`);
               qrBox.innerHTML = '<span style="color:#999">No QR configured</span>';

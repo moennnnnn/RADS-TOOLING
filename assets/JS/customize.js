@@ -1153,20 +1153,38 @@
 
     async function rebuildHandleOptions() {
         if (!handleList) return;
-        handleList.innerHTML = '';
+        handleList.innerHTML = '<div style="padding:10px;color:#666">Loading handles...</div>';
 
-        // prefer productData.allowed.handle if present
-        const allowHandles = productData?.allowed?.handle || null;
+        // ✅ FIX: Always fetch handles from API
         let handlesToRender = [];
 
-        if (allowHandles && Array.isArray(allowHandles.handles) && allowHandles.handles.length) {
-            handlesToRender = allowHandles.handles.slice();
-        } else {
-            // No handles assigned to this product - show message
-            handleList.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">No handles available for this product</div>';
-            console.warn('No handles assigned to this product');
+        try {
+            const resp = await fetch(`/RADS-TOOLING/backend/api/get_product_handles.php?product_id=${PID}`, {
+                credentials: 'same-origin'
+            });
+
+            if (!resp.ok) {
+                throw new Error(`HTTP ${resp.status}`);
+            }
+
+            const data = await resp.json();
+
+            if (data.success && Array.isArray(data.handles) && data.handles.length > 0) {
+                handlesToRender = data.handles;
+                console.log('✅ Loaded', handlesToRender.length, 'handles from API');
+            } else {
+                handleList.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">No handles available for this product</div>';
+                console.warn('No handles assigned to product', PID);
+                return;
+            }
+        } catch (err) {
+            console.error('Failed to load handles:', err);
+            handleList.innerHTML = '<div style="padding:20px;text-align:center;color:#e11;">Error loading handles</div>';
             return;
         }
+
+        // ✅ Clear loading message
+        handleList.innerHTML = '';
 
         handlesToRender.forEach(h => {
             const div = document.createElement('div');
@@ -1178,15 +1196,34 @@
             // Look up price from pricing map (not directly on handle object)
             const price = parseFloat(getSurcharge('handles', h.id) || 0);
             const handleName = h.name || 'Handle';
-            const handlePreview = h.preview || '';
+            const handlePreview = (h.preview || '').toString();
 
             // Build HTML parts
             let swatchContent = '';
             let priceContent = '';
 
             if (handlePreview && handlePreview.trim() !== '') {
-                const imgSrc = HANDLE_DIR + handlePreview;
-                swatchContent = `<img src="${imgSrc}" alt="${handleName}" onerror="this.style.opacity=.25" style="width: 100%; height: 100%; object-fit: contain;">`;
+                const previewTrim = handlePreview.trim();
+
+                // Determine correct src:
+                // - data: -> use as-is
+                // - startsWith http or // -> use as-is
+                // - startsWith / -> use as-is (absolute)
+                // - otherwise prefix with HANDLE_DIR and strip leading slashes
+                const isData = previewTrim.toLowerCase().startsWith('data:');
+                const isHttp = previewTrim.toLowerCase().startsWith('http://') || previewTrim.toLowerCase().startsWith('https://');
+                const isProtocolRelative = previewTrim.startsWith('//');
+                const isAbsolute = previewTrim.startsWith('/');
+
+                let imgSrc;
+                if (isData || isHttp || isProtocolRelative || isAbsolute) {
+                    imgSrc = previewTrim;
+                } else {
+                    imgSrc = (HANDLE_DIR || '') + previewTrim.replace(/^\/+/, '');
+                }
+
+                // create image element with onerror fallback
+                swatchContent = `<img src="${imgSrc}" alt="${handleName}" style="width: 100%; height: 100%; object-fit: contain;" onerror="(function(el){ el.style.opacity = '.25'; el.style.filter = 'grayscale(60%)'; console.warn('Handle image failed to load:', el.src); })(this);">`;
             } else {
                 swatchContent = `<span style="color: #999; font-size: 12px; text-align: center;">No image</span>`;
             }
@@ -1195,14 +1232,13 @@
                 priceContent = `<div class="cz-price-badge">+ ₱${fmt(price)}</div>`;
             }
 
-            const src = HANDLE_DIR + (h.preview || '');
             div.innerHTML = `
-                <div class="cz-swatch" style="background: ${handlePreview && handlePreview.trim() ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
-                    ${swatchContent}
-                </div>
-                <div class="cz-item-name">${handleName}</div>
-                ${priceContent}
-            `;
+            <div class="cz-swatch" style="background: ${handlePreview && handlePreview.trim() ? 'transparent' : '#f0f0f0'}; display: flex; align-items: center; justify-content: center;">
+                ${swatchContent}
+            </div>
+            <div class="cz-item-name">${handleName}</div>
+            ${priceContent}
+        `;
 
             div.onclick = () => {
                 const wasActive = div.classList.contains('is-active');
@@ -1233,6 +1269,7 @@
             handleList.appendChild(p);
         }
     }
+
     function selectExclusive(listEl, btn) {
         listEl.querySelectorAll('.cz-item').forEach(x => x.classList.remove('is-active'));
         btn.classList.add('is-active');
@@ -1457,18 +1494,24 @@
     }
 
     // ======= Export Customization Data for Cart/Checkout =======
+    // REPLACE existing window.getCustomizationData with this version
     window.getCustomizationData = function () {
         const basePrice = Number(productData?.pricing?.base_price || 0);
         const computedTotal = computePrice();
         const computedTotalWithVAT = getComputedTotalWithVAT();
 
-        // Calculate addons total (everything except base and size)
-        let addonsTotal = 0;
-        ['door', 'body', 'inside'].forEach(part => {
-            addonsTotal += Number(chosen[part].texturePrice || 0);
-            addonsTotal += Number(chosen[part].colorPrice || 0);
-        });
-        addonsTotal += Number(chosen.handle.price || 0);
+        // Use computedTotal - basePrice so size deltas are included in addonsTotal
+        let addonsTotal = Math.max(0, computedTotal - basePrice);
+
+        // Defensive: keep the old explicit sum (textures/colors/handle) as fallback if needed
+        if (!Number.isFinite(addonsTotal) || addonsTotal === 0) {
+            addonsTotal = 0;
+            ['door', 'body', 'inside'].forEach(part => {
+                addonsTotal += Number(chosen[part].texturePrice || 0);
+                addonsTotal += Number(chosen[part].colorPrice || 0);
+            });
+            addonsTotal += Number(chosen.handle.price || 0);
+        }
 
         // Get product image from productData
         const productImage = productData?.image || productData?.image_path || '';
@@ -1507,6 +1550,7 @@
             }
         };
     };
+
 
     // ======= Format Customizations for API (Backend Expected Format) =======
     window.getSelectedCustomizationsArray = function () {

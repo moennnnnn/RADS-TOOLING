@@ -720,14 +720,6 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
                     <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
                 </a>
             </div>
-            <div class="header-right">
-                <div class="profile-btn">
-                    <div class="profile-avatar">
-                        <?= strtoupper(substr($customerName, 0, 1)) ?>
-                    </div>
-                    <span><?= $customerName ?></span>
-                </div>
-            </div>
         </div>
     </header>
 
