@@ -102,35 +102,35 @@ const CM = {
         console.log(`Switching to: ${page}`);
         this.currentPage = this.normalizePageKey(page);
 
-        // Special handling for payment tab
-        if (page === 'payment') {
+        // Special handling for tabs without traditional iframe preview
+        if (page === 'payment' || page === 'logo_settings' || page === 'footer_settings') {
             // Hide preview section
             const previewCard = document.getElementById('previewCard');
             if (previewCard) {
                 previewCard.style.display = 'none';
             }
 
-            // Hide Edit Content button
+            // Show Edit Content button
             const btnEdit = document.getElementById('btnEditContent');
             if (btnEdit) {
-                btnEdit.style.display = 'none';
+                btnEdit.style.display = 'block';
             }
 
-            // Show payment settings section
+            // Show payment settings section only for payment tab
             const paymentSection = document.getElementById('paymentSettingsSection');
             if (paymentSection) {
-                paymentSection.style.display = 'block';
+                paymentSection.style.display = page === 'payment' ? 'block' : 'none';
             }
 
             // Update active tab
             this.updateActiveTab();
 
-            // Load payment QR data
-            if (CM.Payment) {
+            // Load payment QR data for payment tab
+            if (page === 'payment' && CM.Payment) {
                 CM.Payment.loadPaymentQR();
             }
 
-            return; // Don't load preview for payment tab
+            return; // Don't load iframe preview for these tabs
         }
 
         // For other tabs, show preview and hide payment section
@@ -184,28 +184,30 @@ const CM = {
         const modal = document.getElementById('editModal');
         if (!modal) return;
 
+        // STEP 1: Show modal FIRST
         modal.classList.add('show');
 
-        // Update title
+        // STEP 2: Update title
         const titles = {
             home_public: 'Edit Public Homepage',
             home_customer: 'Edit Customer Homepage',
             about: 'Edit About Us',
             privacy: 'Edit Privacy Policy',
-            terms: 'Edit Terms & Conditions'
+            terms: 'Edit Terms & Conditions',
+            logo_settings: 'Logo Settings',
+            footer_settings: 'Footer Settings'
         };
         document.getElementById('modalTitle').textContent = titles[this.currentPage] || 'Edit Content';
 
-        // Show customer notice for customer homepage
+        // STEP 3: Show customer notice for customer homepage
         const notice = document.getElementById('customerNotice');
-        if (notice) {
-            notice.style.display = this.currentPage === 'home_customer' ? 'block' : 'none';
-        }
+        // Notice only exists for regular pages, not logo/footer settings
+        // We'll handle this after building interface
 
-        // Build editor interface
+        // STEP 4: Build editor interface (now modal is in DOM)
         this.buildEditorInterface();
 
-        // Load content
+        // STEP 5: Load content
         this.loadEditorContent();
     },
 
@@ -217,21 +219,127 @@ const CM = {
     },
 
     buildEditorInterface() {
-        const container = document.getElementById('editorContainer');
-        if (!container) return;
+        // Wait for modal to be in DOM
+        setTimeout(() => {
+            const container = document.getElementById('editorLayoutContainer');
+            if (!container) {
+                console.error('editorLayoutContainer not found!');
+                return;
+            }
 
-        if (this.currentPage === 'home_public') {
-            container.innerHTML = this.getHomePublicEditor();
-        } else if (this.currentPage === 'home_customer') {
-            container.innerHTML = this.getHomeCustomerEditor();
-        } else if (this.currentPage === 'about') {
-            container.innerHTML = this.getAboutPageEditor();
-        } else {
-            container.innerHTML = this.getSimplePageEditor();
+            let html = '';
+
+            // Logo and Footer Settings: Use 2-column layout directly
+            if (this.currentPage === 'logo_settings') {
+                html = this.getLogoSettingsEditor();
+                container.innerHTML = html;
+
+                // Setup event listeners for logo settings
+                this.setupLogoSettingsListeners();
+
+            } else if (this.currentPage === 'footer_settings') {
+                html = this.getFooterSettingsEditor();
+                container.innerHTML = html;
+
+                // Setup event listeners for footer settings
+                this.setupFooterSettingsListeners();
+
+            } else {
+                // Regular pages: Use editor-layout with left panel + right iframe
+                html = `
+                <div class="editor-layout">
+                    <div class="editor-panel">
+                        <div class="editor-header">
+                            <h3>Edit Fields</h3>
+                            <div class="editor-status"><span id="previewStatus" class="preview-status status-published">Published</span></div>
+                        </div>
+                        <div id="customerNotice" class="alert alert-info ${this.currentPage === 'home_customer' ? '' : 'hidden'}" style="padding:12px">
+                            <span class="material-symbols-rounded">info</span>
+                            <p>Use <code>{{customer_name}}</code> as placeholder for customer's name</p>
+                        </div>
+                        <div id="editorContainer" class="editor-fields" style="padding:20px">
+                            ${this.getEditorFieldsHTML()}
+                        </div>
+                    </div>
+                    <div class="preview-panel">
+                        <div class="preview-header">
+                            <h3>Live Preview</h3>
+                        </div>
+                        <div class="preview-iframe-container">
+                            <iframe id="livePreviewIframe" frameborder="0"></iframe>
+                        </div>
+                    </div>
+                </div>
+            `;
+                container.innerHTML = html;
+
+                // Initialize Quill editors for regular pages
+                this.initQuillEditors();
+            }
+        }, 100); // Small delay to ensure modal is rendered
+    },
+
+    // NEW: Setup logo settings event listeners
+    setupLogoSettingsListeners() {
+        const logoTextRadio = document.getElementById('logo-type-text');
+        const logoImageRadio = document.getElementById('logo-type-image');
+        const logoText = document.getElementById('logo-text');
+
+        if (logoTextRadio) {
+            logoTextRadio.addEventListener('change', () => {
+                this.toggleLogoType('text');
+                this.updateLogoPreview();
+            });
         }
 
-        // Initialize Quill editors
-        this.initQuillEditors();
+        if (logoImageRadio) {
+            logoImageRadio.addEventListener('change', () => {
+                this.toggleLogoType('image');
+                this.updateLogoPreview();
+            });
+        }
+
+        if (logoText) {
+            logoText.addEventListener('input', () => {
+                this.updateLogoPreview();
+            });
+        }
+    },
+
+    // NEW: Setup footer settings event listeners
+    setupFooterSettingsListeners() {
+        const footerFields = [
+            'footer-company-name',
+            'footer-description',
+            'footer-email',
+            'footer-phone',
+            'footer-address',
+            'footer-hours',
+            'footer-facebook',
+            'footer-copyright'
+        ];
+
+        footerFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', () => {
+                    this.updateFooterPreview();
+                });
+            }
+        });
+    },
+
+    // Helper: Get editor fields HTML based on page
+    getEditorFieldsHTML() {
+        if (this.currentPage === 'home_public') {
+            return this.getHomePublicEditor();
+        } else if (this.currentPage === 'home_customer') {
+            return this.getHomeCustomerEditor();
+        } else if (this.currentPage === 'about') {
+            return this.getAboutPageEditor();
+        } else {
+            return this.getSimplePageEditor();
+        }
     },
 
     getHomePublicEditor() {
@@ -447,6 +555,123 @@ const CM = {
     `;
     },
 
+    getLogoSettingsEditor() {
+        return `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 70vh;">
+        <!-- LEFT: Edit Section -->
+        <div class="editor-section" style="overflow-y: auto; padding-right: 15px;">
+            <h3><span class="material-symbols-rounded">image</span> Logo Configuration</h3>
+
+            <label>Logo Type</label>
+            <div style="margin-bottom: 20px;">
+                <label style="display: inline-flex; align-items: center; margin-right: 20px; cursor: pointer;">
+                    <input type="radio" name="logo_type" value="text" id="logo-type-text" checked style="margin-right: 8px;">
+                    Text Logo
+                </label>
+                <label style="display: inline-flex; align-items: center; cursor: pointer;">
+                    <input type="radio" name="logo_type" value="image" id="logo-type-image" style="margin-right: 8px;">
+                    Image Logo
+                </label>
+            </div>
+
+            <!-- Text Logo Section -->
+            <div id="text-logo-section">
+                <label>Logo Text</label>
+                <input type="text" id="logo-text" class="form-input" placeholder="RADS TOOLING" value="RADS TOOLING">
+            </div>
+
+            <!-- Image Logo Section -->
+            <div id="image-logo-section" style="display: none;">
+                <label>Logo Image</label>
+                <button type="button" class="btn-upload" onclick="document.getElementById('logoImageUpload').click()">
+                    <span class="material-symbols-rounded">upload</span> Upload Logo Image
+                </button>
+                <input type="file" id="logoImageUpload" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="CM.handleLogoImageUpload(event)">
+
+                <div id="logo-image-upload-preview" style="margin-top: 15px; display: none;">
+                    <p style="font-weight: 500; margin-bottom: 8px;">Uploaded Image:</p>
+                    <img id="logo-image-preview-img" src="" alt="Logo Preview" style="max-width: 250px; max-height: 120px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+                    <input type="hidden" id="logo-image-path" value="">
+                    <br>
+                    <button type="button" class="btn-secondary" onclick="CM.removeLogoImage()" style="margin-top: 10px;">
+                        <span class="material-symbols-rounded">delete</span> Remove Image
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Live Preview Section -->
+        <div class="preview-panel" style="background: #f5f8fa; padding: 20px; border-radius: 8px; overflow-y: auto;">
+            <h3 style="margin-bottom: 15px;"><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your logo will appear:</p>
+
+            <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+                <div id="logo-live-preview" style="font-size: 24px; font-weight: 600; font-family: Arial, sans-serif;">
+                    <span style="color: #2563eb;">R</span>ADS TOOLING
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+    },
+
+    getFooterSettingsEditor() {
+        return `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 70vh;">
+        <!-- LEFT: Edit Section -->
+        <div class="editor-section" style="overflow-y: auto; padding-right: 15px;">
+            <h3><span class="material-symbols-rounded">contact_mail</span> Footer Configuration</h3>
+
+            <label>Company Name</label>
+            <input type="text" id="footer-company-name" class="form-input" placeholder="About RADS TOOLING">
+
+            <label>Company Description</label>
+            <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
+
+            <label>Email Address</label>
+            <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
+
+            <label>Phone Number</label>
+            <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
+
+            <label>Physical Address</label>
+            <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
+
+            <label>Business Hours</label>
+            <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+
+            <label>Facebook Page URL</label>
+            <input type="url" id="footer-facebook" class="form-input" placeholder="https://facebook.com/radstooling">
+
+            <label>Copyright Text</label>
+            <input type="text" id="footer-copyright" class="form-input" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+        </div>
+
+        <!-- RIGHT: Live Preview Section -->
+        <div class="preview-panel" style="background: #f5f8fa; padding: 20px; border-radius: 8px; overflow-y: auto;">
+            <h3 style="margin-bottom: 15px;"><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your footer will appear:</p>
+
+            <div id="footer-live-preview" style="background: #1e293b; color: white; padding: 20px; border-radius: 6px; font-size: 13px;">
+                <div style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 14px;">About RADS TOOLING</h4>
+                    <p style="margin: 0; color: #cbd5e1; font-size: 12px;">Premium custom cabinet manufacturer serving clients since 2007.</p>
+                </div>
+                <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
+                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>RadsTooling@gmail.com</div>
+                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>+63 976 228 4270</div>
+                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>Green Breeze, Piela, Dasmariñas, Cavite</div>
+                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>Mon-Sat: 8:00 AM - 5:00 PM</div>
+                </div>
+                <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
+                    © 2025 RADS TOOLING INC. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+    },
+
     initQuillEditors() {
         this.quillEditors = {};
 
@@ -622,27 +847,65 @@ const CM = {
             }
         }
 
-        // Populate form inputs
-        const inputs = {
-            'footer-company': content.footer_company,
-            'footer-email': content.footer_email,
-            'footer-phone': content.footer_phone,
-            'footer-address': content.footer_address,
-            'footer-hours': content.footer_hours,
-            'video-url': content.video_url
-        };
+        // Logo Settings
+        if (this.currentPage === 'logo_settings') {
+            const logoType = content.logo_type || 'text';
+            const logoTextRadio = document.getElementById('logo-type-text');
+            const logoImageRadio = document.getElementById('logo-type-image');
 
-        Object.keys(inputs).forEach(id => {
-            const input = document.getElementById(id);
-            if (input && inputs[id]) {
-                input.value = inputs[id];
-                input.addEventListener('input', () => this.updateLivePreview());
+            if (logoType === 'image') {
+                if (logoImageRadio) logoImageRadio.checked = true;
+                this.toggleLogoType('image');
+            } else {
+                if (logoTextRadio) logoTextRadio.checked = true;
+                this.toggleLogoType('text');
             }
-        });
 
-        // Render carousel
-        if (content.carousel_images) {
-            this.renderCarousel(content.carousel_images);
+            const logoText = document.getElementById('logo-text');
+            if (logoText && content.logo_text) {
+                logoText.value = content.logo_text;
+            }
+
+            if (content.logo_image && content.logo_image !== '') {
+                const logoImagePath = document.getElementById('logo-image-path');
+                const logoImagePreview = document.getElementById('logo-image-upload-preview');
+                const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
+
+                if (logoImagePath) logoImagePath.value = content.logo_image;
+                if (logoImagePreviewImg) logoImagePreviewImg.src = content.logo_image;
+                if (logoImagePreview) logoImagePreview.style.display = 'block';
+            }
+
+            // Initial preview update - wrapped in setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                this.updateLogoPreview();
+            }, 200);
+        }
+
+        // Footer Settings
+        if (this.currentPage === 'footer_settings') {
+            const footerInputs = {
+                'footer-company-name': content.footer_company_name,
+                'footer-description': content.footer_description,
+                'footer-email': content.footer_email,
+                'footer-phone': content.footer_phone,
+                'footer-address': content.footer_address,
+                'footer-hours': content.footer_hours,
+                'footer-facebook': content.footer_facebook,
+                'footer-copyright': content.footer_copyright
+            };
+
+            Object.keys(footerInputs).forEach(id => {
+                const input = document.getElementById(id);
+                if (input && footerInputs[id]) {
+                    input.value = footerInputs[id];
+                }
+            });
+
+            // Initial preview update - wrapped in setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                this.updateFooterPreview();
+            }, 200);
         }
     },
 
@@ -885,7 +1148,18 @@ const CM = {
     },
 
     updateLivePreview() {
-        // Reload the live preview iframe
+        // SPECIAL: Logo and Footer settings use in-page preview (no iframe)
+        if (this.currentPage === 'logo_settings') {
+            this.updateLogoPreview();
+            return;
+        }
+
+        if (this.currentPage === 'footer_settings') {
+            this.updateFooterPreview();
+            return;
+        }
+
+        // For other pages: Reload the live preview iframe
         const iframe = document.getElementById('livePreviewIframe');
         if (!iframe) return;
 
@@ -898,9 +1172,50 @@ const CM = {
     collectContent() {
         const content = { ...this.currentContent };
 
-        // Collect from Quill editors
+        // Logo Settings specific fields
+        if (this.currentPage === 'logo_settings') {
+            const logoTypeText = document.getElementById('logo-type-text');
+            const logoTypeImage = document.getElementById('logo-type-image');
+            content.logo_type = (logoTypeImage && logoTypeImage.checked) ? 'image' : 'text';
+
+            const logoText = document.getElementById('logo-text');
+            if (logoText) content.logo_text = logoText.value || 'RADS TOOLING';
+
+            const logoImagePath = document.getElementById('logo-image-path');
+            if (logoImagePath) content.logo_image = logoImagePath.value || '';
+
+            return content; // Return early for logo settings
+        }
+
+        // Footer Settings specific fields
+        if (this.currentPage === 'footer_settings') {
+            const footerFields = [
+                'footer-company-name',
+                'footer-description',
+                'footer-email',
+                'footer-phone',
+                'footer-address',
+                'footer-hours',
+                'footer-facebook',
+                'footer-copyright'
+            ];
+
+            footerFields.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    const fieldName = id.replace(/-/g, '_');
+                    content[fieldName] = input.value || '';
+                }
+            });
+
+            return content; // Return early for footer settings
+        }
+
+        // Regular pages: Collect from Quill editors
         Object.keys(this.quillEditors).forEach(key => {
             const editor = this.quillEditors[key];
+            if (!editor) return;
+
             const html = editor.root.innerHTML;
 
             // Map editor IDs to content field names
@@ -910,7 +1225,7 @@ const CM = {
             else if (key === 'quill-video-subtitle') content.video_subtitle = html;
             else if (key === 'quill-welcome') content.welcome_message = html;
             else if (key === 'quill-intro') content.intro_text = html;
-            else if (key === 'quill-main-content') content.content = html; // FIX: Map to 'content'
+            else if (key === 'quill-main-content') content.content = html;
             else if (key === 'quill-about-subheadline') content.about_subheadline = html;
             else if (key === 'quill-about-mission') content.about_mission = html;
             else if (key === 'quill-about-vision') content.about_vision = html;
@@ -918,16 +1233,19 @@ const CM = {
         });
 
         // Collect from inputs
-        const inputs = ['footer-company', 'footer-email', 'footer-phone', 'footer-address', 'footer-hours', 'video-url',
-            'about-headline', 'about-address', 'about-phone', 'about-email',
-            'about-hours-weekday', 'about-hours-sunday', 'about-hero-path', 'customer-hero-image', 'cta-primary-text', 'cta-secondary-text',
-            'footer-description', 'hero-image'
+        const inputs = [
+            'footer-company', 'footer-email', 'footer-phone', 'footer-address',
+            'footer-hours', 'video-url', 'about-headline', 'about-address',
+            'about-phone', 'about-email', 'about-hours-weekday', 'about-hours-sunday',
+            'about-hero-path', 'customer-hero-image', 'cta-primary-text',
+            'cta-secondary-text', 'footer-description', 'hero-image'
         ];
+
         inputs.forEach(id => {
             const input = document.getElementById(id);
             if (input) {
                 const fieldName = id.replace(/-/g, '_');
-                content[fieldName] = input.value;
+                content[fieldName] = input.value || '';
             }
         });
 
@@ -1084,6 +1402,155 @@ const CM = {
         }
     },
 
+    // Logo Settings helper functions
+    toggleLogoType(type) {
+        const textSection = document.getElementById('text-logo-section');
+        const imageSection = document.getElementById('image-logo-section');
+
+        if (type === 'text') {
+            if (textSection) textSection.style.display = 'block';
+            if (imageSection) imageSection.style.display = 'none';
+        } else {
+            if (textSection) textSection.style.display = 'none';
+            if (imageSection) imageSection.style.display = 'block';
+        }
+    },
+
+    updateLogoPreview() {
+        const preview = document.getElementById('logo-live-preview');
+        if (!preview) return;
+
+        const logoTypeImage = document.getElementById('logo-type-image');
+        const isImageLogo = logoTypeImage && logoTypeImage.checked;
+
+        if (isImageLogo) {
+            const logoImagePath = document.getElementById('logo-image-path');
+            const imageSrc = logoImagePath ? logoImagePath.value : '';
+
+            if (imageSrc) {
+                preview.innerHTML = `<img src="${imageSrc}" alt="Logo" style="max-height: 50px; height: auto;">`;
+            } else {
+                preview.innerHTML = '<p style="color: #999; font-size: 14px;">No logo image uploaded yet</p>';
+            }
+        } else {
+            const logoText = document.getElementById('logo-text');
+            const text = logoText ? logoText.value : 'RADS TOOLING';
+
+            if (text) {
+                const firstLetter = text.charAt(0);
+                const restOfText = text.substring(1);
+                preview.innerHTML = `<span style="color: #2563eb;">${firstLetter}</span>${restOfText}`;
+            } else {
+                preview.innerHTML = '<span style="color: #2563eb;">R</span>ADS TOOLING';
+            }
+        }
+    },
+
+    updateFooterPreview() {
+        const companyName = document.getElementById('footer-company-name')?.value || 'About RADS TOOLING';
+        const description = document.getElementById('footer-description')?.value || 'Premium custom cabinet manufacturer serving clients since 2007.';
+        const email = document.getElementById('footer-email')?.value || 'RadsTooling@gmail.com';
+        const phone = document.getElementById('footer-phone')?.value || '+63 976 228 4270';
+        const address = document.getElementById('footer-address')?.value || 'Green Breeze, Piela, Dasmariñas, Cavite';
+        const hours = document.getElementById('footer-hours')?.value || 'Mon-Sat: 8:00 AM - 5:00 PM';
+        const copyright = document.getElementById('footer-copyright')?.value || '© 2025 RADS TOOLING INC. All rights reserved.';
+
+        const preview = document.getElementById('footer-live-preview');
+        if (!preview) return;
+
+        preview.innerHTML = `
+            <div style="margin-bottom: 15px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 14px;">${companyName}</h4>
+                <p style="margin: 0; color: #cbd5e1; font-size: 12px;">${description}</p>
+            </div>
+            <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>${email}</div>
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>${phone}</div>
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>${address}</div>
+                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>${hours}</div>
+            </div>
+            <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
+                ${copyright}
+            </div>
+        `;
+    },
+
+    async handleLogoImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+        if (!validTypes.includes(file.type)) {
+            this.showToast('Please upload a valid image file (PNG, JPG, SVG)', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        // Validate file size (2MB max)
+        if (file.size > 2 * 1024 * 1024) {
+            this.showToast('Image must be less than 2MB', 'error');
+            event.target.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('group', 'logo');
+        formData.append('action', 'upload_image');
+
+        try {
+            this.showToast('Uploading logo...', 'info');
+
+            const response = await fetch(this.apiBaseUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const imgPath = '/' + data.file_path.replace(/^\/+/, '');
+
+                // Update upload preview
+                const logoImagePath = document.getElementById('logo-image-path');
+                const logoImagePreview = document.getElementById('logo-image-upload-preview');
+                const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
+
+                if (logoImagePath) logoImagePath.value = imgPath;
+                if (logoImagePreviewImg) logoImagePreviewImg.src = imgPath;
+                if (logoImagePreview) logoImagePreview.style.display = 'block';
+
+                // Update live preview
+                this.updateLogoPreview();
+
+                this.showToast('Logo uploaded successfully!', 'success');
+            } else {
+                throw new Error(data.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            this.showToast('Upload failed: ' + error.message, 'error');
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    removeLogoImage() {
+        const logoImagePath = document.getElementById('logo-image-path');
+        const logoImagePreview = document.getElementById('logo-image-upload-preview');
+        const logoImagePreviewImg = document.getElementById('logo-image-preview-img');
+
+        if (logoImagePath) logoImagePath.value = '';
+        if (logoImagePreviewImg) logoImagePreviewImg.src = '';
+        if (logoImagePreview) logoImagePreview.style.display = 'none';
+
+        // Update live preview
+        this.updateLogoPreview();
+
+        this.showToast('Logo image removed', 'info');
+    },
+
     showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
         if (!container) return;
@@ -1131,287 +1598,287 @@ document.addEventListener('DOMContentLoaded', function () {
                     CM.init();
                 }, 300);
             }
-            
+
         });
-        
+
     });
     CM.Payment = {
-    currentQRData: {},
-    apiUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
+        currentQRData: {},
+        apiUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
 
-    init() {
-        console.log('Payment QR Management initialized');
-        this.setupEventListeners();
-        this.loadPaymentQR();
-    },
+        init() {
+            console.log('Payment QR Management initialized');
+            this.setupEventListeners();
+            this.loadPaymentQR();
+        },
 
-    setupEventListeners() {
-    const gcashUpload = document.getElementById('gcashQRUpload');
-    if (gcashUpload) {
-        gcashUpload.addEventListener('change', (e) => {
-            this.handleQRUpload('gcash', e.target.files[0]);
-        });
-    } else {
-        console.warn('gcashQRUpload element not found');
-    }
+        setupEventListeners() {
+            const gcashUpload = document.getElementById('gcashQRUpload');
+            if (gcashUpload) {
+                gcashUpload.addEventListener('change', (e) => {
+                    this.handleQRUpload('gcash', e.target.files[0]);
+                });
+            } else {
+                console.warn('gcashQRUpload element not found');
+            }
 
-    const bpiUpload = document.getElementById('bpiQRUpload');
-    if (bpiUpload) {
-        bpiUpload.addEventListener('change', (e) => {
-            this.handleQRUpload('bpi', e.target.files[0]);
-        });
-    } else {
-        console.warn('bpiQRUpload element not found');
-    }
+            const bpiUpload = document.getElementById('bpiQRUpload');
+            if (bpiUpload) {
+                bpiUpload.addEventListener('change', (e) => {
+                    this.handleQRUpload('bpi', e.target.files[0]);
+                });
+            } else {
+                console.warn('bpiQRUpload element not found');
+            }
 
-    const btnGCashUpload = document.getElementById('btnGCashUpload');
-    if (btnGCashUpload && gcashUpload) {
-        btnGCashUpload.addEventListener('click', () => gcashUpload.click());
-    }
+            const btnGCashUpload = document.getElementById('btnGCashUpload');
+            if (btnGCashUpload && gcashUpload) {
+                btnGCashUpload.addEventListener('click', () => gcashUpload.click());
+            }
 
-    const btnBPIUpload = document.getElementById('btnBPIUpload');
-    if (btnBPIUpload && bpiUpload) {
-        btnBPIUpload.addEventListener('click', () => bpiUpload.click());
-    }
-},
-
-
-    async loadPaymentQR() {
-    try {
-        const response = await fetch(`${this.apiUrl}?action=get_payment_qr`);
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const result = await response.json();
-
-        if (result && result.success && result.data) {
-            this.currentQRData = result.data;
-            this.displayQRCodes();
-        } else {
-            console.warn('Unexpected QR response:', result);
-            this.currentQRData = {};
-            this.displayQRCodes();
-        }
-    } catch (err) {
-        console.error('Error loading payment QR:', err);
-        this.showToast('Failed to load QR codes', 'error');
-    }
-},
+            const btnBPIUpload = document.getElementById('btnBPIUpload');
+            if (btnBPIUpload && bpiUpload) {
+                btnBPIUpload.addEventListener('click', () => bpiUpload.click());
+            }
+        },
 
 
-    // ═══════════════════════════════════════════════════════════════
-// FIXED: displayQRCodes() function with better error handling
-// Replace lines 1201-1226 in your content_mgmt.js with this:
-// ═══════════════════════════════════════════════════════════════
+        async loadPaymentQR() {
+            try {
+                const response = await fetch(`${this.apiUrl}?action=get_payment_qr`);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const result = await response.json();
 
-displayQRCodes() {
-    console.log('📸 displayQRCodes called, currentQRData:', this.currentQRData);
-    
-    const buildPath = (path) => {
-        console.log('🔧 buildPath input:', path);
-        
-        if (!path) {
-            console.warn('⚠️  Empty path provided');
-            return '';
-        }
-        
-        // If already a full URL, return as-is
-        if (/^https?:\/\//i.test(path)) {
-            console.log('✅ Full URL detected:', path);
-            return path;
-        }
-        
-        // Remove leading slashes
-        const trimmed = path.replace(/^\/+/, '');
-        console.log('🔄 Trimmed path:', trimmed);
-        
-        // If already starts with RADS-TOOLING, just add leading slash
-        if (/^RADS-TOOLING\//.test(trimmed)) {
-            const result = '/' + trimmed;
-            console.log('✅ Path with RADS-TOOLING prefix:', result);
-            return result;
-        }
-        
-        // Otherwise, prepend /RADS-TOOLING/
-        const result = '/RADS-TOOLING/' + trimmed;
-        console.log('✅ Built final path:', result);
-        return result;
-    };
+                if (result && result.success && result.data) {
+                    this.currentQRData = result.data;
+                    this.displayQRCodes();
+                } else {
+                    console.warn('Unexpected QR response:', result);
+                    this.currentQRData = {};
+                    this.displayQRCodes();
+                }
+            } catch (err) {
+                console.error('Error loading payment QR:', err);
+                this.showToast('Failed to load QR codes', 'error');
+            }
+        },
 
-    const gcashPreview = document.getElementById('gcashQRPreview');
-    const bpiPreview = document.getElementById('bpiQRPreview');
 
-    // ═══ GCASH QR ═══
-    console.log('💳 Processing GCash QR...');
-    if (this.currentQRData.gcash?.image_path) {
-        console.log('✅ GCash data found:', this.currentQRData.gcash);
-        const imgPath = buildPath(this.currentQRData.gcash.image_path);
-        
-        if (gcashPreview) {
-            gcashPreview.innerHTML = `<img 
+        // ═══════════════════════════════════════════════════════════════
+        // FIXED: displayQRCodes() function with better error handling
+        // Replace lines 1201-1226 in your content_mgmt.js with this:
+        // ═══════════════════════════════════════════════════════════════
+
+        displayQRCodes() {
+            console.log('📸 displayQRCodes called, currentQRData:', this.currentQRData);
+
+            const buildPath = (path) => {
+                console.log('🔧 buildPath input:', path);
+
+                if (!path) {
+                    console.warn('⚠️  Empty path provided');
+                    return '';
+                }
+
+                // If already a full URL, return as-is
+                if (/^https?:\/\//i.test(path)) {
+                    console.log('✅ Full URL detected:', path);
+                    return path;
+                }
+
+                // Remove leading slashes
+                const trimmed = path.replace(/^\/+/, '');
+                console.log('🔄 Trimmed path:', trimmed);
+
+                // If already starts with RADS-TOOLING, just add leading slash
+                if (/^RADS-TOOLING\//.test(trimmed)) {
+                    const result = '/' + trimmed;
+                    console.log('✅ Path with RADS-TOOLING prefix:', result);
+                    return result;
+                }
+
+                // Otherwise, prepend /RADS-TOOLING/
+                const result = '/RADS-TOOLING/' + trimmed;
+                console.log('✅ Built final path:', result);
+                return result;
+            };
+
+            const gcashPreview = document.getElementById('gcashQRPreview');
+            const bpiPreview = document.getElementById('bpiQRPreview');
+
+            // ═══ GCASH QR ═══
+            console.log('💳 Processing GCash QR...');
+            if (this.currentQRData.gcash?.image_path) {
+                console.log('✅ GCash data found:', this.currentQRData.gcash);
+                const imgPath = buildPath(this.currentQRData.gcash.image_path);
+
+                if (gcashPreview) {
+                    gcashPreview.innerHTML = `<img 
                 src="${imgPath}" 
                 alt="GCash QR" 
                 style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;"
                 onerror="console.error('❌ Failed to load GCash QR:', this.src); this.parentElement.innerHTML='<div class=\\'qr-placeholder\\' style=\\'color:red;\\'>Failed to load QR image</div>';"
                 onload="console.log('✅ GCash QR loaded successfully:', this.src);">`;
-            console.log('✅ GCash QR HTML set, path:', imgPath);
-        } else {
-            console.error('❌ gcashQRPreview element not found!');
-        }
-    } else {
-        console.warn('⚠️  No GCash QR data available');
-        if (gcashPreview) {
-            gcashPreview.innerHTML = `<div class="qr-placeholder">No GCash QR uploaded</div>`;
-        }
-    }
+                    console.log('✅ GCash QR HTML set, path:', imgPath);
+                } else {
+                    console.error('❌ gcashQRPreview element not found!');
+                }
+            } else {
+                console.warn('⚠️  No GCash QR data available');
+                if (gcashPreview) {
+                    gcashPreview.innerHTML = `<div class="qr-placeholder">No GCash QR uploaded</div>`;
+                }
+            }
 
-    // ═══ BPI QR ═══
-    console.log('🏦 Processing BPI QR...');
-    if (this.currentQRData.bpi?.image_path) {
-        console.log('✅ BPI data found:', this.currentQRData.bpi);
-        const imgPath = buildPath(this.currentQRData.bpi.image_path);
-        
-        if (bpiPreview) {
-            bpiPreview.innerHTML = `<img 
+            // ═══ BPI QR ═══
+            console.log('🏦 Processing BPI QR...');
+            if (this.currentQRData.bpi?.image_path) {
+                console.log('✅ BPI data found:', this.currentQRData.bpi);
+                const imgPath = buildPath(this.currentQRData.bpi.image_path);
+
+                if (bpiPreview) {
+                    bpiPreview.innerHTML = `<img 
                 src="${imgPath}" 
                 alt="BPI QR" 
                 style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain;"
                 onerror="console.error('❌ Failed to load BPI QR:', this.src); this.parentElement.innerHTML='<div class=\\'qr-placeholder\\' style=\\'color:red;\\'>Failed to load QR image</div>';"
                 onload="console.log('✅ BPI QR loaded successfully:', this.src);">`;
-            console.log('✅ BPI QR HTML set, path:', imgPath);
-        } else {
-            console.error('❌ bpiQRPreview element not found!');
-        }
-    } else {
-        console.warn('⚠️  No BPI QR data available');
-        if (bpiPreview) {
-            bpiPreview.innerHTML = `<div class="qr-placeholder">No BPI QR uploaded</div>`;
-        }
-    }
-    
-    console.log('📸 displayQRCodes completed');
-},
-
-    async handleQRUpload(method, file) {
-        if (!file) {
-            this.showToast('Please select a file', 'error');
-            return;
-        }
-
-        // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            this.showToast('Invalid file type. Please upload JPG, PNG, GIF, or WEBP', 'error');
-            return;
-        }
-
-        // Validate file size (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
-            this.showToast('File too large. Maximum size is 5MB', 'error');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('action', 'update_payment_qr');
-        formData.append('method', method);
-        formData.append('qr_image', file);
-
-        try {
-            // Show loading state
-            const uploadBtn = method === 'gcash' ? 
-                document.getElementById('btnGCashUpload') : 
-                document.getElementById('btnBPIUpload');
-            
-            if (uploadBtn) {
-                uploadBtn.disabled = true;
-                uploadBtn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> Uploading...';
+                    console.log('✅ BPI QR HTML set, path:', imgPath);
+                } else {
+                    console.error('❌ bpiQRPreview element not found!');
+                }
+            } else {
+                console.warn('⚠️  No BPI QR data available');
+                if (bpiPreview) {
+                    bpiPreview.innerHTML = `<div class="qr-placeholder">No BPI QR uploaded</div>`;
+                }
             }
 
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                body: formData
+            console.log('📸 displayQRCodes completed');
+        },
+
+        async handleQRUpload(method, file) {
+            if (!file) {
+                this.showToast('Please select a file', 'error');
+                return;
+            }
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                this.showToast('Invalid file type. Please upload JPG, PNG, GIF, or WEBP', 'error');
+                return;
+            }
+
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                this.showToast('File too large. Maximum size is 5MB', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'update_payment_qr');
+            formData.append('method', method);
+            formData.append('qr_image', file);
+
+            try {
+                // Show loading state
+                const uploadBtn = method === 'gcash' ?
+                    document.getElementById('btnGCashUpload') :
+                    document.getElementById('btnBPIUpload');
+
+                if (uploadBtn) {
+                    uploadBtn.disabled = true;
+                    uploadBtn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> Uploading...';
+                }
+
+                const response = await fetch(this.apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showToast(`${method.toUpperCase()} QR code updated successfully!`, 'success');
+
+                    // Reload QR codes to show new one
+                    await this.loadPaymentQR();
+                } else {
+                    throw new Error(result.message || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Error uploading QR:', error);
+                this.showToast('Failed to upload QR code: ' + error.message, 'error');
+            } finally {
+                // Reset button state
+                const uploadBtn = method === 'gcash' ?
+                    document.getElementById('btnGCashUpload') :
+                    document.getElementById('btnBPIUpload');
+
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<span class="material-symbols-rounded">upload</span> Upload QR';
+                }
+            }
+        },
+
+        showPaymentSettings() {
+            // Hide all editor sections
+            document.querySelectorAll('.editor-section').forEach(section => {
+                section.style.display = 'none';
             });
 
-            const result = await response.json();
-
-            if (result.success) {
-                this.showToast(`${method.toUpperCase()} QR code updated successfully!`, 'success');
-                
-                // Reload QR codes to show new one
-                await this.loadPaymentQR();
-            } else {
-                throw new Error(result.message || 'Upload failed');
+            // Show payment section
+            const paymentSection = document.getElementById('paymentSettingsSection');
+            if (paymentSection) {
+                paymentSection.style.display = 'block';
             }
-        } catch (error) {
-            console.error('Error uploading QR:', error);
-            this.showToast('Failed to upload QR code: ' + error.message, 'error');
-        } finally {
-            // Reset button state
-            const uploadBtn = method === 'gcash' ? 
-                document.getElementById('btnGCashUpload') : 
-                document.getElementById('btnBPIUpload');
-            
-            if (uploadBtn) {
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = '<span class="material-symbols-rounded">upload</span> Upload QR';
+
+            // Update active tab
+            document.querySelectorAll('.cm-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector('.cm-tab[data-page="payment"]')?.classList.add('active');
+
+            // Load payment QR data
+            this.loadPaymentQR();
+        },
+
+        showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container';
+                document.body.appendChild(container);
             }
+
+            // Create toast
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} show`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
-    },
+    };
 
-    showPaymentSettings() {
-        // Hide all editor sections
-        document.querySelectorAll('.editor-section').forEach(section => {
-            section.style.display = 'none';
-        });
-
-        // Show payment section
-        const paymentSection = document.getElementById('paymentSettingsSection');
-        if (paymentSection) {
-            paymentSection.style.display = 'block';
+    // Initialize payment module when CM initializes
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof CM !== 'undefined' && CM.Payment) {
+            CM.Payment.init();
         }
+    });
 
-        // Update active tab
-        document.querySelectorAll('.cm-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        document.querySelector('.cm-tab[data-page="payment"]')?.classList.add('active');
-
-        // Load payment QR data
-        this.loadPaymentQR();
-    },
-
-    showToast(message, type = 'info') {
-        // Create toast container if it doesn't exist
-        let container = document.querySelector('.toast-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'toast-container';
-            document.body.appendChild(container);
-        }
-
-        // Create toast
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type} show`;
-        toast.textContent = message;
-
-        container.appendChild(toast);
-
-        // Auto remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
-};
-
-// Initialize payment module when CM initializes
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof CM !== 'undefined' && CM.Payment) {
-        CM.Payment.init();
-    }
-});
-    
 });
 
-(function() {
+(function () {
     'use strict';
 
     console.log('💳 Payment QR Management initialized');
@@ -1424,9 +1891,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const previewCard = document.getElementById('previewCard');
 
         tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
+            tab.addEventListener('click', function () {
                 const page = this.getAttribute('data-page');
-                
+
                 // Remove active from all tabs
                 tabs.forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
@@ -1437,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Show payment QR section, hide preview
                     if (paymentSection) paymentSection.style.display = 'block';
                     if (previewCard) previewCard.style.display = 'none';
-                    
+
                     // Load current QR codes
                     loadPaymentQRCodes();
                 } else {
@@ -1491,7 +1958,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function displayQRCode(method, qrData) {
         const previewId = method === 'gcash' ? 'gcashQRPreview' : 'bpiQRPreview';
         const preview = document.getElementById(previewId);
-        
+
         if (!preview) {
             console.error(`Preview element not found: ${previewId}`);
             return;
@@ -1500,9 +1967,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (qrData && qrData.image_path) {
             // Build full URL with /RADS-TOOLING/ prefix
             const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
-            
+
             console.log(`✅ ${method.toUpperCase()} QR found:`, imageUrl);
-            
+
             // Create image element
             preview.innerHTML = `
                 <img 
@@ -1597,15 +2064,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (data.success) {
                 showToast('success', `${method.toUpperCase()} QR code uploaded successfully!`);
-                
+
                 // Refresh QR codes display
                 await loadPaymentQRCodes();
-                
+
                 // Clear file input
                 const inputId = method === 'gcash' ? 'gcashQRUpload' : 'bpiQRUpload';
                 const input = document.getElementById(inputId);
                 if (input) input.value = '';
-                
+
             } else {
                 showToast('error', data.message || 'Upload failed');
             }
@@ -1628,11 +2095,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Fallback: create simple toast
         const container = document.getElementById('toastContainer') || createToastContainer();
-        
+
         const toast = document.createElement('div');
         toast.className = `toast show toast-${type}`;
         toast.textContent = message;
-        
+
         // Color based on type
         const colors = {
             success: '#28a745',
@@ -1650,9 +2117,9 @@ document.addEventListener('DOMContentLoaded', function() {
             font-weight: 500;
             animation: slideIn 0.3s ease;
         `;
-        
+
         container.appendChild(toast);
-        
+
         // Auto remove after 3.5 seconds
         setTimeout(() => {
             toast.style.opacity = '0';
@@ -1681,13 +2148,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========== 6. INITIALIZE ON PAGE LOAD ==========
     function init() {
         console.log('🚀 Initializing Payment QR Management...');
-        
+
         // Initialize tab switching
         initPaymentTab();
-        
+
         // Initialize upload button handlers
         initUploadHandlers();
-        
+
         // Load QR codes if payment tab is active
         const activeTab = document.querySelector('.cm-tab.active');
         if (activeTab && activeTab.getAttribute('data-page') === 'payment') {

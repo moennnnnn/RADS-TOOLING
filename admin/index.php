@@ -603,8 +603,10 @@ if (!$isLoggedIn) {
                 <button class="cm-tab active" data-page="home_public"><span class="material-symbols-rounded">home</span> Homepage</button>
                 <button class="cm-tab" data-page="about"><span class="material-symbols-rounded">info</span> About Us</button>
                 <button class="cm-tab" data-page="privacy"><span class="material-symbols-rounded">shield</span> Privacy Policy</button>
-                <button class="cm-tab" data-page="payment"><span class="material-symbols-rounded">qr_code</span> Payment Process Info</button>
                 <button class="cm-tab" data-page="terms"><span class="material-symbols-rounded">gavel</span> Terms & Conditions</button>
+                <button class="cm-tab" data-page="payment"><span class="material-symbols-rounded">qr_code</span> Payment Process Info</button>
+                <button class="cm-tab" data-page="logo_settings"><span class="material-symbols-rounded">image</span> Logo Settings</button>
+                <button class="cm-tab" data-page="footer_settings"><span class="material-symbols-rounded">contact_mail</span> Footer Settings</button>
             </div>
             <div class="cm-preview-container">
                 <div class="cm-preview-card" id="previewCard"><iframe id="previewIframe" style="width:100%; height:600px; border:1px solid #e3edfb; border-radius:8px;"></iframe></div>
