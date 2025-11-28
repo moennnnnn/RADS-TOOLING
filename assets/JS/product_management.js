@@ -154,7 +154,7 @@ function initializeEventListeners() {
 // ===== Fetch data =====
 async function loadProducts() {
   try {
-    const data = await fetchJSON('/RADS-TOOLING/backend/api/admin_products.php?action=list');
+    const data = await fetchJSON('/backend/api/admin_products.php?action=list');
     allProducts = data.data || [];
     displayProducts(allProducts);
   } catch (err) {
@@ -164,20 +164,20 @@ async function loadProducts() {
 }
 async function loadTextures() {
   try {
-    const d = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=list_textures');
+    const d = await fetchJSON('/backend/api/admin_customization.php?action=list_textures');
     allTextures = d.data || [];
     if (allTextures.length > 0) console.log('📦 Texture data structure:', allTextures[0]);
   } catch (e) { console.warn('Failed to load textures:', e); }
 }
 async function loadColors() {
   try {
-    const d = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=list_colors');
+    const d = await fetchJSON('/backend/api/admin_customization.php?action=list_colors');
     allColors = d.data || [];
   } catch (e) { console.warn(e); }
 }
 async function loadHandles() {
   try {
-    const d = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=list_handles');
+    const d = await fetchJSON('/backend/api/admin_customization.php?action=list_handles');
     allHandles = d.data || [];
     if (allHandles.length > 0) console.log('🔧 Handle data structure:', allHandles[0]);
   } catch (e) { console.warn('Failed to load handles:', e); }
@@ -193,7 +193,7 @@ async function fetchPrimaryImageForProduct(productId) {
   if (productPrimaryImageCache.has(productId)) return productPrimaryImageCache.get(productId);
 
   try {
-    const resp = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${productId}`, {
+    const resp = await fetch(`/backend/api/product_images.php?action=list&product_id=${productId}`, {
       credentials: 'same-origin'
     });
     const js = await resp.json().catch(() => ({ success: false }));
@@ -235,13 +235,13 @@ function displayProducts(products) {
   // Build each row but attach data-product-id on the img for later patching (if needed).
   tbody.innerHTML = products.map((product) => {
     // Build image src safely from whatever product.image holds
-    let imgSrc = '/RADS-TOOLING/uploads/products/placeholder.jpg';
+    let imgSrc = '/uploads/products/placeholder.jpg';
     if (product.image) {
       const raw = String(product.image || '');
       if (raw.startsWith('uploads/')) {
-        imgSrc = `/RADS-TOOLING/${normalizeSrc(raw)}`;
+        imgSrc = `/${normalizeSrc(raw)}`;
       } else {
-        imgSrc = `/RADS-TOOLING/uploads/products/${normalizeSrc(raw)}`;
+        imgSrc = `/uploads/products/${normalizeSrc(raw)}`;
       }
     }
 
@@ -255,7 +255,7 @@ function displayProducts(products) {
             alt="${alt}"
             class="product-img"
             data-product-id="${product.id}"
-            onerror="this.onerror=null; this.src='/RADS-TOOLING/uploads/products/placeholder.jpg'">
+            onerror="this.onerror=null; this.src='/uploads/products/placeholder.jpg'">
         </td>
         <td><strong>${product.name}</strong></td>
         <td><span class="badge badge-info">${product.type}</span></td>
@@ -312,7 +312,7 @@ function displayProducts(products) {
       // Also fetch when cache undefined (first time)
       const primaryFn = await fetchPrimaryImageForProduct(pid);
       if (primaryFn) {
-        const newSrc = `/RADS-TOOLING/uploads/products/${primaryFn}`;
+        const newSrc = `/uploads/products/${primaryFn}`;
         // only update if different
         if ((imgEl.getAttribute('src') || '') !== newSrc) {
           imgEl.src = newSrc;
@@ -424,7 +424,7 @@ async function handleEditProduct(id) {
   try {
     if (!id) throw new Error('Invalid product id');
 
-    const data = await fetchJSON(`/RADS-TOOLING/backend/api/admin_products.php?action=view&id=${id}`);
+    const data = await fetchJSON(`/backend/api/admin_products.php?action=view&id=${id}`);
 
     // DEBUG: useful for troubleshooting — remove when stable
     console.log('DEBUG: view product response', data);
@@ -572,7 +572,7 @@ async function handleAddProduct(e) {
 
     if (isEdit) {
       // Update endpoint (edit)
-      const endpoint = `/RADS-TOOLING/backend/api/admin_products.php?action=update&id=${encodeURIComponent(editingId)}`;
+      const endpoint = `/backend/api/admin_products.php?action=update&id=${encodeURIComponent(editingId)}`;
       const resp = await fetchJSON(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -590,7 +590,7 @@ async function handleAddProduct(e) {
       if (Array.isArray(window.uploadedProductImages) && window.uploadedProductImages.length > 0) {
         try {
           // 1) fetch existing images list for this product
-          const existingResponse = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${productId}`, {
+          const existingResponse = await fetch(`/backend/api/product_images.php?action=list&product_id=${productId}`, {
             credentials: 'same-origin'
           });
           const existingResult = await existingResponse.json().catch(() => ({ success: false, data: [] }));
@@ -623,7 +623,7 @@ async function handleAddProduct(e) {
       }
     } else {
       // Add endpoint (create)
-      const endpoint = '/RADS-TOOLING/backend/api/admin_products.php?action=add';
+      const endpoint = '/backend/api/admin_products.php?action=add';
       const result = await fetchJSON(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -681,7 +681,7 @@ async function uploadImagesToProductImagesTable(productId, imageFilenames = [], 
   // FIX: Get existing images first to avoid duplicates
   let existingImages = [];
   try {
-    const existingResp = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${productId}`, {
+    const existingResp = await fetch(`/backend/api/product_images.php?action=list&product_id=${productId}`, {
       credentials: 'same-origin'
     });
     const existingResult = await existingResp.json().catch(() => ({ success: false, data: [] }));
@@ -713,7 +713,7 @@ async function uploadImagesToProductImagesTable(productId, imageFilenames = [], 
     fd.append('is_primary', (startDisplayOrder === 0 && i === 0 && existingImages.length === 0) ? '1' : '0');
 
     try {
-      const res = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=insert_direct`, {
+      const res = await fetch(`/backend/api/product_images.php?action=insert_direct`, {
         method: 'POST',
         body: fd,
         credentials: 'same-origin'
@@ -769,7 +769,7 @@ async function handleImagePreview(e) {
       formData.append('images[]', files[i]);
     }
 
-    const resp = await fetch('/RADS-TOOLING/backend/api/admin_products.php?action=upload_image', {
+    const resp = await fetch('/backend/api/admin_products.php?action=upload_image', {
       method: 'POST',
       body: formData,
       credentials: 'same-origin'
@@ -813,7 +813,7 @@ async function handleImagePreview(e) {
       }
       window.uploadedProductImages.push(shortName);
 
-      const imagePath = `/RADS-TOOLING/uploads/products/${shortName}`;
+      const imagePath = `/uploads/products/${shortName}`;
       const imgWrapper = document.createElement('div');
       imgWrapper.className = 'image-preview-item';
       imgWrapper.style.cssText = 'position:relative;width:100px;height:100px;display:inline-block;margin:5px;';
@@ -822,7 +822,7 @@ async function handleImagePreview(e) {
       const img = document.createElement('img');
       img.src = imagePath;
       img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;border:2px solid #ddd;';
-      img.onerror = function () { console.error('Failed to load preview', imagePath); this.src = '/RADS-TOOLING/uploads/products/placeholder.jpg'; };
+      img.onerror = function () { console.error('Failed to load preview', imagePath); this.src = '/uploads/products/placeholder.jpg'; };
 
       // primary badge if first (or none existing)
       if (window.uploadedProductImages.length === 1 && !previewContainer.querySelector('.primary-badge')) {
@@ -850,7 +850,7 @@ async function handleImagePreview(e) {
       const imgPrev = document.getElementById('productImagePreview');
       if (imgPrev) {
         imgPrev.dataset.filename = window.uploadedProductImages[0];
-        imgPrev.src = `/RADS-TOOLING/uploads/products/${window.uploadedProductImages[0]}`;
+        imgPrev.src = `/uploads/products/${window.uploadedProductImages[0]}`;
         imgPrev.style.display = 'none';
       }
     }
@@ -926,7 +926,7 @@ async function loadExistingProductImages(productId) {
     uploadedProductImages = [];
     window.uploadedProductImages = [];
 
-    const response = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${productId}`, {
+    const response = await fetch(`/backend/api/product_images.php?action=list&product_id=${productId}`, {
       credentials: 'same-origin'
     });
     const result = await response.json();
@@ -978,11 +978,11 @@ async function loadExistingProductImages(productId) {
 
       const imgEl = document.createElement('img');
       // ensure path is normalized and points to uploads (fallback to placeholder)
-      imgEl.src = imgPath ? `/RADS-TOOLING/${normalizeSrc(imgPath)}` : '/RADS-TOOLING/uploads/products/placeholder.jpg';
+      imgEl.src = imgPath ? `/${normalizeSrc(imgPath)}` : '/uploads/products/placeholder.jpg';
       imgEl.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;';
       imgEl.onerror = function () {
         this.onerror = null;
-        this.src = '/RADS-TOOLING/uploads/products/placeholder.jpg';
+        this.src = '/uploads/products/placeholder.jpg';
       };
 
       if (Number(img.is_primary) === 1 || index === 0) {
@@ -1054,7 +1054,7 @@ async function deleteProductImageById(imageId, productId) {
   try {
     const fd = new FormData();
     fd.append('image_id', imageId);
-    const resp = await fetch('/RADS-TOOLING/backend/api/product_images.php?action=delete', {
+    const resp = await fetch('/backend/api/product_images.php?action=delete', {
       method: 'POST',
       body: fd,
       credentials: 'same-origin'
@@ -1092,7 +1092,7 @@ async function handleModelPreview(e) {
   formData.append('model', file);
 
   try {
-    const data = await fetch('/RADS-TOOLING/backend/api/admin_products.php?action=upload_model', {
+    const data = await fetch('/backend/api/admin_products.php?action=upload_model', {
       method: 'POST',
       body: formData,
       credentials: 'same-origin'
@@ -1122,7 +1122,7 @@ async function toggleProductRelease(productId, newStatus) {
   if (!confirmed) return;
 
   try {
-    await fetchJSON('/RADS-TOOLING/backend/api/admin_products.php?action=toggle_release', {
+    await fetchJSON('/backend/api/admin_products.php?action=toggle_release', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id: productId, status: newStatus })
     });
@@ -1138,7 +1138,7 @@ async function toggleProductRelease(productId, newStatus) {
 // ===== Customization Modal =====
 async function openCustomizationModal(productId) {
   try {
-    const data = await fetchJSON(`/RADS-TOOLING/backend/api/admin_products.php?action=view&id=${productId}`);
+    const data = await fetchJSON(`/backend/api/admin_products.php?action=view&id=${productId}`);
     const product = data.data;
     currentProduct = product;
 
@@ -1238,7 +1238,7 @@ async function populateTexturesList(productTextures) {
   let existingParts = {};
   try {
     if (currentProduct?.id) {
-      const response = await fetchJSON(`/RADS-TOOLING/backend/api/admin_customization.php?action=list_product_textures_parts&product_id=${currentProduct.id}`);
+      const response = await fetchJSON(`/backend/api/admin_customization.php?action=list_product_textures_parts&product_id=${currentProduct.id}`);
       if (response.success && response.data) {
         response.data.forEach(texture => {
           existingParts[texture.id] = texture.allowed_parts || [];
@@ -1260,7 +1260,7 @@ async function populateTexturesList(productTextures) {
     const texturePrice = texture.price || texture.texture_price || 0;
 
     const imageUrl = textureImage
-      ? `/RADS-TOOLING/uploads/textures/${textureImage}`
+      ? `/uploads/textures/${textureImage}`
       : placeholderSVG;
 
     const textureParts = existingParts[texture.id] || [];
@@ -1367,7 +1367,7 @@ function populateHandlesList(productHandles) {
     const handlePrice = handle.price || handle.handle_price || 0;
 
     const imageUrl = handleImage
-      ? `/RADS-TOOLING/uploads/handles/${handleImage}`
+      ? `/uploads/handles/${handleImage}`
       : placeholderSVG;
 
     container.innerHTML += `
@@ -1410,7 +1410,7 @@ async function deleteTexture(textureId, textureName) {
   }
 
   try {
-    const response = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=delete_texture', {
+    const response = await fetchJSON('/backend/api/admin_customization.php?action=delete_texture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ texture_id: textureId })
@@ -1471,7 +1471,7 @@ async function deleteColor(colorId, colorName) {
   }
 
   try {
-    const response = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=delete_color', {
+    const response = await fetchJSON('/backend/api/admin_customization.php?action=delete_color', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ color_id: colorId })
@@ -1532,7 +1532,7 @@ async function deleteHandle(handleId, handleName) {
   }
 
   try {
-    const response = await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=delete_handle', {
+    const response = await fetchJSON('/backend/api/admin_customization.php?action=delete_handle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ handle_id: handleId })
@@ -1663,19 +1663,19 @@ async function saveCustomizationOptions() {
   const handle_ids = Array.from(document.querySelectorAll('#handlesListContainer  input:checked')).map(cb => +cb.value);
 
   try {
-    await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=update_size_config', {
+    await fetchJSON('/backend/api/admin_customization.php?action=update_size_config', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id, size_config })
     });
-    await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_textures', {
+    await fetchJSON('/backend/api/admin_customization.php?action=assign_textures', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id, texture_ids })
     });
-    await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_colors', {
+    await fetchJSON('/backend/api/admin_customization.php?action=assign_colors', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id, color_ids })
     });
-    await fetchJSON('/RADS-TOOLING/backend/api/admin_customization.php?action=assign_handles', {
+    await fetchJSON('/backend/api/admin_customization.php?action=assign_handles', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id, handle_ids })
     });
@@ -1855,7 +1855,7 @@ function setField(id, value, isCheckbox = false) {
 // ===== Image Manager (modal) functions =====
 async function openImageManager(productId) {
   try {
-    const response = await fetch(`/RADS-TOOLING/backend/api/product_images.php?action=list&product_id=${productId}`, {
+    const response = await fetch(`/backend/api/product_images.php?action=list&product_id=${productId}`, {
       credentials: 'same-origin'
     });
     const result = await response.json();
@@ -1882,7 +1882,7 @@ async function openImageManager(productId) {
             ${images.length === 0 ? '<p style="grid-column: 1/-1; text-align: center; color: #999; padding: 40px 0;">No images yet. Upload images below.</p>' : ''}
             ${images.map(img => `
               <div class="image-item" data-image-id="${img.image_id}" style="position: relative; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s;">
-                <img src="/RADS-TOOLING/${normalizeSrc(img.image_path)}" style="width: 100%; height: 180px; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/RADS-TOOLING/uploads/products/placeholder.jpg'">
+                <img src="/${normalizeSrc(img.image_path)}" style="width: 100%; height: 180px; object-fit: cover; display: block;" onerror="this.onerror=null; this.src='/uploads/products/placeholder.jpg'">
                 ${img.is_primary ? '<div style="position: absolute; top: 8px; left: 8px; background: #4CAF50; color: white; padding: 6px 10px; font-size: 11px; border-radius: 4px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">PRIMARY</div>' : ''}
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); padding: 10px 8px 8px; display: flex; gap: 4px; justify-content: center;">
                   ${!img.is_primary ? `<button onclick="setPrimaryImage(${img.image_id}, ${productId})" style="flex: 1; background: #2196F3; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Set Primary</button>` : ''}
@@ -1933,7 +1933,7 @@ async function setPrimaryImage(imageId, productId) {
     const fd = new FormData();
     fd.append('image_id', imageId);
 
-    const response = await fetch('/RADS-TOOLING/backend/api/product_images.php?action=set_primary', {
+    const response = await fetch('/backend/api/product_images.php?action=set_primary', {
       method: 'POST',
       body: fd,
       credentials: 'same-origin'
@@ -1963,7 +1963,7 @@ async function deleteProductImage(imageId, productId) {
     const fd = new FormData();
     fd.append('image_id', imageId);
 
-    const response = await fetch('/RADS-TOOLING/backend/api/product_images.php?action=delete', {
+    const response = await fetch('/backend/api/product_images.php?action=delete', {
       method: 'POST',
       body: fd,
       credentials: 'same-origin'
@@ -2001,7 +2001,7 @@ async function uploadAdditionalImages(productId) {
 
     showNotification('info', 'Uploading images...');
 
-    const response = await fetch('/RADS-TOOLING/backend/api/product_images.php?action=upload', {
+    const response = await fetch('/backend/api/product_images.php?action=upload', {
       method: 'POST',
       body: formData,
       credentials: 'same-origin'

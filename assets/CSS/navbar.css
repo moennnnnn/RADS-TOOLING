@@ -1,0 +1,100 @@
+/* =========================================
+   SHARED NAVBAR/BRAND STYLES
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+/* Default Style (Base) */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Poppins", sans-serif;
+    width: fit-content;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.navbar-brand .logo-link {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Agwat ng icon at text */
+    transition: opacity 0.3s;
+}
+
+.navbar-brand .logo-link:hover {
+    opacity: 0.9;
+}
+
+/* Text Logo Styles */
+.navbar-brand .logo-text {
+    font-weight: 800;
+    color: #2f5b88;
+    /* Brand Color */
+    line-height: 1;
+    letter-spacing: -0.5px;
+    font-size: 1.5rem;
+    /* Default size */
+}
+
+/* Image Logo Styles */
+.navbar-brand .logo-image {
+    height: 40px;
+    /* Default height */
+    width: auto;
+    object-fit: contain;
+}
+
+/* =========================================
+   CONTEXT OVERRIDES (Automatic Resizing)
+   ========================================= */
+
+/* 1. Kapag nasa Public/Customer HEADER (.navbar) */
+.navbar .navbar-brand .logo-text {
+    font-size: 2rem;
+    /* Mas malaki sa header */
+    color: #2f5b88;
+}
+
+.navbar .navbar-brand .logo-image {
+    height: 50px;
+}
+
+/* 2. Kapag nasa LOGIN / REGISTER (.auth-form, .login-container) */
+.auth-form .navbar-brand,
+.login-container .navbar-brand {
+    width: 100%;
+    /* Gitna sa login form */
+    margin-bottom: 2rem;
+}
+
+.auth-form .navbar-brand .logo-text,
+.login-container .navbar-brand .logo-text {
+    font-size: 2.5rem;
+    /* Pinakamalaki sa login */
+}
+
+.auth-form .navbar-brand .logo-image,
+.login-container .navbar-brand .logo-image {
+    height: 80px;
+    /* Malaking image sa login */
+}
+
+/* 3. Kapag nasa ADMIN SIDEBAR (.sidebar-logo) */
+.sidebar-logo .navbar-brand {
+    width: 100%;
+    justify-content: flex-start;
+    /* Kaliwa ang alignment sa sidebar */
+}
+
+.sidebar-logo .navbar-brand .logo-text {
+    font-size: 1.5rem;
+    /* Sakto lang sa sidebar */
+    color: #2c3e50;
+    /* Darker color para sa admin theme */
+}
+
+.sidebar-logo .navbar-brand .logo-image {
+    height: 40px;
+}

@@ -52,7 +52,7 @@ if ($pdo instanceof PDO) {
         // Get stats - check if deleted column exists first
         $colCheck = $pdo->query("SHOW COLUMNS FROM feedback LIKE 'deleted'")->fetch();
         $deletedFilter = $colCheck ? " AND deleted = 0" : "";
-        
+
         $statsQuery = $pdo->query("
             SELECT 
                 COUNT(*) AS cnt, 
@@ -81,17 +81,18 @@ if ($pdo instanceof PDO) {
         ");
         $stmt->execute();
         $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
     } catch (Throwable $e) {
         error_log('Testimonials query error: ' . $e->getMessage());
     }
 }
 
-function e(string $s): string { 
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); 
+function e(string $s): string
+{
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
-function safeDate(?string $s): string {
+function safeDate(?string $s): string
+{
     if (!$s) return '—';
     $t = strtotime($s);
     return $t ? date('M d, Y', $t) : e($s);
@@ -102,7 +103,7 @@ $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
 
 // If customer is logged in, redirect to customer view
 if ($isCustomer) {
-    header('Location: /RADS-TOOLING/customer/testimonials.php');
+    header('Location: /customer/testimonials.php');
     exit;
 }
 
@@ -114,20 +115,20 @@ if ($isCustomer) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RADS TOOLING - Customer Testimonials</title>
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
+    <link rel="stylesheet" href="/assets/CSS/Homepage.css" />
+    <link rel="stylesheet" href="/assets/CSS/about.css">
+    <link rel="stylesheet" href="/assets/CSS/chat-widget.css">
+    <link rel="stylesheet" href="/assets/CSS/responsive.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
-     <style>
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
@@ -139,7 +140,7 @@ if ($isCustomer) {
         .top-header {
             background: linear-gradient(135deg, #4a6fa5 0%, #6b8cce 100%);
             padding: 1rem 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
         }
 
         .header-content {
@@ -165,15 +166,15 @@ if ($isCustomer) {
             color: #fff;
             text-decoration: none;
             padding: .6rem 1.2rem;
-            background: rgba(255,255,255,.15);
+            background: rgba(255, 255, 255, .15);
             border-radius: 8px;
             transition: all .2s ease;
             font-weight: 500;
-            border: 1px solid rgba(255,255,255,.3);
+            border: 1px solid rgba(255, 255, 255, .3);
         }
 
         .back-link:hover {
-            background: rgba(255,255,255,.25);
+            background: rgba(255, 255, 255, .25);
             transform: translateX(-3px);
         }
 
@@ -219,7 +220,7 @@ if ($isCustomer) {
             border-radius: 50px;
             font-weight: 600;
             color: #4a6fa5;
-            box-shadow: 0 4px 15px rgba(0,0,0,.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, .08);
             border: 2px solid #e9ecef;
         }
 
@@ -238,7 +239,7 @@ if ($isCustomer) {
             background: #fff;
             padding: 2rem;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
             transition: all .3s ease;
             position: relative;
             border: 1px solid #e9ecef;
@@ -246,7 +247,7 @@ if ($isCustomer) {
 
         .testimonial-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 8px 30px rgba(74,111,165,.2);
+            box-shadow: 0 8px 30px rgba(74, 111, 165, .2);
             border-color: #4a6fa5;
         }
 
@@ -256,7 +257,7 @@ if ($isCustomer) {
             top: -5px;
             left: 15px;
             font-size: 80px;
-            color: rgba(74,111,165,.08);
+            color: rgba(74, 111, 165, .08);
             font-family: Georgia, serif;
             line-height: 1;
         }
@@ -309,7 +310,7 @@ if ($isCustomer) {
             color: #fff;
             font-weight: 700;
             font-size: 1.05rem;
-            box-shadow: 0 2px 8px rgba(74,111,165,.3);
+            box-shadow: 0 2px 8px rgba(74, 111, 165, .3);
         }
 
         .customer-details {
@@ -334,7 +335,7 @@ if ($isCustomer) {
             padding: 5rem 2rem;
             background: #fff;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,.08);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
         }
 
         .empty-state .icon {
@@ -359,15 +360,15 @@ if ($isCustomer) {
             .container {
                 padding: 2rem 1rem;
             }
-            
+
             .page-header h1 {
                 font-size: 2rem;
             }
-            
+
             .testimonials-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .summary-bar {
                 flex-direction: column;
                 gap: 1rem;
@@ -378,17 +379,16 @@ if ($isCustomer) {
             }
         }
     </style>
+
 <body>
     <!-- HEADER -->
     <header class="navbar">
         <div class="navbar-container">
-            <div class="navbar-brand">
-                <a href="/RADS-TOOLING/public/index.php" class="logo-link">
-                    <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-                </a>
-            </div>
-
-            <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+            <?php
+            require_once __DIR__ . '/../backend/components/navbar.php';
+            renderNavbar();
+            ?>
+            <form class="search-container" action="/public/products.php" method="get">
                 <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
                 <button type="submit" class="search-btn" aria-label="Search">
                     <span class="material-symbols-rounded">search</span>
@@ -396,25 +396,25 @@ if ($isCustomer) {
             </form>
 
             <div class="navbar-actions">
-                <a href="/RADS-TOOLING/customer/cust_login.php" class="nav-link">
+                <a href="/customer/cust_login.php" class="nav-link">
                     <span class="material-symbols-rounded">login</span>
                     <span>Login</span>
                 </a>
-                <a href="/RADS-TOOLING/customer/register.php" class="nav-link">
+                <a href="/customer/register.php" class="nav-link">
                     <span class="material-symbols-rounded">person_add</span>
                     <span>Sign Up</span>
                 </a>
-                <a href="/RADS-TOOLING/admin/login.php" class="nav-link-icon" title="Staff Login">
+                <a href="/admin/login.php" class="nav-link-icon" title="Staff Login">
                     <span class="material-symbols-rounded">admin_panel_settings</span>
                 </a>
             </div>
         </div>
 
         <nav class="navbar-menu">
-            <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item">Home</a>
-            <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
-            <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
-            <a href="/RADS-TOOLING/public/testimonials.php" class="nav-menu-item active">Testimonials</a>
+            <a href="/public/index.php" class="nav-menu-item">Home</a>
+            <a href="/public/about.php" class="nav-menu-item">About Us</a>
+            <a href="/public/products.php" class="nav-menu-item">Products</a>
+            <a href="/public/testimonials.php" class="nav-menu-item active">Testimonials</a>
         </nav>
     </header>
 
@@ -445,24 +445,24 @@ if ($isCustomer) {
             </div>
         <?php else: ?>
             <div class="testimonials-grid">
-                <?php foreach ($testimonials as $t): 
+                <?php foreach ($testimonials as $t):
                     $name = trim($t['customer_name'] ?? 'Customer');
                     $initials = '';
                     if ($name !== '' && $name !== 'Customer') {
                         $parts = preg_split('/\s+/', $name);
                         $initials = strtoupper(
-                            mb_substr($parts[0], 0, 1) . 
-                            (isset($parts[1]) ? mb_substr($parts[1], 0, 1) : '')
+                            mb_substr($parts[0], 0, 1) .
+                                (isset($parts[1]) ? mb_substr($parts[1], 0, 1) : '')
                         );
                     } else {
                         $initials = 'C';
                     }
                     $rating = (int)($t['rating'] ?? 0);
                     $comment = trim((string)($t['comment'] ?? ''));
-                    ?>
+                ?>
                     <div class="testimonial-card">
                         <div class="rating" aria-label="<?php echo $rating; ?> out of 5 stars">
-                            <?php for ($i=1; $i<=5; $i++): ?>
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
                                 <span class="star <?php echo $i <= $rating ? '' : 'empty'; ?>">★</span>
                             <?php endfor; ?>
                         </div>
@@ -506,7 +506,7 @@ if ($isCustomer) {
             <p style="color: #666; margin-bottom: 20px;">
                 Please login to chat with our support team and get instant answers to your questions.
             </p>
-            <a href="/RADS-TOOLING/customer/cust_login.php"
+            <a href="/customer/cust_login.php"
                 style="display: inline-block; padding: 12px 24px; background: #1f4e74; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
                 <i class="fas fa-sign-in-alt"></i> Login Now
             </a>
@@ -535,74 +535,11 @@ if ($isCustomer) {
     </script>
 
     <!-- FOOTER -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>About RADS TOOLING</h3>
-                <p class="footer-description">
-                    Premium custom cabinet manufacturer serving clients since 2007.
-                    Quality craftsmanship, affordable prices, and exceptional service.
-                </p>
-                <div class="footer-social">
-                    <a href="#" class="social-icon" aria-label="Facebook">
-                        <span class="material-symbols-rounded">facebook</span>
-                    </a>
-                    <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
-                        <span class="material-symbols-rounded">mail</span>
-                    </a>
-                </div>
-            </div>
-
-            <div class="footer-section">
-                <h3>Quick Links</h3>
-                <ul class="footer-links">
-                    <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
-                    <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-                    <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
-                    <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
-                    <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
-                    <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-section">
-                <h3>Categories</h3>
-                <ul class="footer-links">
-                    <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen Cabinet</a></li>
-                    <li><a href="/RADS-TOOLING/public/products.php?type=Wardrobe">Wardrobe</a></li>
-                    <li><a href="/RADS-TOOLING/public/products.php?type=Office Cabinet">Office Cabinet</a></li>
-                    <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
-                    <li><a href="/RADS-TOOLING/public/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-section">
-                <h3>Contact Info</h3>
-                <div class="contact-info-item">
-                    <span class="material-symbols-rounded">location_on</span>
-                    <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
-                </div>
-                <div class="contact-info-item">
-                    <span class="material-symbols-rounded">mail</span>
-                    <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
-                </div>
-                <div class="contact-info-item">
-                    <span class="material-symbols-rounded">schedule</span>
-                    <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p class="footer-copyright">
-                © 2025 RADS TOOLING INC. All rights reserved.
-            </p>
-            <div class="footer-legal">
-                <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
-                <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
-            </div>
-        </div>
-    </footer>
-    <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+    <?php
+    require_once __DIR__ . '/../backend/components/footer.php';
+    renderFooter();
+    ?>
+    <script src="/assets/JS/chat_widget.js"></script>
 </body>
+
 </html>

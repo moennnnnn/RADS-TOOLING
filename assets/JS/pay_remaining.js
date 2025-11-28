@@ -1,4 +1,4 @@
-// /RADS-TOOLING/assets/JS/payment_remaining.js
+// /assets/JS/payment_remaining.js
 // Payment handler for remaining balance with flexible amount options
 
 (function () {
@@ -220,7 +220,7 @@
 
         // Fetch QR code (matching checkout.js logic)
         try {
-            const response = await fetch('/RADS-TOOLING/backend/api/content_mgmt.php', {
+            const response = await fetch('/backend/api/content_mgmt.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -253,7 +253,7 @@
                     const qrData = selectedMethod === 'gcash' ? result.data.gcash : result.data.bpi;
 
                     if (qrData && qrData.image_path) {
-                        const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
+                        const imageUrl = `/${qrData.image_path}`;
                         console.log(`✅ Displaying ${selectedMethod.toUpperCase()} QR:`, imageUrl);
 
                         qrBox.innerHTML = `
@@ -335,7 +335,7 @@
         btn.innerHTML = '<span class="material-symbols-rounded">hourglass_empty</span> Submitting...';
 
         try {
-            const response = await fetch('/RADS-TOOLING/backend/api/payment_submit.php', {
+            const response = await fetch('/backend/api/payment_submit.php', {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
@@ -367,7 +367,7 @@
 
     // ===== Step 5: Go to Orders =====
     $('#btnGoOrders')?.addEventListener('click', () => {
-        location.href = '/RADS-TOOLING/customer/orders.php';
+        location.href = '/customer/orders.php';
     });
 
     // ===== Numeric Input Validation =====

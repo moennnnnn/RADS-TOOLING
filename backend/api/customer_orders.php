@@ -232,7 +232,7 @@ if ($action === 'list') {
                 $itemsSubtotal += $itemTotal;
                 
                 if (empty($item['image'])) {
-                    $item['image'] = '/RADS-TOOLING/assets/images/cab1.jpg';
+                    $item['image'] = '/assets/images/cab1.jpg';
                 }
             }
             unset($item);
@@ -368,7 +368,7 @@ elseif ($action === 'details') {
             $itemsSubtotal += $itemTotal;
             
             if (empty($item['image'])) {
-                $item['image'] = '/RADS-TOOLING/assets/images/cab1.jpg';
+                $item['image'] = '/assets/images/cab1.jpg';
             }
         }
         unset($item);

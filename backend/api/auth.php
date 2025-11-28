@@ -403,7 +403,7 @@ class AuthAPI
 
         // 🔴 Not verified → tell frontend to go to verify.php
         if ((int)$user['email_verified'] !== 1) {
-            $verifyUrl = '/RADS-TOOLING/customer/verify.php?email=' . urlencode($user['email']);
+            $verifyUrl = '/customer/verify.php?email=' . urlencode($user['email']);
             $this->send(true, 'Verification required', [
                 'verify_required' => true,
                 'email'           => $user['email'],
@@ -443,7 +443,7 @@ class AuthAPI
         $this->send(true, 'Login successful', [
             'user'           => $_SESSION['user'],
             'session_token'  => $token,
-            'redirect'       => '/RADS-TOOLING/customer/homepage.php'
+            'redirect'       => '/customer/homepage.php'
         ]);
     }
 

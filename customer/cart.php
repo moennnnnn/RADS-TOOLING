@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/customer/cart.php
+// /customer/cart.php
 declare(strict_types=1);
 session_start();
 
@@ -712,11 +712,11 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
     <header class="minimal-header">
         <div class="header-content">
             <div class="header-left">
-                <a href="/RADS-TOOLING/customer/products.php" class="back-button">
+                <a href="/customer/products.php" class="back-button">
                     <span class="material-symbols-rounded">arrow_back</span>
                     Back
                 </a>
-                <a href="/RADS-TOOLING/customer/homepage.php" class="logo">
+                <a href="/customer/homepage.php" class="logo">
                     <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
                 </a>
             </div>
@@ -870,7 +870,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
             <span class="material-symbols-rounded">shopping_cart</span>
             <h2>Your cart is empty</h2>
             <p>Add some amazing cabinets to get started!</p>
-            <button class="checkout-btn" onclick="location.href='/RADS-TOOLING/customer/products.php'">
+            <button class="checkout-btn" onclick="location.href='/customer/products.php'">
               Browse Products
             </button>
           </div>
@@ -909,7 +909,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
                   src="${escapeHtml(item.image)}" 
                   alt="${escapeHtml(item.name)}" 
                   class="cart-item-image" 
-                  onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                  onerror="this.src='/assets/images/placeholder.jpg'">
                 
                 <div class="cart-item-details">
                   <h3 class="cart-item-name">${escapeHtml(item.name)}</h3>
@@ -1055,7 +1055,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
           Proceed to Checkout (${selectedItems.size})
         </button>
 
-        <button class="continue-shopping" onclick="location.href='/RADS-TOOLING/customer/products.php'">
+        <button class="continue-shopping" onclick="location.href='/customer/products.php'">
           Continue Shopping
         </button>
       `;
@@ -1157,8 +1157,8 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 
                 const pid = firstItem.id;
                 const url = selectedMode === 'delivery' ?
-                    `/RADS-TOOLING/customer/checkout_delivery.php?pid=${pid}` :
-                    `/RADS-TOOLING/customer/checkout_pickup.php?pid=${pid}`;
+                    `/customer/checkout_delivery.php?pid=${pid}` :
+                    `/customer/checkout_pickup.php?pid=${pid}`;
 
                 window.location.href = url;
             });

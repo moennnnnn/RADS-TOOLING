@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/backend/api/order_create.php
+// /backend/api/order_create.php
 // ✅ FINAL FIXED VERSION - handles nested payload structure + better error messages
 
 declare(strict_types=1);
@@ -15,7 +15,7 @@ if (!isset($_SESSION['customer']) || empty($_SESSION['customer'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Please login to place an order',
-        'redirect' => '/RADS-TOOLING/customer/login.php'
+        'redirect' => '/customer/login.php'
     ]);
     exit;
 }

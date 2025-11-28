@@ -4,8 +4,8 @@ const CM = {
     currentPage: 'home_public',
     currentContent: {},
     quillEditors: {},
-    apiBaseUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
-    previewUrl: '/RADS-TOOLING/backend/api/cms_preview.php',
+    apiBaseUrl: '/backend/api/content_mgmt.php',
+    previewUrl: '/backend/api/cms_preview.php',
 
     normalizePageKey(page) {
         // Any aliases you might use in tabs/dropdowns map to DB keys
@@ -98,68 +98,130 @@ const CM = {
         });
     },
 
+    // HANAPIN ANG switchTab FUNCTION AT PALITAN NG GANITO:
+    // HANAPIN AT PALITAN ANG switchTab FUNCTION:
     switchTab(page) {
         console.log(`Switching to: ${page}`);
         this.currentPage = this.normalizePageKey(page);
 
-        // Special handling for tabs without traditional iframe preview
-        if (page === 'payment' || page === 'logo_settings' || page === 'footer_settings') {
-            // Hide preview section
-            const previewCard = document.getElementById('previewCard');
-            if (previewCard) {
-                previewCard.style.display = 'none';
-            }
-
-            // Show Edit Content button
-            const btnEdit = document.getElementById('btnEditContent');
-            if (btnEdit) {
-                btnEdit.style.display = 'block';
-            }
-
-            // Show payment settings section only for payment tab
-            const paymentSection = document.getElementById('paymentSettingsSection');
-            if (paymentSection) {
-                paymentSection.style.display = page === 'payment' ? 'block' : 'none';
-            }
-
-            // Update active tab
-            this.updateActiveTab();
-
-            // Load payment QR data for payment tab
-            if (page === 'payment' && CM.Payment) {
-                CM.Payment.loadPaymentQR();
-            }
-
-            return; // Don't load iframe preview for these tabs
-        }
-
-        // For other tabs, show preview and hide payment section
-        const previewCard = document.getElementById('previewCard');
-        if (previewCard) {
-            previewCard.style.display = 'block';
-        }
-
+        // Get elements
+        const previewCard = document.getElementById('previewCard'); // Main container
+        const previewPanel = document.querySelector('.preview-panel'); // The right side panel
+        const iframe = document.getElementById('previewIframe');
         const btnEdit = document.getElementById('btnEditContent');
-        if (btnEdit) {
-            btnEdit.style.display = 'block';
-        }
-
         const paymentSection = document.getElementById('paymentSettingsSection');
-        if (paymentSection) {
-            paymentSection.style.display = 'none';
+
+        // 1. Reset Defaults (Show standard CMS view)
+        if (paymentSection) paymentSection.style.display = 'none';
+        if (previewCard) previewCard.style.display = 'block';
+        if (previewPanel) previewPanel.style.display = 'flex'; // Show right panel by default
+        if (iframe) iframe.style.display = 'block';
+        if (btnEdit) btnEdit.style.display = 'block';
+
+        // 2. Handle Payment Tab
+        if (page === 'payment') {
+            if (previewCard) previewCard.style.display = 'none';
+            if (paymentSection) paymentSection.style.display = 'block';
+            this.updateActiveTab();
+            if (CM.Payment) CM.Payment.loadPaymentQR();
+            return;
+        }
+        
+        // 3. Handle Logo & Footer Tabs (HIDE IFRAME PREVIEW COMPLETELY)
+        if (page === 'logo_settings' || page === 'footer_settings') {
+            if (iframe) iframe.style.display = 'none'; // Hide normal page preview
+
+            // Create or Show Static Preview Container
+            let staticPreview = document.getElementById('staticPreviewContainer');
+            if (!staticPreview) {
+                staticPreview = document.createElement('div');
+                staticPreview.id = 'staticPreviewContainer';
+                staticPreview.className = 'static-preview-box';
+                staticPreview.style.padding = '20px';
+                staticPreview.style.textAlign = 'center';
+                staticPreview.style.background = '#f8f9fa';
+                staticPreview.style.border = '1px dashed #ccc';
+                previewCard.appendChild(staticPreview);
+            }
+            staticPreview.style.display = 'block';
+
+            // Adjust the editor layout to full width since preview is gone
+            const editorLayout = document.querySelector('.editor-layout');
+            if (editorLayout) {
+                editorLayout.style.gridTemplateColumns = '1fr'; // Make editor take full width
+            }
+            if (previewPanel) previewPanel.style.display = 'none';
+
+            this.loadStaticPreview(page);
+            this.updateActiveTab();
+            return;
         }
 
-        // Update dropdown if switching to homepage
+        // 4. Normal Pages (Restoring Standard View)
+        // Restore layout logic
+        const editorLayout = document.querySelector('.editor-layout');
+        if (editorLayout) {
+            editorLayout.style.gridTemplateColumns = '500px 1fr'; // Restore split view
+        }
+        if (previewPanel) previewPanel.style.display = 'flex'; // Show preview panel again
+
+        // Dropdown logic for homepage
         const typeSelect = document.getElementById('homepageType');
-        if (typeSelect && (page === 'home_public' || page === 'home_customer')) {
-            typeSelect.value = page;
-            typeSelect.parentElement.style.display = 'flex';
-        } else if (typeSelect) {
-            typeSelect.parentElement.style.display = 'none';
+        if (typeSelect) {
+            if (page === 'home_public' || page === 'home_customer') {
+                typeSelect.value = page;
+                typeSelect.parentElement.style.display = 'flex';
+            } else {
+                typeSelect.parentElement.style.display = 'none';
+            }
         }
 
         this.updateActiveTab();
         this.loadPreview();
+    },
+
+    // DAGDAG MO ITONG BAGONG FUNCTION SA LOOB NG CM OBJECT:
+    async loadStaticPreview(page) {
+        const container = document.getElementById('staticPreviewContainer');
+        if (!container) return;
+
+        container.innerHTML = '<p>Loading current settings...</p>';
+
+        try {
+            const response = await fetch(`${this.apiBaseUrl}?action=get&page=${page}&status=published`);
+            const data = await response.json();
+            const content = data.content || {};
+
+            if (page === 'logo_settings') {
+                const type = content.logo_type || 'text';
+                const text = content.logo_text || 'RADS TOOLING';
+                const img = content.logo_image || '';
+
+                let html = `<h3>Current Logo Preview</h3><div style="padding: 20px; background: white; display: inline-block; border: 1px solid #ddd; border-radius: 8px;">`;
+                if (type === 'image' && img) {
+                    html += `<img src="${img}" style="height: 60px; width: auto;" alt="Logo">`;
+                } else {
+                    html += `<h2 style="margin:0; font-family: Arial; color: #333;"><span style="color: #2563eb;">${text.charAt(0)}</span>${text.slice(1)}</h2>`;
+                }
+                html += `</div><p style="margin-top:10px; color: #666;">This logo appears on all pages.</p>`;
+                container.innerHTML = html;
+
+            } else if (page === 'footer_settings') {
+                container.innerHTML = `
+                    <h3>Current Footer Details</h3>
+                    <div style="text-align: left; max-width: 600px; margin: 0 auto; background: white; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                        <p><strong>Company:</strong> ${content.footer_company_name || 'N/A'}</p>
+                        <p><strong>Email:</strong> ${content.footer_email || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${content.footer_phone || 'N/A'}</p>
+                        <p><strong>Address:</strong> ${content.footer_address || 'N/A'}</p>
+                        <hr>
+                        <p style="font-size: 0.9em; color: #666;">${content.footer_copyright || ''}</p>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            container.innerHTML = '<p style="color:red">Failed to load preview.</p>';
+        }
     },
 
     loadPreview() {
@@ -184,10 +246,9 @@ const CM = {
         const modal = document.getElementById('editModal');
         if (!modal) return;
 
-        // STEP 1: Show modal FIRST
         modal.classList.add('show');
 
-        // STEP 2: Update title
+        // Update title
         const titles = {
             home_public: 'Edit Public Homepage',
             home_customer: 'Edit Customer Homepage',
@@ -199,15 +260,16 @@ const CM = {
         };
         document.getElementById('modalTitle').textContent = titles[this.currentPage] || 'Edit Content';
 
-        // STEP 3: Show customer notice for customer homepage
+        // Show customer notice for customer homepage
         const notice = document.getElementById('customerNotice');
-        // Notice only exists for regular pages, not logo/footer settings
-        // We'll handle this after building interface
+        if (notice) {
+            notice.style.display = this.currentPage === 'home_customer' ? 'block' : 'none';
+        }
 
-        // STEP 4: Build editor interface (now modal is in DOM)
+        // Build editor interface
         this.buildEditorInterface();
 
-        // STEP 5: Load content
+        // Load content
         this.loadEditorContent();
     },
 
@@ -219,127 +281,25 @@ const CM = {
     },
 
     buildEditorInterface() {
-        // Wait for modal to be in DOM
-        setTimeout(() => {
-            const container = document.getElementById('editorLayoutContainer');
-            if (!container) {
-                console.error('editorLayoutContainer not found!');
-                return;
-            }
+        const container = document.getElementById('editorContainer');
+        if (!container) return;
 
-            let html = '';
-
-            // Logo and Footer Settings: Use 2-column layout directly
-            if (this.currentPage === 'logo_settings') {
-                html = this.getLogoSettingsEditor();
-                container.innerHTML = html;
-
-                // Setup event listeners for logo settings
-                this.setupLogoSettingsListeners();
-
-            } else if (this.currentPage === 'footer_settings') {
-                html = this.getFooterSettingsEditor();
-                container.innerHTML = html;
-
-                // Setup event listeners for footer settings
-                this.setupFooterSettingsListeners();
-
-            } else {
-                // Regular pages: Use editor-layout with left panel + right iframe
-                html = `
-                <div class="editor-layout">
-                    <div class="editor-panel">
-                        <div class="editor-header">
-                            <h3>Edit Fields</h3>
-                            <div class="editor-status"><span id="previewStatus" class="preview-status status-published">Published</span></div>
-                        </div>
-                        <div id="customerNotice" class="alert alert-info ${this.currentPage === 'home_customer' ? '' : 'hidden'}" style="padding:12px">
-                            <span class="material-symbols-rounded">info</span>
-                            <p>Use <code>{{customer_name}}</code> as placeholder for customer's name</p>
-                        </div>
-                        <div id="editorContainer" class="editor-fields" style="padding:20px">
-                            ${this.getEditorFieldsHTML()}
-                        </div>
-                    </div>
-                    <div class="preview-panel">
-                        <div class="preview-header">
-                            <h3>Live Preview</h3>
-                        </div>
-                        <div class="preview-iframe-container">
-                            <iframe id="livePreviewIframe" frameborder="0"></iframe>
-                        </div>
-                    </div>
-                </div>
-            `;
-                container.innerHTML = html;
-
-                // Initialize Quill editors for regular pages
-                this.initQuillEditors();
-            }
-        }, 100); // Small delay to ensure modal is rendered
-    },
-
-    // NEW: Setup logo settings event listeners
-    setupLogoSettingsListeners() {
-        const logoTextRadio = document.getElementById('logo-type-text');
-        const logoImageRadio = document.getElementById('logo-type-image');
-        const logoText = document.getElementById('logo-text');
-
-        if (logoTextRadio) {
-            logoTextRadio.addEventListener('change', () => {
-                this.toggleLogoType('text');
-                this.updateLogoPreview();
-            });
-        }
-
-        if (logoImageRadio) {
-            logoImageRadio.addEventListener('change', () => {
-                this.toggleLogoType('image');
-                this.updateLogoPreview();
-            });
-        }
-
-        if (logoText) {
-            logoText.addEventListener('input', () => {
-                this.updateLogoPreview();
-            });
-        }
-    },
-
-    // NEW: Setup footer settings event listeners
-    setupFooterSettingsListeners() {
-        const footerFields = [
-            'footer-company-name',
-            'footer-description',
-            'footer-email',
-            'footer-phone',
-            'footer-address',
-            'footer-hours',
-            'footer-facebook',
-            'footer-copyright'
-        ];
-
-        footerFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('input', () => {
-                    this.updateFooterPreview();
-                });
-            }
-        });
-    },
-
-    // Helper: Get editor fields HTML based on page
-    getEditorFieldsHTML() {
         if (this.currentPage === 'home_public') {
-            return this.getHomePublicEditor();
+            container.innerHTML = this.getHomePublicEditor();
         } else if (this.currentPage === 'home_customer') {
-            return this.getHomeCustomerEditor();
+            container.innerHTML = this.getHomeCustomerEditor();
         } else if (this.currentPage === 'about') {
-            return this.getAboutPageEditor();
+            container.innerHTML = this.getAboutPageEditor();
+        } else if (this.currentPage === 'logo_settings') {
+            container.innerHTML = this.getLogoSettingsEditor();
+        } else if (this.currentPage === 'footer_settings') {
+            container.innerHTML = this.getFooterSettingsEditor();
         } else {
-            return this.getSimplePageEditor();
+            container.innerHTML = this.getSimplePageEditor();
         }
+
+        // Initialize Quill editors
+        this.initQuillEditors();
     },
 
     getHomePublicEditor() {
@@ -427,7 +387,7 @@ const CM = {
             <div id="quill-intro" class="quill-container"></div>
             
             <label>Hero Image</label>
-            <input type="text" id="customer-hero-image" class="form-input" placeholder="/RADS-TOOLING/assets/images/cabinet-hero.jpg">
+            <input type="text" id="customer-hero-image" class="form-input" placeholder="/assets/images/cabinet-hero.jpg">
             <button type="button" class="btn-upload" onclick="document.getElementById('customerHeroUpload').click()">
                 <span class="material-symbols-rounded">upload</span> Upload Hero Image
             </button>
@@ -557,119 +517,191 @@ const CM = {
 
     getLogoSettingsEditor() {
         return `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 70vh;">
-        <!-- LEFT: Edit Section -->
-        <div class="editor-section" style="overflow-y: auto; padding-right: 15px;">
-            <h3><span class="material-symbols-rounded">image</span> Logo Configuration</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- Edit Section -->
+      <div class="editor-section">
+        <h3><span class="material-symbols-rounded">image</span> Logo Configuration</h3>
 
-            <label>Logo Type</label>
-            <div style="margin-bottom: 20px;">
-                <label style="display: inline-flex; align-items: center; margin-right: 20px; cursor: pointer;">
-                    <input type="radio" name="logo_type" value="text" id="logo-type-text" checked style="margin-right: 8px;">
-                    Text Logo
-                </label>
-                <label style="display: inline-flex; align-items: center; cursor: pointer;">
-                    <input type="radio" name="logo_type" value="image" id="logo-type-image" style="margin-right: 8px;">
-                    Image Logo
-                </label>
-            </div>
-
-            <!-- Text Logo Section -->
-            <div id="text-logo-section">
-                <label>Logo Text</label>
-                <input type="text" id="logo-text" class="form-input" placeholder="RADS TOOLING" value="RADS TOOLING">
-            </div>
-
-            <!-- Image Logo Section -->
-            <div id="image-logo-section" style="display: none;">
-                <label>Logo Image</label>
-                <button type="button" class="btn-upload" onclick="document.getElementById('logoImageUpload').click()">
-                    <span class="material-symbols-rounded">upload</span> Upload Logo Image
-                </button>
-                <input type="file" id="logoImageUpload" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="CM.handleLogoImageUpload(event)">
-
-                <div id="logo-image-upload-preview" style="margin-top: 15px; display: none;">
-                    <p style="font-weight: 500; margin-bottom: 8px;">Uploaded Image:</p>
-                    <img id="logo-image-preview-img" src="" alt="Logo Preview" style="max-width: 250px; max-height: 120px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
-                    <input type="hidden" id="logo-image-path" value="">
-                    <br>
-                    <button type="button" class="btn-secondary" onclick="CM.removeLogoImage()" style="margin-top: 10px;">
-                        <span class="material-symbols-rounded">delete</span> Remove Image
-                    </button>
-                </div>
-            </div>
+        <label>Logo Type</label>
+        <div style="margin-bottom: 20px;">
+          <label style="display: inline-flex; align-items: center; margin-right: 20px; cursor: pointer;">
+            <input type="radio" name="logo_type" value="text" id="logo-type-text" checked style="margin-right: 8px;">
+            Text Logo
+          </label>
+          <label style="display: inline-flex; align-items: center; cursor: pointer;">
+            <input type="radio" name="logo_type" value="image" id="logo-type-image" style="margin-right: 8px;">
+            Image Logo
+          </label>
         </div>
 
-        <!-- RIGHT: Live Preview Section -->
-        <div class="preview-panel" style="background: #f5f8fa; padding: 20px; border-radius: 8px; overflow-y: auto;">
-            <h3 style="margin-bottom: 15px;"><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
-            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your logo will appear:</p>
-
-            <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
-                <div id="logo-live-preview" style="font-size: 24px; font-weight: 600; font-family: Arial, sans-serif;">
-                    <span style="color: #2563eb;">R</span>ADS TOOLING
-                </div>
-            </div>
+        <!-- Text Logo Section -->
+        <div id="text-logo-section">
+          <label>Logo Text</label>
+          <input type="text" id="logo-text" class="form-input" placeholder="RADS TOOLING" value="RADS TOOLING">
         </div>
+
+        <!-- Image Logo Section -->
+        <div id="image-logo-section" style="display: none;">
+          <label>Logo Image</label>
+          <button type="button" class="btn-upload" onclick="document.getElementById('logoImageUpload').click()">
+            <span class="material-symbols-rounded">upload</span> Upload Logo Image
+          </button>
+          <input type="file" id="logoImageUpload" accept="image/png,image/jpeg,image/svg+xml" style="display:none;" onchange="CM.handleLogoImageUpload(event)">
+
+          <div id="logo-image-upload-preview" style="margin-top: 15px; display: none;">
+            <p style="font-weight: 500; margin-bottom: 8px;">Uploaded Image:</p>
+            <img id="logo-image-preview-img" src="" alt="Logo Preview" style="max-width: 250px; max-height: 120px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+            <input type="hidden" id="logo-image-path" value="">
+            <br>
+            <button type="button" class="btn-secondary" onclick="CM.removeLogoImage()" style="margin-top: 10px;">
+              <span class="material-symbols-rounded">delete</span> Remove Image
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview Section -->
+      <div class="editor-section" style="background: #f5f8fa; padding: 20px; border-radius: 8px;">
+        <h3><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your logo will appear:</p>
+
+        <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #ddd;">
+          <div id="logo-live-preview" style="font-size: 24px; font-weight: 600; font-family: Arial, sans-serif;">
+            <span style="color: #2563eb;">R</span>ADS TOOLING
+          </div>
+        </div>
+      </div>
     </div>
-    `;
+  `;
     },
 
     getFooterSettingsEditor() {
         return `
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 70vh;">
-        <!-- LEFT: Edit Section -->
-        <div class="editor-section" style="overflow-y: auto; padding-right: 15px;">
-            <h3><span class="material-symbols-rounded">contact_mail</span> Footer Configuration</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- Edit Section -->
+      <div class="editor-section">
+        <h3><span class="material-symbols-rounded">contact_mail</span> Footer Configuration</h3>
 
-            <label>Company Name</label>
-            <input type="text" id="footer-company-name" class="form-input" placeholder="About RADS TOOLING">
+        <label>Company Name</label>
+        <input type="text" id="footer-company-name" class="form-input" placeholder="About RADS TOOLING">
 
-            <label>Company Description</label>
-            <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
+        <label>Company Description</label>
+        <textarea id="footer-description" class="form-input" rows="3" placeholder="Premium custom cabinet manufacturer..."></textarea>
 
-            <label>Email Address</label>
-            <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
+        <label>Email Address</label>
+        <input type="email" id="footer-email" class="form-input" placeholder="RadsTooling@gmail.com">
 
-            <label>Phone Number</label>
-            <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
+        <label>Phone Number</label>
+        <input type="tel" id="footer-phone" class="form-input" placeholder="+63 976 228 4270">
 
-            <label>Physical Address</label>
-            <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
+        <label>Physical Address</label>
+        <input type="text" id="footer-address" class="form-input" placeholder="Green Breeze, Piela, Dasmariñas, Cavite">
 
-            <label>Business Hours</label>
-            <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
+        <label>Business Hours</label>
+        <input type="text" id="footer-hours" class="form-input" placeholder="Mon-Sat: 8:00 AM - 5:00 PM">
 
-            <label>Facebook Page URL</label>
-            <input type="url" id="footer-facebook" class="form-input" placeholder="https://facebook.com/radstooling">
+        <label>Facebook Page URL</label>
+        <input type="url" id="footer-facebook" class="form-input" placeholder="https://facebook.com/radstooling">
 
-            <label>Copyright Text</label>
-            <input type="text" id="footer-copyright" class="form-input" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+        <label>Copyright Text</label>
+        <input type="text" id="footer-copyright" class="form-input" placeholder="© 2025 RADS TOOLING INC. All rights reserved.">
+      </div>
+
+      <!-- Preview Section -->
+      <div class="editor-section" style="background: #f5f8fa; padding: 20px; border-radius: 8px;">
+        <h3><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your footer will appear:</p>
+
+        <div id="footer-live-preview" style="background: #1e293b; color: white; padding: 20px; border-radius: 6px; font-size: 13px;">
+          <div style="margin-bottom: 15px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 14px;">About RADS TOOLING</h4>
+            <p style="margin: 0; color: #cbd5e1; font-size: 12px;">Premium custom cabinet manufacturer serving clients since 2007.</p>
+          </div>
+          <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
+            <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>RadsTooling@gmail.com</div>
+            <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>+63 976 228 4270</div>
+            <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>Green Breeze, Piela, Dasmariñas, Cavite</div>
+            <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>Mon-Sat: 8:00 AM - 5:00 PM</div>
+          </div>
+          <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
+            © 2025 RADS TOOLING INC. All rights reserved.
+          </div>
         </div>
-
-        <!-- RIGHT: Live Preview Section -->
-        <div class="preview-panel" style="background: #f5f8fa; padding: 20px; border-radius: 8px; overflow-y: auto;">
-            <h3 style="margin-bottom: 15px;"><span class="material-symbols-rounded">visibility</span> Live Preview</h3>
-            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">This is how your footer will appear:</p>
-
-            <div id="footer-live-preview" style="background: #1e293b; color: white; padding: 20px; border-radius: 6px; font-size: 13px;">
-                <div style="margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 8px 0; font-size: 14px;">About RADS TOOLING</h4>
-                    <p style="margin: 0; color: #cbd5e1; font-size: 12px;">Premium custom cabinet manufacturer serving clients since 2007.</p>
-                </div>
-                <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
-                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>RadsTooling@gmail.com</div>
-                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>+63 976 228 4270</div>
-                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>Green Breeze, Piela, Dasmariñas, Cavite</div>
-                    <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>Mon-Sat: 8:00 AM - 5:00 PM</div>
-                </div>
-                <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
-                    © 2025 RADS TOOLING INC. All rights reserved.
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    `;
+  `;
+    },
+
+    updateLogoPreview() {
+        const preview = document.getElementById('logo-live-preview');
+        if (!preview) return;
+
+        const logoTypeImage = document.getElementById('logo-type-image');
+        const isImageLogo = logoTypeImage && logoTypeImage.checked;
+
+        if (isImageLogo) {
+            const logoImagePath = document.getElementById('logo-image-path');
+            const imageSrc = logoImagePath ? logoImagePath.value : '';
+
+            if (imageSrc) {
+                preview.innerHTML = `<img src="${imageSrc}" alt="Logo" style="max-height: 50px; height: auto;">`;
+            } else {
+                preview.innerHTML = '<p style="color: #999; font-size: 14px;">No logo image uploaded yet</p>';
+            }
+        } else {
+            const logoText = document.getElementById('logo-text');
+            const text = logoText ? logoText.value : 'RADS TOOLING';
+
+            if (text) {
+                const firstLetter = text.charAt(0);
+                const restOfText = text.substring(1);
+                preview.innerHTML = `<span style="color: #2563eb;">${firstLetter}</span>${restOfText}`;
+            } else {
+                preview.innerHTML = '<span style="color: #2563eb;">R</span>ADS TOOLING';
+            }
+        }
+    },
+
+    updateFooterPreview() {
+        const companyName = document.getElementById('footer-company-name')?.value || 'About RADS TOOLING';
+        const description = document.getElementById('footer-description')?.value || 'Premium custom cabinet manufacturer serving clients since 2007.';
+        const email = document.getElementById('footer-email')?.value || 'RadsTooling@gmail.com';
+        const phone = document.getElementById('footer-phone')?.value || '+63 976 228 4270';
+        const address = document.getElementById('footer-address')?.value || 'Green Breeze, Piela, Dasmariñas, Cavite';
+        const hours = document.getElementById('footer-hours')?.value || 'Mon-Sat: 8:00 AM - 5:00 PM';
+        const copyright = document.getElementById('footer-copyright')?.value || '© 2025 RADS TOOLING INC. All rights reserved.';
+
+        const preview = document.getElementById('footer-live-preview');
+        if (!preview) return;
+
+        preview.innerHTML = `
+    <div style="margin-bottom: 15px;">
+      <h4 style="margin: 0 0 8px 0; font-size: 14px;">${companyName}</h4>
+      <p style="margin: 0; color: #cbd5e1; font-size: 12px;">${description}</p>
+    </div>
+    <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
+      <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>${email}</div>
+      <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>${phone}</div>
+      <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>${address}</div>
+      <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>${hours}</div>
+    </div>
+    <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
+      ${copyright}
+    </div>
+  `;
+    },
+
+    toggleLogoType(type) {
+        const textSection = document.getElementById('text-logo-section');
+        const imageSection = document.getElementById('image-logo-section');
+
+        if (type === 'text') {
+            if (textSection) textSection.style.display = 'block';
+            if (imageSection) imageSection.style.display = 'none';
+        } else {
+            if (textSection) textSection.style.display = 'none';
+            if (imageSection) imageSection.style.display = 'block';
+        }
     },
 
     initQuillEditors() {
@@ -862,8 +894,12 @@ const CM = {
             }
 
             const logoText = document.getElementById('logo-text');
-            if (logoText && content.logo_text) {
-                logoText.value = content.logo_text;
+            if (logoText) {
+                if (content.logo_text) {
+                    logoText.value = content.logo_text;
+                }
+                // Update live preview when text changes
+                logoText.addEventListener('input', () => this.updateLogoPreview());
             }
 
             if (content.logo_image && content.logo_image !== '') {
@@ -876,10 +912,22 @@ const CM = {
                 if (logoImagePreview) logoImagePreview.style.display = 'block';
             }
 
-            // Initial preview update - wrapped in setTimeout to ensure DOM is ready
-            setTimeout(() => {
-                this.updateLogoPreview();
-            }, 200);
+            // Add event listeners for logo type radio buttons
+            if (logoTextRadio) {
+                logoTextRadio.addEventListener('change', () => {
+                    this.toggleLogoType('text');
+                    this.updateLogoPreview();
+                });
+            }
+            if (logoImageRadio) {
+                logoImageRadio.addEventListener('change', () => {
+                    this.toggleLogoType('image');
+                    this.updateLogoPreview();
+                });
+            }
+
+            // Initial preview update
+            this.updateLogoPreview();
         }
 
         // Footer Settings
@@ -897,15 +945,40 @@ const CM = {
 
             Object.keys(footerInputs).forEach(id => {
                 const input = document.getElementById(id);
-                if (input && footerInputs[id]) {
-                    input.value = footerInputs[id];
+                if (input) {
+                    if (footerInputs[id]) {
+                        input.value = footerInputs[id];
+                    }
+                    // Add event listener to update live preview
+                    input.addEventListener('input', () => this.updateFooterPreview());
                 }
             });
 
-            // Initial preview update - wrapped in setTimeout to ensure DOM is ready
-            setTimeout(() => {
-                this.updateFooterPreview();
-            }, 200);
+            // Initial preview update
+            this.updateFooterPreview();
+        }
+
+        // Populate form inputs
+        const inputs = {
+            'footer-company': content.footer_company,
+            'footer-email': content.footer_email,
+            'footer-phone': content.footer_phone,
+            'footer-address': content.footer_address,
+            'footer-hours': content.footer_hours,
+            'video-url': content.video_url
+        };
+
+        Object.keys(inputs).forEach(id => {
+            const input = document.getElementById(id);
+            if (input && inputs[id]) {
+                input.value = inputs[id];
+                input.addEventListener('input', () => this.updateLivePreview());
+            }
+        });
+
+        // Render carousel
+        if (content.carousel_images) {
+            this.renderCarousel(content.carousel_images);
         }
     },
 
@@ -1148,18 +1221,7 @@ const CM = {
     },
 
     updateLivePreview() {
-        // SPECIAL: Logo and Footer settings use in-page preview (no iframe)
-        if (this.currentPage === 'logo_settings') {
-            this.updateLogoPreview();
-            return;
-        }
-
-        if (this.currentPage === 'footer_settings') {
-            this.updateFooterPreview();
-            return;
-        }
-
-        // For other pages: Reload the live preview iframe
+        // Reload the live preview iframe
         const iframe = document.getElementById('livePreviewIframe');
         if (!iframe) return;
 
@@ -1172,50 +1234,9 @@ const CM = {
     collectContent() {
         const content = { ...this.currentContent };
 
-        // Logo Settings specific fields
-        if (this.currentPage === 'logo_settings') {
-            const logoTypeText = document.getElementById('logo-type-text');
-            const logoTypeImage = document.getElementById('logo-type-image');
-            content.logo_type = (logoTypeImage && logoTypeImage.checked) ? 'image' : 'text';
-
-            const logoText = document.getElementById('logo-text');
-            if (logoText) content.logo_text = logoText.value || 'RADS TOOLING';
-
-            const logoImagePath = document.getElementById('logo-image-path');
-            if (logoImagePath) content.logo_image = logoImagePath.value || '';
-
-            return content; // Return early for logo settings
-        }
-
-        // Footer Settings specific fields
-        if (this.currentPage === 'footer_settings') {
-            const footerFields = [
-                'footer-company-name',
-                'footer-description',
-                'footer-email',
-                'footer-phone',
-                'footer-address',
-                'footer-hours',
-                'footer-facebook',
-                'footer-copyright'
-            ];
-
-            footerFields.forEach(id => {
-                const input = document.getElementById(id);
-                if (input) {
-                    const fieldName = id.replace(/-/g, '_');
-                    content[fieldName] = input.value || '';
-                }
-            });
-
-            return content; // Return early for footer settings
-        }
-
-        // Regular pages: Collect from Quill editors
+        // Collect from Quill editors
         Object.keys(this.quillEditors).forEach(key => {
             const editor = this.quillEditors[key];
-            if (!editor) return;
-
             const html = editor.root.innerHTML;
 
             // Map editor IDs to content field names
@@ -1225,7 +1246,7 @@ const CM = {
             else if (key === 'quill-video-subtitle') content.video_subtitle = html;
             else if (key === 'quill-welcome') content.welcome_message = html;
             else if (key === 'quill-intro') content.intro_text = html;
-            else if (key === 'quill-main-content') content.content = html;
+            else if (key === 'quill-main-content') content.content = html; // FIX: Map to 'content'
             else if (key === 'quill-about-subheadline') content.about_subheadline = html;
             else if (key === 'quill-about-mission') content.about_mission = html;
             else if (key === 'quill-about-vision') content.about_vision = html;
@@ -1233,21 +1254,44 @@ const CM = {
         });
 
         // Collect from inputs
-        const inputs = [
-            'footer-company', 'footer-email', 'footer-phone', 'footer-address',
-            'footer-hours', 'video-url', 'about-headline', 'about-address',
-            'about-phone', 'about-email', 'about-hours-weekday', 'about-hours-sunday',
-            'about-hero-path', 'customer-hero-image', 'cta-primary-text',
-            'cta-secondary-text', 'footer-description', 'hero-image'
+        const inputs = ['footer-company', 'footer-email', 'footer-phone', 'footer-address', 'footer-hours', 'video-url',
+            'about-headline', 'about-address', 'about-phone', 'about-email',
+            'about-hours-weekday', 'about-hours-sunday', 'about-hero-path', 'customer-hero-image', 'cta-primary-text', 'cta-secondary-text',
+            'footer-description', 'hero-image'
         ];
-
         inputs.forEach(id => {
             const input = document.getElementById(id);
             if (input) {
                 const fieldName = id.replace(/-/g, '_');
-                content[fieldName] = input.value || '';
+                content[fieldName] = input.value;
             }
         });
+
+        // Logo Settings specific fields
+        if (this.currentPage === 'logo_settings') {
+            const logoTypeText = document.getElementById('logo-type-text');
+            const logoTypeImage = document.getElementById('logo-type-image');
+            content.logo_type = logoTypeImage && logoTypeImage.checked ? 'image' : 'text';
+
+            const logoText = document.getElementById('logo-text');
+            if (logoText) content.logo_text = logoText.value;
+
+            const logoImagePath = document.getElementById('logo-image-path');
+            if (logoImagePath) content.logo_image = logoImagePath.value;
+        }
+
+        // Footer Settings specific fields
+        if (this.currentPage === 'footer_settings') {
+            const footerFields = ['footer-company-name', 'footer-description', 'footer-email', 'footer-phone',
+                'footer-address', 'footer-hours', 'footer-facebook', 'footer-copyright'];
+            footerFields.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    const fieldName = id.replace(/-/g, '_');
+                    content[fieldName] = input.value;
+                }
+            });
+        }
 
         return content;
     },
@@ -1416,65 +1460,6 @@ const CM = {
         }
     },
 
-    updateLogoPreview() {
-        const preview = document.getElementById('logo-live-preview');
-        if (!preview) return;
-
-        const logoTypeImage = document.getElementById('logo-type-image');
-        const isImageLogo = logoTypeImage && logoTypeImage.checked;
-
-        if (isImageLogo) {
-            const logoImagePath = document.getElementById('logo-image-path');
-            const imageSrc = logoImagePath ? logoImagePath.value : '';
-
-            if (imageSrc) {
-                preview.innerHTML = `<img src="${imageSrc}" alt="Logo" style="max-height: 50px; height: auto;">`;
-            } else {
-                preview.innerHTML = '<p style="color: #999; font-size: 14px;">No logo image uploaded yet</p>';
-            }
-        } else {
-            const logoText = document.getElementById('logo-text');
-            const text = logoText ? logoText.value : 'RADS TOOLING';
-
-            if (text) {
-                const firstLetter = text.charAt(0);
-                const restOfText = text.substring(1);
-                preview.innerHTML = `<span style="color: #2563eb;">${firstLetter}</span>${restOfText}`;
-            } else {
-                preview.innerHTML = '<span style="color: #2563eb;">R</span>ADS TOOLING';
-            }
-        }
-    },
-
-    updateFooterPreview() {
-        const companyName = document.getElementById('footer-company-name')?.value || 'About RADS TOOLING';
-        const description = document.getElementById('footer-description')?.value || 'Premium custom cabinet manufacturer serving clients since 2007.';
-        const email = document.getElementById('footer-email')?.value || 'RadsTooling@gmail.com';
-        const phone = document.getElementById('footer-phone')?.value || '+63 976 228 4270';
-        const address = document.getElementById('footer-address')?.value || 'Green Breeze, Piela, Dasmariñas, Cavite';
-        const hours = document.getElementById('footer-hours')?.value || 'Mon-Sat: 8:00 AM - 5:00 PM';
-        const copyright = document.getElementById('footer-copyright')?.value || '© 2025 RADS TOOLING INC. All rights reserved.';
-
-        const preview = document.getElementById('footer-live-preview');
-        if (!preview) return;
-
-        preview.innerHTML = `
-            <div style="margin-bottom: 15px;">
-                <h4 style="margin: 0 0 8px 0; font-size: 14px;">${companyName}</h4>
-                <p style="margin: 0; color: #cbd5e1; font-size: 12px;">${description}</p>
-            </div>
-            <div style="border-top: 1px solid #334155; padding-top: 12px; font-size: 12px;">
-                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">✉️</span>${email}</div>
-                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📞</span>${phone}</div>
-                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">📍</span>${address}</div>
-                <div style="margin-bottom: 5px;"><span style="margin-right: 8px;">🕒</span>${hours}</div>
-            </div>
-            <div style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 12px; text-align: center; color: #94a3b8; font-size: 11px;">
-                ${copyright}
-            </div>
-        `;
-    },
-
     async handleLogoImageUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1604,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     CM.Payment = {
         currentQRData: {},
-        apiUrl: '/RADS-TOOLING/backend/api/content_mgmt.php',
+        apiUrl: '/backend/api/content_mgmt.php',
 
         init() {
             console.log('Payment QR Management initialized');
@@ -1697,8 +1682,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     return result;
                 }
 
-                // Otherwise, prepend /RADS-TOOLING/
-                const result = '/RADS-TOOLING/' + trimmed;
+                // Otherwise, prepend /
+                const result = '/' + trimmed;
                 console.log('✅ Built final path:', result);
                 return result;
             };
@@ -1921,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', function () {
         console.log('🔄 Loading payment QR codes...');
 
         try {
-            const response = await fetch('/RADS-TOOLING/backend/api/content_mgmt.php?action=get_payment_qr', {
+            const response = await fetch('/backend/api/content_mgmt.php?action=get_payment_qr', {
                 method: 'GET',
                 credentials: 'same-origin',
                 headers: {
@@ -1965,8 +1950,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (qrData && qrData.image_path) {
-            // Build full URL with /RADS-TOOLING/ prefix
-            const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
+            // Build full URL with / prefix
+            const imageUrl = `/${qrData.image_path}`;
 
             console.log(`✅ ${method.toUpperCase()} QR found:`, imageUrl);
 
@@ -2047,7 +2032,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('action', 'update_payment_qr');
 
         try {
-            const response = await fetch('/RADS-TOOLING/backend/api/content_mgmt.php', {
+            const response = await fetch('/backend/api/content_mgmt.php', {
                 method: 'POST',
                 credentials: 'same-origin',
                 body: formData

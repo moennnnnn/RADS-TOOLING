@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/customer/payment_remaining_balance.php
+// /customer/payment_remaining_balance.php
 // Payment page for remaining balance on existing orders
 
 declare(strict_types=1);
@@ -9,7 +9,7 @@ require_once __DIR__ . '/../backend/config/app.php';
 
 // Check if user is logged in
 if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? '') !== 'customer') {
-    header('Location: /RADS-TOOLING/customer/cust_login.php');
+    header('Location: /customer/cust_login.php');
     exit;
 }
 
@@ -17,7 +17,7 @@ $customerId = (int)($_SESSION['user']['id'] ?? 0);
 $orderId = (int)($_GET['order_id'] ?? 0);
 
 if ($orderId <= 0) {
-    header('Location: /RADS-TOOLING/customer/orders.php');
+    header('Location: /customer/orders.php');
     exit;
 }
 
@@ -40,7 +40,7 @@ try {
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$order) {
-        header('Location: /RADS-TOOLING/customer/orders.php');
+        header('Location: /customer/orders.php');
         exit;
     }
 
@@ -52,12 +52,12 @@ try {
 
     if (strtolower($order['status']) === 'cancelled') {
         // Cannot pay for cancelled order
-        header('Location: /RADS-TOOLING/customer/orders.php');
+        header('Location: /customer/orders.php');
         exit;
     }
 } catch (Exception $e) {
     error_log("Payment remaining balance error: " . $e->getMessage());
-    header('Location: /RADS-TOOLING/customer/orders.php');
+    header('Location: /customer/orders.php');
     exit;
 }
 
@@ -533,12 +533,10 @@ $option100 = $remainingBalance;
     <div class="page-wrapper">
         <header class="navbar">
             <div class="navbar-container">
-                <div class="navbar-brand">
-                    <a href="/RADS-TOOLING/customer/homepage.php" class="logo-link">
-                        <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-                    </a>
-                </div>
-
+                <?php
+                require_once __DIR__ . '/../backend/components/navbar.php';
+                renderNavbar();
+                ?>
                 <div class="navbar-actions">
                     <!-- Profile Menu (non-clickable on payment page) -->
                     <div class="profile-menu">
@@ -557,10 +555,10 @@ $option100 = $remainingBalance;
             </div>
 
             <nav class="navbar-menu">
-                <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
-                <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-                <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
-                <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+                <a href="/customer/homepage.php" class="nav-menu-item">Home</a>
+                <a href="/customer/about.php" class="nav-menu-item">About</a>
+                <a href="/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
             </nav>
         </header>
 
@@ -571,7 +569,7 @@ $option100 = $remainingBalance;
                     Pay Remaining Balance
                 </h1>
                 <div style="margin-top: 24px;">
-                    <button class="rt-btn ghost" onclick="location.href='/RADS-TOOLING/customer/orders.php'">
+                    <button class="rt-btn ghost" onclick="location.href='/customer/orders.php'">
                         <span class="material-symbols-rounded">arrow_back</span>
                         Back to Orders
                     </button>
@@ -694,11 +692,10 @@ $option100 = $remainingBalance;
             </div>
         </main>
 
-        <footer class="footer">
-            <div class="footer-bottom">
-                <p>© 2025 RADS TOOLING INC. All rights reserved.</p>
-            </div>
-        </footer>
+        <?php
+        require_once __DIR__ . '/../backend/components/footer.php';
+        renderFooter();
+        ?>
     </div>
 
     <!-- PAYMENT WIZARD MODALS -->
@@ -802,7 +799,7 @@ $option100 = $remainingBalance;
                             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
         console.log('✅ RT_PAYMENT:', window.RT_PAYMENT);
     </script>
-    <script src="/RADS-TOOLING/assets/JS/pay_remaining.js" defer></script>
+    <script src="/assets/JS/pay_remaining.js" defer></script>
 </body>
 
 </html>

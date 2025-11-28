@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/customer/checkout_pickup.php
+// /customer/checkout_pickup.php
 // 🔥 COMPLETE FIXED VERSION with Material Symbols icons
 
 declare(strict_types=1);
@@ -10,8 +10,8 @@ require_once __DIR__ . '/../backend/config/app.php';
 $pid = (int)($_GET['pid'] ?? $_POST['pid'] ?? 0);
 
 if ($pid <= 0) {
-    header('Location: /RADS-TOOLING/customer/products.php');
-    exit;
+  header('Location: /customer/products.php');
+  exit;
 }
 
 $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND status = 'released'");
@@ -19,8 +19,8 @@ $stmt->execute([$pid]);
 $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$product) {
-    header('Location: /RADS-TOOLING/customer/products.php');
-    exit;
+  header('Location: /customer/products.php');
+  exit;
 }
 
 $user = $_SESSION['user'] ?? null;
@@ -28,26 +28,27 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <title>Pick-up Details - Rads Tooling</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+
   <!-- ✅ CRITICAL: Fonts MUST load first -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
-  
+
   <!-- ✅ FIXED: Material Symbols with FILL enabled -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-  
+
   <link rel="stylesheet" href="../assets/CSS/Homepage.css">
   <link rel="stylesheet" href="../assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="../assets/CSS/about.css">
   <link rel="stylesheet" href="../assets/CSS/checkout.css">
   <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
-  
+  <link rel="stylesheet" href="/assets/CSS/responsive.css">
+
   <style>
     /* ✅ Force Poppins everywhere */
     * {
@@ -329,123 +330,123 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
     }
   </style>
 </head>
+
 <body>
-<div class="page-wrapper">
-  <header class="navbar">
-    <div class="navbar-container">
-      <div class="navbar-brand">
-        <a class="logo-link" href="/RADS-TOOLING/customer/homepage.php">
-          <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-        </a>
-      </div>
-      <div class="navbar-actions">
-        <a class="cart-button" href="/RADS-TOOLING/cart.php">
-          <span class="material-symbols-rounded">shopping_cart</span>
-          <span id="cartCount" class="cart-badge">0</span>
-        </a>
-      </div>
-    </div>
-    <nav class="navbar-menu">
-      <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
-      <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-      <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
-      <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
-    </nav>
-  </header>
-
-  <main class="checkout-main checkout-wrapper">
-    <div class="checkout-header">
-      <h1>Pick-up Details</h1>
-      <p>Please provide your contact information for pick-up</p>
-    </div>
-
-    <div class="checkout-card">
-      <!-- ✅ FIXED: Pick-up location with Material Symbols icon -->
-      <div class="pickup-location-banner">
-        <span class="material-symbols-rounded">location_on</span>
-        <div class="content">
-          <h3>
-            <span class="material-symbols-rounded">pin_drop</span>
-            Pick-up Location
-          </h3>
-          <p>
-            <strong>RADS TOOLING Shop</strong><br>
-            Green Breeze, Piela, Dasmariñas, Cavite<br>
-            <strong>Hours:</strong> Mon-Sat, 8:00 AM - 5:00 PM
-          </p>
+  <div class="page-wrapper">
+    <header class="navbar">
+      <div class="navbar-container">
+        <?php
+        require_once __DIR__ . '/../backend/components/navbar.php';
+        renderNavbar();
+        ?>
+        <div class="navbar-actions">
+          <a class="cart-button" href="/cart.php">
+            <span class="material-symbols-rounded">shopping_cart</span>
+            <span id="cartCount" class="cart-badge">0</span>
+          </a>
         </div>
       </div>
+      <nav class="navbar-menu">
+        <a href="/customer/homepage.php" class="nav-menu-item">Home</a>
+        <a href="/customer/about.php" class="nav-menu-item">About</a>
+        <a href="/customer/products.php" class="nav-menu-item">Products</a>
+        <a href="/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+      </nav>
+    </header>
 
-      <form id="pickupForm" method="POST" action="checkout_delivery_review.php">
-        <input type="hidden" name="mode" value="pickup">
-        <input type="hidden" name="pid" value="<?= $pid ?>">
+    <main class="checkout-main checkout-wrapper">
+      <div class="checkout-header">
+        <h1>Pick-up Details</h1>
+        <p>Please provide your contact information for pick-up</p>
+      </div>
 
-        <!-- Personal Information -->
-        <div class="form-row">
+      <div class="checkout-card">
+        <!-- ✅ FIXED: Pick-up location with Material Symbols icon -->
+        <div class="pickup-location-banner">
+          <span class="material-symbols-rounded">location_on</span>
+          <div class="content">
+            <h3>
+              <span class="material-symbols-rounded">pin_drop</span>
+              Pick-up Location
+            </h3>
+            <p>
+              <strong>RADS TOOLING Shop</strong><br>
+              Green Breeze, Piela, Dasmariñas, Cavite<br>
+              <strong>Hours:</strong> Mon-Sat, 8:00 AM - 5:00 PM
+            </p>
+          </div>
+        </div>
+
+        <form id="pickupForm" method="POST" action="checkout_delivery_review.php">
+          <input type="hidden" name="mode" value="pickup">
+          <input type="hidden" name="pid" value="<?= $pid ?>">
+
+          <!-- Personal Information -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>First Name <span class="required">*</span></label>
+              <input type="text" name="first_name" placeholder="Enter your first name" required>
+            </div>
+
+            <div class="form-group">
+              <label>Last Name <span class="required">*</span></label>
+              <input type="text" name="last_name" placeholder="Enter your last name" required>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
           <div class="form-group">
-            <label>First Name <span class="required">*</span></label>
-            <input type="text" name="first_name" placeholder="Enter your first name" required>
+            <label>Mobile Number <span class="required">*</span></label>
+            <div class="phone-group">
+              <input type="text" value="+63" disabled class="country-code">
+              <input type="tel" id="phoneLocal" name="phoneLocal" class="phone-input"
+                placeholder="9123456789" pattern="[0-9]{10}" maxlength="10"
+                inputmode="numeric" required>
+            </div>
+            <input type="hidden" id="phoneFull" name="phone">
+            <small>Enter 10 digits only (example: 9123456789)</small>
           </div>
 
+          <!-- Email (Optional) -->
           <div class="form-group">
-            <label>Last Name <span class="required">*</span></label>
-            <input type="text" name="last_name" placeholder="Enter your last name" required>
+            <label>Email Address (Optional)</label>
+            <input type="email" name="email" placeholder="your.email@example.com">
+            <small>We'll send order updates to this email</small>
           </div>
-        </div>
 
-        <!-- Contact Information -->
-        <div class="form-group">
-          <label>Mobile Number <span class="required">*</span></label>
-          <div class="phone-group">
-            <input type="text" value="+63" disabled class="country-code">
-            <input type="tel" id="phoneLocal" name="phoneLocal" class="phone-input" 
-                   placeholder="9123456789" pattern="[0-9]{10}" maxlength="10" 
-                   inputmode="numeric" required>
+          <!-- Action Buttons -->
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" id="btnClear">
+              <span class="material-symbols-rounded">restart_alt</span>
+              Clear Form
+            </button>
+            <button type="button" class="btn btn-primary" id="btnContinue">
+              <span>Continue to Review</span>
+              <span class="material-symbols-rounded">arrow_forward</span>
+            </button>
           </div>
-          <input type="hidden" id="phoneFull" name="phone">
-          <small>Enter 10 digits only (example: 9123456789)</small>
-        </div>
+        </form>
+      </div>
+    </main>
 
-        <!-- Email (Optional) -->
-        <div class="form-group">
-          <label>Email Address (Optional)</label>
-          <input type="email" name="email" placeholder="your.email@example.com">
-          <small>We'll send order updates to this email</small>
-        </div>
+    <?php
+    require_once __DIR__ . '/../backend/components/footer.php';
+    renderFooter();
+    ?>
+  </div>
 
-        <!-- Action Buttons -->
-        <div class="btn-group">
-          <button type="button" class="btn btn-secondary" id="btnClear">
-            <span class="material-symbols-rounded">restart_alt</span>
-            Clear Form
-          </button>
-          <button type="button" class="btn btn-primary" id="btnContinue">
-            <span>Continue to Review</span>
-            <span class="material-symbols-rounded">arrow_forward</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </main>
-
-  <footer class="footer">
-    <div class="footer-bottom">
-      <p>© 2025 RADS TOOLING INC. All rights reserved.</p>
-    </div>
-  </footer>
-</div>
-
-<!-- Validation Modal -->
-<div class="rt-modal" id="invalidModal" hidden>
-  <div class="rt-card">
-    <h3>Incomplete Form</h3>
-    <p>Please fill in all the highlighted fields before continuing.</p>
-    <div class="rt-actions">
-      <button class="rt-btn" onclick="document.getElementById('invalidModal').hidden = true">OK</button>
+  <!-- Validation Modal -->
+  <div class="rt-modal" id="invalidModal" hidden>
+    <div class="rt-card">
+      <h3>Incomplete Form</h3>
+      <p>Please fill in all the highlighted fields before continuing.</p>
+      <div class="rt-actions">
+        <button class="rt-btn" onclick="document.getElementById('invalidModal').hidden = true">OK</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
+  <script src="/assets/JS/checkout.js" defer></script>
 </body>
+
 </html>

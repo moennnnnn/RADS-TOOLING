@@ -19,13 +19,15 @@ if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? '') === 'staff') {
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/login.css">
+    <link rel="stylesheet" href="/assets/CSS/login.css">
 </head>
 
 <body>
     <div class="login-container">
-        <span class="login-logo">R</span><span class="logo-text">ADS </span>
-        <span class="login-logo">T</span><span class="logo-text">OOLING </span>
+        <?php
+        require_once __DIR__ . '/../backend/components/navbar.php';
+        renderNavbar();
+        ?>
         <p class="subtitle">Login as Admin</p>
 
         <form id="loginForm">
@@ -52,7 +54,7 @@ if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? '') === 'staff') {
 
     </div>
 
-    <script src="/RADS-TOOLING/assets/JS/login.js"> </script>
+    <script src="/assets/JS/login.js"> </script>
 
 </body>
 

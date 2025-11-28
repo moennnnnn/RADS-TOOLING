@@ -25,7 +25,7 @@ async function loadCustomerOrders(status = 'all') {
     `;
 
     try {
-        const response = await fetch(`/RADS-TOOLING/backend/api/customer_orders.php?status=${status}`);
+        const response = await fetch(`/backend/api/customer_orders.php?status=${status}`);
         const data = await response.json();
 
         if (data.success) {
@@ -71,10 +71,10 @@ function createOrderCard(order) {
     const items = order.items || [];
     const itemsHtml = items.slice(0, 3).map(item => `
         <div class="order-item">
-            <img src="${item.image || '/RADS-TOOLING/assets/images/cab1.jpg'}" 
+            <img src="${item.image || '/assets/images/cab1.jpg'}" 
                  alt="${escapeHtml(item.name)}" 
                  class="item-thumbnail"
-                 onerror="this.src='/RADS-TOOLING/assets/images/cab1.jpg'">
+                 onerror="this.src='/assets/images/cab1.jpg'">
             <div class="item-info">
                 <div class="item-name">${escapeHtml(item.name)}</div>
                 <div class="item-meta">Qty: ${item.quantity}</div>
@@ -201,7 +201,7 @@ async function viewOrderDetails(orderId) {
     document.body.style.overflow = 'hidden';
 
     try {
-        const response = await fetch(`/RADS-TOOLING/backend/api/customer_orders.php?action=details&id=${orderId}`);
+        const response = await fetch(`/backend/api/customer_orders.php?action=details&id=${orderId}`);
         const data = await response.json();
 
         if (data.success && data.order) {
@@ -470,7 +470,7 @@ function payRemainingBalance(orderId) {
         return;
     }
     // Redirect to remaining balance payment page with order_id
-    window.location.href = `/RADS-TOOLING/customer/pay_remaining_balance.php?order_id=${orderId}`;
+    window.location.href = `/customer/pay_remaining_balance.php?order_id=${orderId}`;
 }
 
 function showError(message) {

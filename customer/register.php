@@ -18,7 +18,7 @@ if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? '') === 'customer'
   header('Location: /customer/index.php');
   exit;
 }
-$next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
+$next = $_GET['next'] ?? '/customer/homepage.php';
 ?>
 <!doctype html>
 <html lang="en">
@@ -27,7 +27,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Customer Registration | Rads Tooling</title>
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/login.css">
+  <link rel="stylesheet" href="/assets/CSS/login.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
   <style>
@@ -165,10 +165,10 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
 <body>
   <main class="auth-wrap">
     <div class="auth-form register-form">
-      <div class="logo-container">
-        <span class="login-logo">R</span><span class="logo-text">ADS</span>
-        <span class="login-logo">T</span><span class="logo-text">OOLING</span>
-      </div>
+      <?php
+      require_once __DIR__ . '/../backend/components/navbar.php';
+      renderNavbar();
+      ?>
       <p class="subtitle">Create your account to get started</p>
 
       <form id="registerForm">
@@ -231,7 +231,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
       </form>
 
       <div class="auth-links">
-        <p>Already have an account? <a href="/RADS-TOOLING/customer/cust_login.php?next=<?= urlencode($next) ?>">Sign in here</a></p>
+        <p>Already have an account? <a href="/customer/cust_login.php?next=<?= urlencode($next) ?>">Sign in here</a></p>
       </div>
     </div>
   </main>
@@ -362,7 +362,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
   </script>
 
   <!-- Use external JS file -->
-  <script src="/RADS-TOOLING/assets/JS/register.js"></script>
+  <script src="/assets/JS/register.js"></script>
 </body>
 
 </html>

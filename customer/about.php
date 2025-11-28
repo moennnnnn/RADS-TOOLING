@@ -69,17 +69,18 @@ if ($pdo instanceof PDO) {
         ");
         $stmt->execute();
         $testimonials = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
     } catch (Throwable $e) {
         error_log('Testimonials query error: ' . $e->getMessage());
     }
 }
 
-function e(string $s): string { 
-    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); 
+function e(string $s): string
+{
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
-function safeDate(?string $s): string {
+function safeDate(?string $s): string
+{
     if (!$s) return '—';
     $t = strtotime($s);
     return $t ? date('M d, Y', $t) : e($s);
@@ -99,7 +100,7 @@ if (!$isPreview) {
     $user = $_SESSION['user'] ?? null;
     $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
     if (!$isCustomer) {
-        header('Location: /RADS-TOOLING/customer/cust_login.php');
+        header('Location: /customer/cust_login.php');
         exit;
     }
 }
@@ -117,7 +118,7 @@ $customerId = $user['id'] ?? 0;
 
 $img = $_SESSION['user']['profile_image'] ?? '';
 if ($img) {
-    $avatarHtml = '<img src="/RADS-TOOLING/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">';
+    $avatarHtml = '<img src="/' . htmlspecialchars($img) . '?v=' . time() . '" alt="Avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">';
 } else {
     $avatarHtml = strtoupper(substr($customerName, 0, 1));
 }
@@ -132,23 +133,22 @@ if ($img) {
     <title>Rads Tooling - <?= $customerName ?></title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/about.css">
+    <link rel="stylesheet" href="/assets/CSS/Homepage.css" />
+    <link rel="stylesheet" href="/assets/CSS/chat-widget.css">
+    <link rel="stylesheet" href="/assets/CSS/about.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
     <div class="page-wrapper">
         <!-- HEADER -->
         <header class="navbar">
             <div class="navbar-container">
-                <div class="navbar-brand">
-                    <a href="/RADS-TOOLING/customer/homepage.php" class="logo-link">
-                        <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-                    </a>
-                </div>
-
-                <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+                <?php
+                require_once __DIR__ . '/../backend/components/navbar.php';
+                renderNavbar();
+                ?>
+                <form class="search-container" action="/public/products.php" method="get">
                     <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
                     <button type="submit" class="search-btn" aria-label="Search">
                         <span class="material-symbols-rounded">search</span>
@@ -182,11 +182,11 @@ if ($img) {
                                 </div>
                             </div>
                             <div class="dropdown-divider"></div>
-                            <a href="/RADS-TOOLING/customer/profile.php" class="dropdown-item">
+                            <a href="/customer/profile.php" class="dropdown-item">
                                 <span class="material-symbols-rounded">person</span>
                                 <span>My Profile</span>
                             </a>
-                            <a href="/RADS-TOOLING/customer/orders.php" class="dropdown-item">
+                            <a href="/customer/orders.php" class="dropdown-item">
                                 <span class="material-symbols-rounded">receipt_long</span>
                                 <span>My Orders</span>
                             </a>
@@ -199,7 +199,7 @@ if ($img) {
                     </div>
 
                     <!-- Cart -->
-                    <a href="/RADS-TOOLING/customer/cart.php" class="cart-button">
+                    <a href="/customer/cart.php" class="cart-button">
                         <span class="material-symbols-rounded">shopping_cart</span>
                         <span id="cartCount" class="cart-badge">0</span>
                     </a>
@@ -207,10 +207,10 @@ if ($img) {
             </div>
 
             <nav class="navbar-menu">
-                <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item ">Home</a>
-                <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item active">About</a>
-                <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
-                <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+                <a href="/customer/homepage.php" class="nav-menu-item ">Home</a>
+                <a href="/customer/about.php" class="nav-menu-item active">About</a>
+                <a href="/customer/products.php" class="nav-menu-item">Products</a>
+                <a href="/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
             </nav>
         </header>
 
@@ -339,98 +339,32 @@ if ($img) {
                 </button>
             </div>
         </div>
-        
- <!-- LOGOUT MODAL (Admin Style) -->
-      <div class="modal" id="logoutModal" style="display:none;">
-        <div class="modal-content modal-small">
-          <button class="modal-close" onclick="closeLogoutModal()" type="button">
-            <span class="material-symbols-rounded">close</span>
-          </button>
-          <div class="modal-icon-wrapper">
-            <div class="modal-icon warning">
-              <span class="material-symbols-rounded">logout</span>
+
+        <!-- LOGOUT MODAL (Admin Style) -->
+        <div class="modal" id="logoutModal" style="display:none;">
+            <div class="modal-content modal-small">
+                <button class="modal-close" onclick="closeLogoutModal()" type="button">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+                <div class="modal-icon-wrapper">
+                    <div class="modal-icon warning">
+                        <span class="material-symbols-rounded">logout</span>
+                    </div>
+                </div>
+                <h2 class="modal-title">Confirm Logout</h2>
+                <p class="modal-message">Are you sure you want to logout?</p>
+                <div class="modal-actions">
+                    <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
+                    <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
+                </div>
             </div>
-          </div>
-          <h2 class="modal-title">Confirm Logout</h2>
-          <p class="modal-message">Are you sure you want to logout?</p>
-          <div class="modal-actions">
-            <button onclick="closeLogoutModal()" class="btn-modal-secondary" type="button">Cancel</button>
-            <button onclick="confirmLogout()" class="btn-modal-primary" type="button">Logout</button>
-          </div>
         </div>
-      </div>
-    </main>
+        </main>
         <!-- FOOTER -->
-        <footer class="footer">
-            <div class="footer-content">
-                <!-- About Section -->
-                <div class="footer-section">
-                    <h3>About RADS TOOLING</h3>
-                    <p class="footer-description">
-                        Premium custom cabinet manufacturer serving clients since 2007.
-                        Quality craftsmanship, affordable prices, and exceptional service.
-                    </p>
-                    <div class="footer-social">
-                        <a href="#" class="social-icon" aria-label="Facebook">
-                            <span class="material-symbols-rounded">facebook</span>
-                        </a>
-                        <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
-                            <span class="material-symbols-rounded">mail</span>
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Quick Links -->
-                <div class="footer-section">
-                    <h3>Quick Links</h3>
-                    <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/customer/homepage.php">Home</a></li>
-                        <li><a href="/RADS-TOOLING/customer/about.php">About Us</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php">Products</a></li>
-                        <li><a href="/RADS-TOOLING/customer/testimonials.php">Testimonials</a></li>
-                    </ul>
-                </div>
-
-                <!-- Categories -->
-                <div class="footer-section">
-                    <h3>Categories</h3>
-                    <ul class="footer-links">
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Kitchen Cabinet">Kitchen Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Wardrobe">Wardrobe</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Office Cabinet">Office Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
-                        <li><a href="/RADS-TOOLING/customer/products.php?type=Commercial">Storage Cabinet</a></li>
-                    </ul>
-                </div>
-
-                <!-- Contact Info -->
-                <div class="footer-section">
-                    <h3>Contact Info</h3>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">location_on</span>
-                        <span>Green Breeze, Piela, Dasmariñas, Cavite</span>
-                    </div>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">mail</span>
-                        <a href="mailto:RadsTooling@gmail.com">RadsTooling@gmail.com</a>
-                    </div>
-                    <div class="contact-info-item">
-                        <span class="material-symbols-rounded">schedule</span>
-                        <span>Mon-Sat: 8:00 AM - 5:00 PM</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="footer-bottom">
-                <p class="footer-copyright">
-                    © 2025 RADS TOOLING INC. All rights reserved.
-                </p>
-                <div class="footer-legal">
-                    <a href="/RADS-TOOLING/customer/privacy.php">Privacy Policy</a>
-                    <a href="/RADS-TOOLING/customer/terms.php">Terms & Conditions</a>
-                </div>
-            </div>
-        </footer>
+        <?php
+        require_once __DIR__ . '/../backend/components/footer.php';
+        renderFooter();
+        ?>
     </div>
     <script>
         // ========== INITIALIZE ON PAGE LOAD ==========
@@ -474,7 +408,7 @@ if ($img) {
         // ========== LOAD USER STATISTICS ==========
         /*async function loadUserStatistics() {
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/customer_stats.php', {
+                const response = await fetch('/backend/api/customer_stats.php', {
                     credentials: 'same-origin'
                 });
                 const data = await response.json();
@@ -502,7 +436,7 @@ if ($img) {
             if (!ordersContainer) return;
 
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/recent_orders.php?limit=3', {
+                const response = await fetch('/backend/api/recent_orders.php?limit=3', {
                     credentials: 'same-origin'
                 });
                 const data = await response.json();
@@ -521,7 +455,7 @@ if ($img) {
         </div>
       `).join('');
                 } else {
-                    ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/RADS-TOOLING/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
+                    ordersContainer.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No orders yet. <a href="/customer/customize.php" style="color:#1f4e74;font-weight:600;">Start designing</a>!</p>';
                 }
             } catch {
                 ordersContainer.innerHTML = '<p style="text-align:center;color:#dc3545;padding:40px;">Failed to load orders</p>';
@@ -549,18 +483,18 @@ if ($img) {
 
         async function confirmLogout() {
             try {
-                await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
+                await fetch('/backend/api/auth.php?action=logout', {
                     method: 'POST',
                     credentials: 'same-origin'
                 });
 
                 localStorage.removeItem('cart');
-                window.location.href = '/RADS-TOOLING/public/index.php';
+                window.location.href = '/public/index.php';
 
             } catch (error) {
                 console.error('Logout error:', error);
                 localStorage.removeItem('cart');
-                window.location.href = '/RADS-TOOLING/public/index.php';
+                window.location.href = '/public/index.php';
             }
         }
 
@@ -570,7 +504,7 @@ if ($img) {
             if (!productsContainer) return;
 
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/products.php?action=list&limit=4', {
+                const response = await fetch('/backend/api/products.php?action=list&limit=4', {
                     credentials: 'same-origin',
                     headers: {
                         'Accept': 'application/json'
@@ -581,11 +515,11 @@ if ($img) {
 
                 if (result.success && result.data && result.data.products && result.data.products.length > 0) {
                     productsContainer.innerHTML = result.data.products.map(product => `
-        <a href="/RADS-TOOLING/public/product_detail.php?id=${product.id}" class="product-card">
+        <a href="/public/product_detail.php?id=${product.id}" class="product-card">
           <div class="product-image">
-            <img src="/RADS-TOOLING/${product.image || 'assets/images/placeholder.jpg'}" 
+            <img src="/${product.image || 'assets/images/placeholder.jpg'}" 
                  alt="${escapeHtml(product.name)}"
-                 onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                 onerror="this.src='/assets/images/placeholder.jpg'">
           </div>
           <div class="product-info">
             <h3>${escapeHtml(product.name)}</h3>
@@ -754,22 +688,23 @@ if ($img) {
                         try {
                             // wipe any local/session flags you use for customer
                             sessionStorage.removeItem('rads_admin_session'); // ok lang iwan kung shared
-                            await fetch('/RADS-TOOLING/backend/api/auth.php?action=logout', {
+                            await fetch('/backend/api/auth.php?action=logout', {
                                 method: 'POST',
                                 credentials: 'same-origin'
                             });
                         } catch (_) {
-                            /* ignore network errors */ }
-                        location.href = '/RADS-TOOLING/public/index.php';
+                            /* ignore network errors */
+                        }
+                        location.href = '/public/index.php';
                     }
                 });
             });
         }
     </script>
 
-    <script src="/RADS-TOOLING/assets/JS/nav_user.js"></script>
+    <script src="/assets/JS/nav_user.js"></script>
 
-    <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+    <script src="/assets/JS/chat_widget.js"></script>
 </body>
 
 </html>

@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/customer/checkout_delivery_review.php
+// /customer/checkout_delivery_review.php
 // 🔥 ULTIMATE FIXED VERSION - All issues resolved!
 
 declare(strict_types=1);
@@ -29,7 +29,7 @@ if ($pid > 0) {
 }
 
 if (!$product) {
-  header('Location: /RADS-TOOLING/customer/products.php');
+  header('Location: /customer/products.php');
   exit;
 }
 
@@ -71,7 +71,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
   <link rel="stylesheet" href="../assets/CSS/about.css">
   <link rel="stylesheet" href="../assets/CSS/checkout.css">
   <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
+  <link rel="stylesheet" href="/assets/CSS/responsive.css">
 
   <style>
     /* ✅ Force Poppins everywhere */
@@ -520,17 +520,16 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
   <div class="page-wrapper">
     <header class="navbar">
       <div class="navbar-container">
-        <div class="navbar-brand">
-          <a class="logo-link" href="/RADS-TOOLING/customer/homepage.php">
-            <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-          </a>
-        </div>
+        <?php
+        require_once __DIR__ . '/../backend/components/navbar.php';
+        renderNavbar();
+        ?>
       </div>
       <nav class="navbar-menu">
-        <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
-        <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-        <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
-        <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+        <a href="/customer/homepage.php" class="nav-menu-item">Home</a>
+        <a href="/customer/about.php" class="nav-menu-item">About</a>
+        <a href="/customer/products.php" class="nav-menu-item">Products</a>
+        <a href="/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
       </nav>
     </header>
 
@@ -655,11 +654,10 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
       </div>
     </main>
 
-    <footer class="footer">
-      <div class="footer-bottom">
-        <p>© 2025 RADS TOOLING INC. All rights reserved.</p>
-      </div>
-    </footer>
+    <?php
+    require_once __DIR__ . '/../backend/components/footer.php';
+    renderFooter();
+    ?>
   </div>
 
   <!-- PAYMENT WIZARD MODALS -->
@@ -950,7 +948,7 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 
     console.log('✅ RT_ORDER:', window.RT_ORDER);
   </script>
-  <script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
+  <script src="/assets/JS/checkout.js" defer></script>
 </body>
 
 </html>

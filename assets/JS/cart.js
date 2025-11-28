@@ -1,4 +1,4 @@
-// /RADS-TOOLING/assets/JS/cart.js
+// /assets/JS/cart.js
 
 (function () {
   'use strict';
@@ -114,7 +114,7 @@
           <span class="material-symbols-rounded">shopping_cart</span>
           <h2>Your cart is empty</h2>
           <p>Add some amazing cabinets to get started!</p>
-          <button class="checkout-btn" onclick="location.href='/RADS-TOOLING/customer/products.php'">
+          <button class="checkout-btn" onclick="location.href='/customer/products.php'">
             Browse Products
           </button>
         </div>
@@ -175,7 +175,7 @@
       const itemTotal = item.isCustomized ? (item.computedTotal || item.price) : item.price;
       return `
               <div class="cart-item" data-product-id="${item.id}">
-                <img src="${item.image || '/RADS-TOOLING/assets/images/placeholder.jpg'}" alt="${escapeHtml(item.name)}" class="cart-item-image" onerror="this.src='/RADS-TOOLING/assets/images/placeholder.jpg'">
+                <img src="${item.image || '/assets/images/placeholder.jpg'}" alt="${escapeHtml(item.name)}" class="cart-item-image" onerror="this.src='/assets/images/placeholder.jpg'">
                 <div class="cart-item-details">
                   <h3 class="cart-item-name">
                     ${escapeHtml(item.name)}
@@ -229,7 +229,7 @@
             Proceed to Checkout
           </button>
 
-          <button class="continue-shopping" onclick="location.href='/RADS-TOOLING/customer/products.php'">
+          <button class="continue-shopping" onclick="location.href='/customer/products.php'">
             Continue Shopping
           </button>
         </div>
@@ -316,9 +316,9 @@
 
         // Redirect to checkout with mode
         if (selectedMode === 'delivery') {
-          window.location.href = `/RADS-TOOLING/customer/checkout_delivery.php?pid=${firstItem.id}`;
+          window.location.href = `/customer/checkout_delivery.php?pid=${firstItem.id}`;
         } else {
-          window.location.href = `/RADS-TOOLING/customer/checkout_pickup.php?pid=${firstItem.id}`;
+          window.location.href = `/customer/checkout_pickup.php?pid=${firstItem.id}`;
         }
       });
     }

@@ -1,4 +1,4 @@
-// /RADS-TOOLING/assets/JS/checkout.js
+// /assets/JS/checkout.js
 // 🔥 COMPLETE ULTIMATE FIXED VERSION - All bugs squashed!
 
 (function () {
@@ -203,7 +203,7 @@
     // ✅ FETCH PROVINCES (with NCR)
     async function fetchProvinces() {
       // Try local API first
-      let j = await getJSON('/RADS-TOOLING/backend/api/psgc.php?action=provinces');
+      let j = await getJSON('/backend/api/psgc.php?action=provinces');
       if (Array.isArray(j) && j.length) {
         const filtered = j.map(x => x.name || x).filter(name =>
           ALLOWED_PROVINCES.some(allowed =>
@@ -252,7 +252,7 @@
       }
 
       // Try local API
-      let j = await getJSON('/RADS-TOOLING/backend/api/psgc.php?action=cities&province=' + encodeURIComponent(provinceName));
+      let j = await getJSON('/backend/api/psgc.php?action=cities&province=' + encodeURIComponent(provinceName));
       if (Array.isArray(j) && j.length) return j.map(x => x.name || x);
 
       // Try cloud API
@@ -270,7 +270,7 @@
 
     // ✅ FETCH BARANGAYS
     async function fetchBarangays(cityName, provinceName) {
-      let j = await getJSON('/RADS-TOOLING/backend/api/psgc.php?action=barangays&city=' + encodeURIComponent(cityName));
+      let j = await getJSON('/backend/api/psgc.php?action=barangays&city=' + encodeURIComponent(cityName));
       if (Array.isArray(j) && j.length) return j.map(x => x.name || x);
 
       const norm = s => (s || '').toLowerCase().trim();
@@ -485,7 +485,7 @@
       // ✅ STEP 1: Create order
       if (!ORDER_ID) {
         try {
-          const url = `${location.origin}/RADS-TOOLING/backend/api/order_create.php`;
+          const url = `${location.origin}/backend/api/order_create.php`;
 
           // ✅ FIX: Use customization data from RT_ORDER (already populated by checkout_delivery_review.php)
           const selectedCustomizations = orderData.selectedCustomizations || [];
@@ -572,7 +572,7 @@
 
       // ✅ STEP 2: Save payment decision
       try {
-        const url = `${location.origin}/RADS-TOOLING/backend/api/payment_decision.php`;
+        const url = `${location.origin}/backend/api/payment_decision.php`;
         const r2 = await fetch(url, {
           method: 'POST',
           headers: {
@@ -611,7 +611,7 @@
 
       // ✅ STEP 3: Fetch QR code
       try {
-        const url = `${location.origin}/RADS-TOOLING/backend/api/content_mgmt.php`;
+        const url = `${location.origin}/backend/api/content_mgmt.php`;
         const r3 = await fetch(url, {
           method: 'POST',
           headers: {
@@ -635,7 +635,7 @@
             const qrData = method === 'gcash' ? result3.data.gcash : result3.data.bpi;
 
             if (qrData && qrData.image_path) {
-              const imageUrl = `/RADS-TOOLING/${qrData.image_path}`;
+              const imageUrl = `/${qrData.image_path}`;
               console.log(`✅ Displaying ${method.toUpperCase()} QR:`, imageUrl);
 
               qrBox.innerHTML = `
@@ -733,7 +733,7 @@
 
       try {
         console.log('📤 Submitting payment verification...');
-        const r = await fetch('/RADS-TOOLING/backend/api/payment_submit.php', {
+        const r = await fetch('/backend/api/payment_submit.php', {
           method: 'POST',
           body: form,
           credentials: 'same-origin'
@@ -760,7 +760,7 @@
     });
 
     $('#btnGoOrders')?.addEventListener('click', () => {
-      location.href = '/RADS-TOOLING/customer/orders.php';
+      location.href = '/customer/orders.php';
     });
   }
 

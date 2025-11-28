@@ -1,7 +1,7 @@
 # Root .htaccess
 
-# If your project runs under a subfolder (e.g. /RADS-TOOLING/), set this:
-RewriteBase /RADS-TOOLING/
+# If your project runs under a subfolder (e.g. /), set this:
+RewriteBase /
 
 Options -Indexes
 DirectoryIndex index.php

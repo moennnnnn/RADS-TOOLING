@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (empty($_SESSION['user']) || ($_SESSION['user']['aud'] ?? '') !== 'customer') {
-    header('Location: /RADS-TOOLING/customer/login.php');
+    header('Location: /customer/login.php');
     exit;
 }
 if (empty($_SESSION['csrf_token'])) {
@@ -17,7 +17,7 @@ $CSRF = $_SESSION['csrf_token'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Account - RADS Tooling</title>
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/css/profile.css">
+    <link rel="stylesheet" href="/assets/css/profile.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -469,7 +469,7 @@ $CSRF = $_SESSION['csrf_token'];
         });
     </script>
     <script>
-        const API_BASE = '/RADS-TOOLING/backend/api';
+        const API_BASE = '/backend/api';
         const CSRF_TOKEN = <?php echo json_encode($CSRF); ?>;
 
         let customerData = null;
@@ -568,7 +568,7 @@ $CSRF = $_SESSION['csrf_token'];
         function renderProfile(customer) {
             const fullName = customer.full_name || customer.username || 'Customer';
             const initials = (fullName.split(' ').map(s => s[0]).join('').slice(0, 2) || 'U').toUpperCase();
-            const profileImage = customer.profile_image ? `/RADS-TOOLING/${customer.profile_image}` : null;
+            const profileImage = customer.profile_image ? `/${customer.profile_image}` : null;
 
             // nav username (kung wala yung element, tahimik lang)
             const navUser = document.getElementById('nav-username');

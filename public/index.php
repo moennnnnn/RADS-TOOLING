@@ -23,7 +23,7 @@ $isCustomer = $user && (($user['aud'] ?? '') === 'customer');
 
 // If customer is logged in, redirect to customer homepage
 if ($isCustomer) {
-  header('Location: /RADS-TOOLING/customer/homepage.php');
+  header('Location: /customer/homepage.php');
   exit;
 }
 ?>
@@ -34,9 +34,9 @@ if ($isCustomer) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rads Tooling - Custom Cabinet Solutions</title>
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/Homepage.css" />
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-widget.css">
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
+  <link rel="stylesheet" href="/assets/CSS/Homepage.css" />
+  <link rel="stylesheet" href="/assets/CSS/chat-widget.css">
+  <link rel="stylesheet" href="/assets/CSS/responsive.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
@@ -48,13 +48,11 @@ if ($isCustomer) {
     <!-- HEADER -->
     <header class="navbar">
       <div class="navbar-container">
-        <div class="navbar-brand">
-          <a href="/RADS-TOOLING/public/index.php" class="logo-link">
-            <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-          </a>
-        </div>
-
-        <form class="search-container" action="/RADS-TOOLING/public/products.php" method="get">
+        <?php
+        require_once __DIR__ . '/../backend/components/navbar.php';
+        renderNavbar();
+        ?>
+        <form class="search-container" action="/public/products.php" method="get">
           <input type="text" name="q" class="search-input" placeholder="Search cabinets..." />
           <button type="submit" class="search-btn" aria-label="Search">
             <span class="material-symbols-rounded">search</span>
@@ -62,25 +60,25 @@ if ($isCustomer) {
         </form>
 
         <div class="navbar-actions">
-          <a href="/RADS-TOOLING/customer/cust_login.php" class="nav-link">
+          <a href="/customer/cust_login.php" class="nav-link">
             <span class="material-symbols-rounded">login</span>
             <span>Login</span>
           </a>
-          <a href="/RADS-TOOLING/customer/register.php" class="nav-link">
+          <a href="/customer/register.php" class="nav-link">
             <span class="material-symbols-rounded">person_add</span>
             <span>Sign Up</span>
           </a>
-          <a href="/RADS-TOOLING/admin/login.php" class="nav-link-icon" title="Staff Login">
+          <a href="/admin/login.php" class="nav-link-icon" title="Staff Login">
             <span class="material-symbols-rounded">admin_panel_settings</span>
           </a>
         </div>
       </div>
 
       <nav class="navbar-menu">
-        <a href="/RADS-TOOLING/public/index.php" class="nav-menu-item active">Home</a>
-        <a href="/RADS-TOOLING/public/about.php" class="nav-menu-item">About Us</a>
-        <a href="/RADS-TOOLING/public/products.php" class="nav-menu-item">Products</a>
-        <a href="/RADS-TOOLING/public/testimonials.php" class="nav-menu-item">Testimonials</a>
+        <a href="/public/index.php" class="nav-menu-item active">Home</a>
+        <a href="/public/about.php" class="nav-menu-item">About Us</a>
+        <a href="/public/products.php" class="nav-menu-item">Products</a>
+        <a href="/public/testimonials.php" class="nav-menu-item">Testimonials</a>
       </nav>
     </header>
 
@@ -92,10 +90,10 @@ if ($isCustomer) {
             <?php echo $cmsContent['hero_headline'] ?? '<h1>Welcome to RADS Tooling</h1>'; ?>
             <?php echo $cmsContent['hero_subtitle'] ?? '<p>Your trusted partner in custom cabinets</p>'; ?>
             <div class="hero-actions">
-              <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary">
+              <a href="/customer/register.php" class="btn-cta-primary">
                 <i class="fas fa-rocket"></i> Get Started Free
               </a>
-              <a href="/RADS-TOOLING/public/products.php" class="btn-cta-secondary">
+              <a href="/public/products.php" class="btn-cta-secondary">
                 <i class="fas fa-th-large"></i> Browse Gallery
               </a>
             </div>
@@ -118,7 +116,7 @@ if ($isCustomer) {
           </div>
           <div class="hero-image-content">
             <?php
-            $heroMedia = $cmsContent['hero_image'] ?? '/RADS-TOOLING/uploads/general/Cab_Hero.glb';
+            $heroMedia = $cmsContent['hero_image'] ?? '/uploads/general/Cab_Hero.glb';
             $heroPath  = parse_url($heroMedia, PHP_URL_PATH) ?: $heroMedia;
             $ext       = strtolower(pathinfo($heroPath, PATHINFO_EXTENSION));
             $isGLB     = ($ext === 'glb');
@@ -129,8 +127,8 @@ if ($isCustomer) {
                 <script type="importmap">
                   {
                   "imports": {
-                      "three": "/RADS-TOOLING/assets/vendor_js/three/three.module.js",
-                      "three/addons/": "/RADS-TOOLING/assets/vendor_js/three/"
+                      "three": "/assets/vendor_js/three/three.module.js",
+                      "three/addons/": "/assets/vendor_js/three/"
                   }
                 }
                 </script>
@@ -144,7 +142,7 @@ if ($isCustomer) {
                   } from 'three/addons/loaders/GLTFLoader.js';
 
                   const MODEL_URL = <?= json_encode($heroMedia) ?>;
-                  const wrap = document.getElementById('hero3d'); 
+                  const wrap = document.getElementById('hero3d');
 
                   const scene = new THREE.Scene();
                   scene.background = new THREE.Color(0xffffff);
@@ -160,8 +158,8 @@ if ($isCustomer) {
                   camera.position.set(1, .7, 3);
 
                   const controls = new OrbitControls(camera, renderer.domElement);
-                  controls.enableZoom = false; 
-                  controls.enablePan = false; 
+                  controls.enableZoom = false;
+                  controls.enablePan = false;
                   controls.enableRotate = false;
                   controls.autoRotate = true;
                   controls.autoRotateSpeed = 2.5;
@@ -232,7 +230,7 @@ if ($isCustomer) {
         </div>
         <h3>3D Customization</h3>
         <p>Visualize your cabinet in real-time with our 360° preview tool. Choose colors, materials, and dimensions.</p>
-        <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Start Customizing →</a>
+        <a href="/customer/register.php" class="feature-link">Start Customizing →</a>
       </div>
 
       <div class="feature-card">
@@ -241,7 +239,7 @@ if ($isCustomer) {
         </div>
         <h3>Track Your Orders</h3>
         <p>Monitor every step from production to delivery with real-time status updates.</p>
-        <a href="/RADS-TOOLING/customer/cust_login.php" class="feature-link">Login to Track →</a>
+        <a href="/customer/cust_login.php" class="feature-link">Login to Track →</a>
       </div>
 
       <div class="feature-card">
@@ -250,7 +248,7 @@ if ($isCustomer) {
         </div>
         <h3>Fast Checkout</h3>
         <p>Secure payment via GCash QR code. Pay 30% down payment to start production.</p>
-        <a href="/RADS-TOOLING/customer/register.php" class="feature-link">Create Account →</a>
+        <a href="/customer/register.php" class="feature-link">Create Account →</a>
       </div>
     </div>
   </section>
@@ -308,10 +306,10 @@ if ($isCustomer) {
       <div class="craft-media">
         <div class="craft-media-box">
           <video class="craft-video"
-            src="/RADS-TOOLING/uploads/general/Cabinets.mp4"
+            src="/uploads/general/Cabinets.mp4"
             muted autoplay loop playsinline controls
             preload="metadata"
-            poster="/RADS-TOOLING/assets/images/cab1.jpg"></video>
+            poster="/assets/images/cab1.jpg"></video>
         </div>
       </div>
     </div>
@@ -324,10 +322,10 @@ if ($isCustomer) {
       <?php echo $cmsContent['cta_headline'] ?? '<h2>Ready to Design Your Dream Cabinet?</h2>'; ?>
       <?php echo $cmsContent['cta_text'] ?? '<p>Join hundreds of satisfied customers</p>'; ?>
       <div class="cta-buttons">
-        <a href="/RADS-TOOLING/customer/register.php" class="btn-cta-primary btn-large">
+        <a href="/customer/register.php" class="btn-cta-primary btn-large">
           <i class="fas fa-user-plus"></i> Create Free Account
         </a>
-        <a href="/RADS-TOOLING/public/testimonials.php" class="btn-cta-secondary btn-large">
+        <a href="/public/testimonials.php" class="btn-cta-secondary btn-large">
           <i class="fas fa-images"></i> View Gallery
         </a>
       </div>
@@ -354,7 +352,7 @@ if ($isCustomer) {
       <p style="color: #666; margin-bottom: 20px;">
         Please login or create an account to chat with our support team and get instant answers to your questions.
       </p>
-      <a href="/RADS-TOOLING/customer/cust_login.php"
+      <a href="/customer/cust_login.php"
         style="display: inline-block; padding: 12px 24px; background: #1f4e74; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
         <i class="fas fa-sign-in-alt"></i> Login Now
       </a>
@@ -383,84 +381,10 @@ if ($isCustomer) {
   </script>
 
   <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-content">
-      <!-- About Section -->
-      <div class="footer-section">
-        <h3><?php echo $cmsContent['footer_company_name'] ?? 'About RADS TOOLING'; ?></h3>
-        <p class="footer-description">
-          <?php echo $cmsContent['footer_description'] ?? 'Premium custom cabinet manufacturer serving clients since 2007.
-            Quality craftsmanship, affordable prices, and exceptional service.'; ?>
-        </p>
-        <div class="footer-social">
-          <a href="#" class="social-icon" aria-label="Facebook">
-            <span class="material-symbols-rounded">facebook</span>
-          </a>
-          <a href="mailto:RadsTooling@gmail.com" class="social-icon" aria-label="Email">
-            <span class="material-symbols-rounded">mail</span>
-          </a>
-        </div>
-      </div>
-
-      <!-- Quick Links -->
-      <div class="footer-section">
-        <h3>Quick Links</h3>
-        <ul class="footer-links">
-          <li><a href="/RADS-TOOLING/public/index.php">Home</a></li>
-          <li><a href="/RADS-TOOLING/public/about.php">About Us</a></li>
-          <li><a href="/RADS-TOOLING/public/products.php">Products</a></li>
-          <li><a href="/RADS-TOOLING/public/testimonials.php">Testimonials</a></li>
-          <li><a href="/RADS-TOOLING/customer/register.php">Sign Up</a></li>
-          <li><a href="/RADS-TOOLING/customer/cust_login.php">Login</a></li>
-        </ul>
-      </div>
-
-      <!-- Categories -->
-      <div class="footer-section">
-        <h3>Categories</h3>
-        <ul class="footer-links">
-          <li><a href="/RADS-TOOLING/public/products.php?type=Kitchen">Kitchen Cabinet</a></li>
-          <li><a href="/RADS-TOOLING/public/products.php?type=Wardrobe">Wardrobe</a></li>
-          <li><a href="/RADS-TOOLING/public/products.php?type=Office Cabinet">Office Cabinet</a></li>
-          <li><a href="/RADS-TOOLING/public/products.php?type=Bathroom Cabinet">Bathroom Cabinet</a></li>
-          <li><a href="/RADS-TOOLING/public/products.php?type=Storage Cabinet">Storage Cabinet</a></li>
-        </ul>
-      </div>
-
-      <!-- Contact Info -->
-      <div class="footer-section">
-        <h3>Contact Info</h3>
-        <div class="contact-info-item">
-          <span class="material-symbols-rounded">location_on</span>
-          <span><?php echo $cmsContent['footer_address'] ?? 'Green Breeze, Piela, Dasmariñas, Cavite'; ?></span>
-        </div>
-        <div class="contact-info-item">
-          <span class="material-symbols-rounded">mail</span>
-          <a href="mailto:<?php echo $cmsContent['footer_email'] ?? 'RadsTooling@gmail.com'; ?>">
-            <?php echo $cmsContent['footer_email'] ?? 'RadsTooling@gmail.com'; ?>
-          </a>
-        </div>
-        <div class="contact-info-item">
-          <span class="material-symbols-rounded">phone</span>
-          <span><?php echo $cmsContent['footer_phone'] ?? '+63 976 228 4270'; ?></span>
-        </div>
-        <div class="contact-info-item">
-          <span class="material-symbols-rounded">schedule</span>
-          <span><?php echo $cmsContent['footer_hours'] ?? 'Mon-Sat: 8:00 AM - 5:00 PM'; ?></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer-bottom">
-      <p class="footer-copyright">
-        <?php echo $cmsContent['footer_copyright'] ?? '© 2025 RADS TOOLING INC. All rights reserved.'; ?>
-      </p>
-      <div class="footer-legal">
-        <a href="/RADS-TOOLING/public/privacy.php">Privacy Policy</a>
-        <a href="/RADS-TOOLING/public/terms.php">Terms & Conditions</a>
-      </div>
-    </div>
-  </footer>
+  <?php
+  require_once __DIR__ . '/../backend/components/footer.php';
+  renderFooter();
+  ?>
 
   </div><!-- /.page-wrapper -->
 
@@ -577,7 +501,7 @@ if ($isCustomer) {
 
 
 
-  <script src="/RADS-TOOLING/assets/JS/chat_widget.js"></script>
+  <script src="/assets/JS/chat_widget.js"></script>
 
 </body>
 

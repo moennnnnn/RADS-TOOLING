@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/api/psgc.php
+// /api/psgc.php
 // Simple PSGC proxy to avoid CORS and keep URLs consistent.
 
 header('Content-Type: application/json; charset=utf-8');

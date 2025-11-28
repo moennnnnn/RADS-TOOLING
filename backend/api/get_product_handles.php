@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/backend/api/get_product_handles.php
+// /backend/api/get_product_handles.php
 declare(strict_types=1);
 
 header('Content-Type: application/json');
@@ -45,10 +45,10 @@ try {
         if (!empty($handle['handle_image'])) {
             // If path starts with uploads/, use as-is
             if (strpos($handle['handle_image'], 'uploads/') === 0) {
-                $imagePath = '/RADS-TOOLING/' . $handle['handle_image'];
+                $imagePath = '/' . $handle['handle_image'];
             } else {
                 // Otherwise, assume it's in uploads/handles/
-                $imagePath = '/RADS-TOOLING/uploads/handles/' . ltrim($handle['handle_image'], '/');
+                $imagePath = '/uploads/handles/' . ltrim($handle['handle_image'], '/');
             }
         }
 

@@ -17,7 +17,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Define base URL
-define('BASE_URL', '/RADS-TOOLING');
+define('BASE_URL', 'https://radstooling.site/');
 
 // Error reporting (set to 0 in production)
 error_reporting(E_ALL);

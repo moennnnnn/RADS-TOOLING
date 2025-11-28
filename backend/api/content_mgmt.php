@@ -6,6 +6,7 @@ while (ob_get_level()) {
 ob_start();
 
 require_once __DIR__ . '/../config/app.php';
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../../includes/guard.php';
 
 // Get action early
@@ -14,7 +15,7 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 // Only require staff authentication for non-public actions
 $publicActions = ['get_payment_qr'];
 if (!in_array($action, $publicActions)) {
-    guard_require_staff();
+  guard_require_staff();
 }
 
 /** @var \PDO|null $pdo */
@@ -73,7 +74,7 @@ function getContent()
   $page = $_GET['page'] ?? 'home_public';
   $status = $_GET['status'] ?? 'draft';
 
-  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms', 'logo_settings', 'footer_settings'];
   if (!in_array($page, $validPages)) {
     throw new Exception('Invalid page');
   }
@@ -123,7 +124,8 @@ function saveContent()
   $page = $_POST['page'] ?? '';
   $content = $_POST['content'] ?? '';
 
-  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  // ✅ UPDATED: Add logo_settings and footer_settings
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms', 'logo_settings', 'footer_settings'];
   if (!in_array($page, $validPages)) {
     throw new Exception('Invalid page');
   }
@@ -135,12 +137,15 @@ function saveContent()
 
   $staffName = $_SESSION['staff']['full_name'] ?? 'Admin';
 
+  // ✅ UPDATED: Add friendly names for logo_settings and footer_settings
   $pageNames = [
     'home_public' => 'Public Homepage',
     'home_customer' => 'Customer Homepage',
     'about' => 'About Us',
     'privacy' => 'Privacy Policy',
-    'terms' => 'Terms & Conditions'
+    'terms' => 'Terms & Conditions',
+    'logo_settings' => 'Logo Settings',        // ✅ ADD THIS
+    'footer_settings' => 'Footer Settings'     // ✅ ADD THIS
   ];
 
   $newContentJson = json_encode($contentData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -178,12 +183,15 @@ function saveContent()
     $stmt->execute([$page]);
     $nextVersion = $stmt->fetch(PDO::FETCH_ASSOC)['next_version'];
 
+    // ✅ CRITICAL FIX: Use $pageNames array to get the correct page_name
+    $pageName = $pageNames[$page] ?? 'Unknown Page';
+
     // Insert new draft with current timestamp
     $stmt = $pdo->prepare("
             INSERT INTO rt_cms_pages (page_key, page_name, content_data, status, version, updated_by, updated_at)
             VALUES (?, ?, ?, 'draft', ?, ?, NOW())
         ");
-    $stmt->execute([$page, $pageNames[$page], $newContentJson, $nextVersion, $staffName]);
+    $stmt->execute([$page, $pageName, $newContentJson, $nextVersion, $staffName]);
 
     // CRITICAL: Commit immediately
     $pdo->commit();
@@ -208,7 +216,7 @@ function publishContent()
 
   $page = $_POST['page'] ?? '';
 
-  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms', 'logo_settings', 'footer_settings'];
   if (!in_array($page, $validPages)) {
     throw new Exception('Invalid page');
   }
@@ -250,7 +258,7 @@ function discardDraft()
 
   $page = $_POST['page'] ?? '';
 
-  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms'];
+  $validPages = ['home_public', 'home_customer', 'about', 'privacy', 'terms', 'logo_settings', 'footer_settings'];
   if (!in_array($page, $validPages)) {
     throw new Exception('Invalid page');
   }
@@ -286,6 +294,21 @@ function getDefaultContent($page)
     ],
     'terms' => [
       'content' => '<h1>Terms & Conditions</h1><p>Content goes here...</p>'
+    ],
+    'logo_settings' => [
+      'logo_type' => 'text',
+      'logo_text' => 'RADS TOOLING',
+      'logo_image' => ''
+    ],
+    'footer_settings' => [
+      'footer_company_name' => 'About RADS TOOLING',
+      'footer_description' => 'Premium custom cabinet manufacturer serving clients since 2007. Quality craftsmanship, affordable prices, and exceptional service.',
+      'footer_email' => 'RadsTooling@gmail.com',
+      'footer_phone' => '+63 976 228 4270',
+      'footer_address' => 'Green Breeze, Piela, Dasmariñas, Cavite',
+      'footer_hours' => 'Mon-Sat: 8:00 AM - 5:00 PM',
+      'footer_facebook' => '',
+      'footer_copyright' => '© 2025 RADS TOOLING INC. All rights reserved.'
     ]
   ];
 
@@ -326,7 +349,7 @@ function updatePaymentQR()
 
   try {
     $method = $_POST['method'] ?? '';
-    
+
     if (!in_array($method, ['gcash', 'bpi'])) {
       throw new Exception('Invalid payment method');
     }
@@ -340,7 +363,7 @@ function updatePaymentQR()
     // Validate file
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     $fileType = mime_content_type($file['tmp_name']);
-    
+
     if (!in_array($fileType, $allowedTypes)) {
       throw new Exception('Invalid file type. Only JPG, PNG, GIF, and WEBP are allowed.');
     }
@@ -367,7 +390,7 @@ function updatePaymentQR()
 
     // Update or insert into database
     $relativePath = 'uploads/qrs/' . $filename;
-    
+
     // Check if record exists
     $stmt = $pdo->prepare("SELECT id, image_path FROM payment_qr WHERE method = ?");
     $stmt->execute([$method]);
@@ -446,6 +469,6 @@ function uploadImage()
       'message' => $e->getMessage(),
       'file' => __FILE__,
       'line' => __LINE__
-    ]);  
+    ]);
   }
 }

@@ -8,10 +8,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!empty($_SESSION['user']) && ($_SESSION['user']['aud'] ?? '') === 'customer') {
-  header('Location: /RADS-TOOLING/customer/homepage.php');
+  header('Location: /customer/homepage.php');
   exit;
 }
-$next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
+$next = $_GET['next'] ?? '/customer/homepage.php';
 ?>
 <!doctype html>
 <html lang="en">
@@ -20,7 +20,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Customer Login | Rads Tooling</title>
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/login.css">
+  <link rel="stylesheet" href="/assets/CSS/login.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" />
 
 </head>
@@ -28,10 +28,10 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
 <body>
   <main class="auth-wrap">
     <div class="auth-form">
-      <div class="logo-container">
-        <span class="login-logo">R</span><span class="logo-text">ADS</span>
-        <span class="login-logo">T</span><span class="logo-text">OOLING</span>
-      </div>
+      <?php
+      require_once __DIR__ . '/../backend/components/navbar.php';
+      renderNavbar();
+      ?>
       <p class="subtitle">Login to your account</p>
 
       <form id="loginForm">
@@ -57,7 +57,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
           <a href="#" id="forgotLink">Forgot password?</a>
         </p>
         <p>
-          No account? <a href="/RADS-TOOLING/customer/register.php?next=<?= urlencode($next) ?>">Create one</a>
+          No account? <a href="/customer/register.php?next=<?= urlencode($next) ?>">Create one</a>
         </p>
       </div>
     </div>
@@ -125,13 +125,13 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
       // Get form data
       const formData = new FormData(e.target);
       const data = Object.fromEntries(formData.entries());
-      const next = document.getElementById('next')?.value || '/RADS-TOOLING/customer/homepage.php';
+      const next = document.getElementById('next')?.value || '/customer/homepage.php';
 
       // Treat "username" field as "username OR email"
       data.audience = 'customer';
 
       try {
-        const res = await fetch('/RADS-TOOLING/backend/api/auth.php?action=login', {
+        const res = await fetch('/backend/api/auth.php?action=login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -149,24 +149,27 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
         }
 
         if (!res.ok || !j.success) {
-  const msg = j.message || j.msg || 'Invalid username or password';
-  if (errorDiv) {
-    errorDiv.textContent = msg;
-    errorDiv.style.display = 'block';
-  } else {
-    __modal({ title: 'Login failed', html: msg }); // fallback if missing
-  }
-  throw new Error(msg);
-}
+          const msg = j.message || j.msg || 'Invalid username or password';
+          if (errorDiv) {
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+          } else {
+            __modal({
+              title: 'Login failed',
+              html: msg
+            }); // fallback if missing
+          }
+          throw new Error(msg);
+        }
 
         // If backend says verification is required, go to verify page instead
         if (j.data && j.data.verify_required) {
           const verifyUrl = j.data.redirect || (
-            `/RADS-TOOLING/customer/verify.php?email=${encodeURIComponent(j.data.email || data.username)}`
+            `/customer/verify.php?email=${encodeURIComponent(j.data.email || data.username)}`
           );
           if (j.data && j.data.verify_required) {
             const verifyUrl = j.data.redirect || (
-              `/RADS-TOOLING/customer/verify.php?email=${encodeURIComponent(j.data.email || data.username)}`
+              `/customer/verify.php?email=${encodeURIComponent(j.data.email || data.username)}`
             );
             // Optional: show a modal, then redirect
             if (window.showModal) {
@@ -223,7 +226,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
       e.preventDefault();
       const email = new FormData(e.target).get('email');
       try {
-        const r = await fetch('/RADS-TOOLING/backend/api/password.php?action=request', {
+        const r = await fetch('/backend/api/password.php?action=request', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -265,7 +268,7 @@ $next = $_GET['next'] ?? '/RADS-TOOLING/customer/homepage.php';
         return;
       }
       try {
-        const r = await fetch('/RADS-TOOLING/backend/api/password.php?action=reset', {
+        const r = await fetch('/backend/api/password.php?action=reset', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

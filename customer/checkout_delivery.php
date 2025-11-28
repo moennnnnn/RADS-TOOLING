@@ -1,5 +1,5 @@
 <?php
-// /RADS-TOOLING/customer/checkout_delivery.php
+// /customer/checkout_delivery.php
 // 🔥 COMPLETE FIXED VERSION with NCR support
 
 declare(strict_types=1);
@@ -10,8 +10,8 @@ require_once __DIR__ . '/../backend/config/app.php';
 $pid = (int)($_GET['pid'] ?? $_POST['pid'] ?? 0);
 
 if ($pid <= 0) {
-    header('Location: /RADS-TOOLING/customer/products.php');
-    exit;
+  header('Location: /customer/products.php');
+  exit;
 }
 
 $stmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND status = 'released'");
@@ -19,8 +19,8 @@ $stmt->execute([$pid]);
 $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$product) {
-    header('Location: /RADS-TOOLING/customer/products.php');
-    exit;
+  header('Location: /customer/products.php');
+  exit;
 }
 
 $user = $_SESSION['user'] ?? null;
@@ -28,23 +28,24 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <title>Delivery Details - Rads Tooling</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
-  
+
   <link rel="stylesheet" href="../assets/CSS/Homepage.css">
   <link rel="stylesheet" href="../assets/CSS/chat-widget.css">
   <link rel="stylesheet" href="../assets/CSS/about.css">
   <link rel="stylesheet" href="../assets/CSS/checkout.css">
   <link rel="stylesheet" href="../assets/CSS/checkout_modal.css">
-  <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/responsive.css">
-  
+  <link rel="stylesheet" href="/assets/CSS/responsive.css">
+
   <style>
     * {
       font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
@@ -295,154 +296,154 @@ $customerName = htmlspecialchars($user['name'] ?? $user['username'] ?? 'Customer
     }
   </style>
 </head>
+
 <body>
-<div class="page-wrapper">
-  <header class="navbar">
-    <div class="navbar-container">
-      <div class="navbar-brand">
-        <a class="logo-link" href="/RADS-TOOLING/customer/homepage.php">
-          <span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING
-        </a>
+  <div class="page-wrapper">
+    <header class="navbar">
+      <div class="navbar-container">
+        <?php
+        require_once __DIR__ . '/../backend/components/navbar.php';
+        renderNavbar();
+        ?>
+        <div class="navbar-actions">
+          <a class="cart-button" href="/cart.php">
+            <span class="material-symbols-rounded">shopping_cart</span>
+            <span id="cartCount" class="cart-badge">0</span>
+          </a>
+        </div>
       </div>
-      <div class="navbar-actions">
-        <a class="cart-button" href="/RADS-TOOLING/cart.php">
-          <span class="material-symbols-rounded">shopping_cart</span>
-          <span id="cartCount" class="cart-badge">0</span>
-        </a>
-      </div>
-    </div>
-    <nav class="navbar-menu">
-      <a href="/RADS-TOOLING/customer/homepage.php" class="nav-menu-item">Home</a>
-      <a href="/RADS-TOOLING/customer/about.php" class="nav-menu-item">About</a>
-      <a href="/RADS-TOOLING/customer/products.php" class="nav-menu-item">Products</a>
-      <a href="/RADS-TOOLING/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
-    </nav>
-  </header>
+      <nav class="navbar-menu">
+        <a href="/customer/homepage.php" class="nav-menu-item">Home</a>
+        <a href="/customer/about.php" class="nav-menu-item">About</a>
+        <a href="/customer/products.php" class="nav-menu-item">Products</a>
+        <a href="/customer/testimonials.php" class="nav-menu-item">Testimonials</a>
+      </nav>
+    </header>
 
-  <main class="checkout-main checkout-wrapper">
-    <div class="checkout-header">
-      <h1>Delivery Details</h1>
-      <p>Please provide your delivery information</p>
-    </div>
-
-    <div class="checkout-card">
-      <div class="notice-box">
-        <span class="material-symbols-rounded">info</span>
-        <p><strong>Limited to NCR and Calabarzon.</strong> Delivery fee is ₱500. Orders are shipped within 3-5 business days.</p>
+    <main class="checkout-main checkout-wrapper">
+      <div class="checkout-header">
+        <h1>Delivery Details</h1>
+        <p>Please provide your delivery information</p>
       </div>
 
-      <form id="deliveryForm" method="POST" action="checkout_delivery_review.php">
-        <input type="hidden" name="mode" value="delivery">
-        <input type="hidden" name="pid" value="<?= $pid ?>">
-
-        <!-- Personal Information -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>First Name <span class="required">*</span></label>
-            <input type="text" name="first_name" placeholder="Enter your first name" required>
-          </div>
-
-          <div class="form-group">
-            <label>Last Name <span class="required">*</span></label>
-            <input type="text" name="last_name" placeholder="Enter your last name" required>
-          </div>
+      <div class="checkout-card">
+        <div class="notice-box">
+          <span class="material-symbols-rounded">info</span>
+          <p><strong>Limited to NCR and Calabarzon.</strong> Delivery fee is ₱500. Orders are shipped within 3-5 business days.</p>
         </div>
 
-        <!-- Contact Information -->
-        <div class="form-group">
-          <label>Mobile Number <span class="required">*</span></label>
-          <div class="phone-group">
-            <input type="text" value="+63" disabled class="country-code">
-            <input type="tel" id="phoneLocal" name="phoneLocal" class="phone-input" 
-                   placeholder="9123456789" pattern="[0-9]{10}" maxlength="10" 
-                   inputmode="numeric" required>
-          </div>
-          <input type="hidden" id="phoneFull" name="phone">
-          <small>Enter 10 digits only (example: 9123456789)</small>
-        </div>
+        <form id="deliveryForm" method="POST" action="checkout_delivery_review.php">
+          <input type="hidden" name="mode" value="delivery">
+          <input type="hidden" name="pid" value="<?= $pid ?>">
 
-        <!-- Address Information -->
-        <div class="form-row">
+          <!-- Personal Information -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>First Name <span class="required">*</span></label>
+              <input type="text" name="first_name" placeholder="Enter your first name" required>
+            </div>
+
+            <div class="form-group">
+              <label>Last Name <span class="required">*</span></label>
+              <input type="text" name="last_name" placeholder="Enter your last name" required>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
           <div class="form-group">
-            <label>Province <span class="required">*</span></label>
-            <select id="province" name="province" required disabled>
-              <option value="">Loading provinces...</option>
+            <label>Mobile Number <span class="required">*</span></label>
+            <div class="phone-group">
+              <input type="text" value="+63" disabled class="country-code">
+              <input type="tel" id="phoneLocal" name="phoneLocal" class="phone-input"
+                placeholder="9123456789" pattern="[0-9]{10}" maxlength="10"
+                inputmode="numeric" required>
+            </div>
+            <input type="hidden" id="phoneFull" name="phone">
+            <small>Enter 10 digits only (example: 9123456789)</small>
+          </div>
+
+          <!-- Address Information -->
+          <div class="form-row">
+            <div class="form-group">
+              <label>Province <span class="required">*</span></label>
+              <select id="province" name="province" required disabled>
+                <option value="">Loading provinces...</option>
+              </select>
+              <input type="hidden" id="provinceVal" name="province">
+              <input type="text" id="provinceInput" name="province" placeholder="Enter province" hidden disabled>
+            </div>
+
+            <div class="form-group">
+              <label>City/Municipality <span class="required">*</span></label>
+              <select id="city" name="city" required disabled>
+                <option value="">Select province first</option>
+              </select>
+              <input type="hidden" id="cityVal" name="city">
+              <input type="text" id="cityInput" name="city" placeholder="Enter city" hidden disabled>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Barangay <span class="required">*</span></label>
+            <select id="barangaySelect" name="barangay" required disabled>
+              <option value="">Select city first</option>
             </select>
-            <input type="hidden" id="provinceVal" name="province">
-            <input type="text" id="provinceInput" name="province" placeholder="Enter province" hidden disabled>
+            <input type="hidden" id="barangayVal" name="barangay">
+            <input type="text" id="barangayInput" name="barangay" placeholder="Enter barangay" hidden disabled>
           </div>
 
+          <div class="form-row">
+            <div class="form-group">
+              <label>Street / Block / Lot <span class="required">*</span></label>
+              <input type="text" name="street" placeholder="123 Main Street, Block 4 Lot 5" required>
+            </div>
+
+            <div class="form-group">
+              <label>Postal Code</label>
+              <input type="text" name="postal" placeholder="4114" pattern="[0-9]{4}" maxlength="4" inputmode="numeric">
+            </div>
+          </div>
+
+          <!-- Email (Optional) -->
           <div class="form-group">
-            <label>City/Municipality <span class="required">*</span></label>
-            <select id="city" name="city" required disabled>
-              <option value="">Select province first</option>
-            </select>
-            <input type="hidden" id="cityVal" name="city">
-            <input type="text" id="cityInput" name="city" placeholder="Enter city" hidden disabled>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Barangay <span class="required">*</span></label>
-          <select id="barangaySelect" name="barangay" required disabled>
-            <option value="">Select city first</option>
-          </select>
-          <input type="hidden" id="barangayVal" name="barangay">
-          <input type="text" id="barangayInput" name="barangay" placeholder="Enter barangay" hidden disabled>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Street / Block / Lot <span class="required">*</span></label>
-            <input type="text" name="street" placeholder="123 Main Street, Block 4 Lot 5" required>
+            <label>Email Address (Optional)</label>
+            <input type="email" name="email" placeholder="your.email@example.com">
+            <small>We'll send order updates to this email</small>
           </div>
 
-          <div class="form-group">
-            <label>Postal Code</label>
-            <input type="text" name="postal" placeholder="4114" pattern="[0-9]{4}" maxlength="4" inputmode="numeric">
+          <!-- Action Buttons -->
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" id="btnClear">
+              <span class="material-symbols-rounded">restart_alt</span>
+              Clear Form
+            </button>
+            <button type="button" class="btn btn-primary" id="btnContinue">
+              <span>Continue to Review</span>
+              <span class="material-symbols-rounded">arrow_forward</span>
+            </button>
           </div>
-        </div>
+        </form>
+      </div>
+    </main>
 
-        <!-- Email (Optional) -->
-        <div class="form-group">
-          <label>Email Address (Optional)</label>
-          <input type="email" name="email" placeholder="your.email@example.com">
-          <small>We'll send order updates to this email</small>
-        </div>
+    <?php
+    require_once __DIR__ . '/../backend/components/footer.php';
+    renderFooter();
+    ?>
+  </div>
 
-        <!-- Action Buttons -->
-        <div class="btn-group">
-          <button type="button" class="btn btn-secondary" id="btnClear">
-            <span class="material-symbols-rounded">restart_alt</span>
-            Clear Form
-          </button>
-          <button type="button" class="btn btn-primary" id="btnContinue">
-            <span>Continue to Review</span>
-            <span class="material-symbols-rounded">arrow_forward</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </main>
-
-  <footer class="footer">
-    <div class="footer-bottom">
-      <p>© 2025 RADS TOOLING INC. All rights reserved.</p>
-    </div>
-  </footer>
-</div>
-
-<!-- Validation Modal -->
-<div class="rt-modal" id="invalidModal" hidden>
-  <div class="rt-card">
-    <h3>Incomplete Form</h3>
-    <p>Please fill in all the highlighted fields before continuing.</p>
-    <div class="rt-actions">
-      <button class="rt-btn" onclick="document.getElementById('invalidModal').hidden = true">OK</button>
+  <!-- Validation Modal -->
+  <div class="rt-modal" id="invalidModal" hidden>
+    <div class="rt-card">
+      <h3>Incomplete Form</h3>
+      <p>Please fill in all the highlighted fields before continuing.</p>
+      <div class="rt-actions">
+        <button class="rt-btn" onclick="document.getElementById('invalidModal').hidden = true">OK</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script src="/RADS-TOOLING/assets/JS/checkout.js" defer></script>
+  <script src="/assets/JS/checkout.js" defer></script>
 </body>
-</html> 
+
+</html>

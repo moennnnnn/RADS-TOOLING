@@ -39,9 +39,9 @@ if (!$isLoggedIn) {
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <!-- Main CSS -->
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/style.css" />
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/chat-admin.css" />
-    <link rel="stylesheet" href="/RADS-TOOLING/assets/CSS/content_mgmt.css" />
+    <link rel="stylesheet" href="/assets/CSS/style.css" />
+    <link rel="stylesheet" href="/assets/CSS/chat-admin.css" />
+    <link rel="stylesheet" href="/assets/CSS/content_mgmt.css" />
 
     <style>
         /* ===== Consolidated Modal, Loading, and UI styles (merged) ===== */
@@ -333,7 +333,13 @@ if (!$isLoggedIn) {
 
     <!-- SIDEBAR -->
     <aside class="sidebar">
-        <div class="sidebar-logo"><span class="logo-text">R</span>ADS <span class="logo-text">T</span>OOLING</div>
+        <div class="sidebar-logo">
+            <?php
+            // Kailangan natin i-require kung hindi pa naka-require sa taas
+            require_once __DIR__ . '/../backend/components/navbar.php';
+            renderNavbar();
+            ?>
+        </div>
         <div class="sidebar-nav">
             <span class="nav-item active" data-section="dashboard"><a href="#"><span class="material-symbols-rounded">home</span>
                     <h2>Dashboard</h2>
@@ -374,7 +380,7 @@ if (!$isLoggedIn) {
             <div class="topbar-profile">
                 <span class="admin-name">Welcome, <?php echo htmlspecialchars($adminName); ?></span>
                 <div class="profile-menu">
-                    <img src="/RADS-TOOLING/assets/images/profile.png" alt="Admin" class="profile-avatar" id="profileIcon" />
+                    <img src="/assets/images/profile.png" alt="Admin" class="profile-avatar" id="profileIcon" />
                     <div class="profile-dropdown" id="profileDropdown">
                         <button id="btnEditProfile"><span class="material-symbols-rounded">person</span> Edit Profile</button>
                         <button id="btnChangePassword"><span class="material-symbols-rounded">key</span> Change Password</button>
@@ -716,52 +722,58 @@ if (!$isLoggedIn) {
                 <label>From: <input type="date" class="report-date" id="report-from" /></label>
                 <label>To: <input type="date" class="report-date" id="report-to" /></label>
                 <button class="btn-generate" id="generateReportBtn">Generate Report</button>
-                <button class="btn-export" id="exportPdfBtn"><span class="material-symbols-rounded">picture_as_pdf</span> Download PDF</button>
             </div>
 
             <div class="report-summary">
-                <!-- summary cards (same as before) -->
-                <div class="summary-card card-total-sales" style="cursor:pointer">
+                <div class="summary-card card-total-sales" onclick="openReportDrilldown('sales')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#3db36b1a;"><span class="material-symbols-rounded" style="color:#3db36b;">payments</span></div>
                     <div class="summary-title">Total Sales</div>
                     <div class="summary-value"><span id="rg-total-sales">₱0</span></div>
                 </div>
-                <div class="summary-card card-total-orders" style="cursor:pointer">
+
+                <div class="summary-card card-total-orders" onclick="openReportDrilldown('orders')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#3498db1a;"><span class="material-symbols-rounded" style="color:#3498db;">shopping_cart</span></div>
                     <div class="summary-title">Total Orders</div>
                     <div class="summary-value"><span id="rg-total-orders">0</span></div>
                 </div>
-                <div class="summary-card card-average-order" style="cursor:pointer">
+
+                <div class="summary-card card-average-order" onclick="openReportDrilldown('orders')" style="cursor:pointer" title="Click to view order list">
                     <div class="summary-icon" style="background:#f7b7311a;"><span class="material-symbols-rounded" style="color:#f7b731;">equalizer</span></div>
                     <div class="summary-title">Avg. Order Value</div>
                     <div class="summary-value"><span id="rg-avg-order">₱0</span></div>
                 </div>
-                <div class="summary-card card-fully-paid" style="cursor:pointer">
+
+                <div class="summary-card card-fully-paid" onclick="openReportDrilldown('fully_paid')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#2f5b881a;"><span class="material-symbols-rounded" style="color:#2f5b88;">verified</span></div>
                     <div class="summary-title">Fully Paid Orders</div>
                     <div class="summary-value"><span id="rg-fully-paid">0</span></div>
                 </div>
-                <div class="summary-card card-cancelled" style="cursor:pointer">
+
+                <div class="summary-card card-cancelled" onclick="openReportDrilldown('cancelled')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#e14d4d1a;"><span class="material-symbols-rounded" style="color:#e14d4d;">block</span></div>
                     <div class="summary-title">Cancelled Orders</div>
                     <div class="summary-value"><span id="rg-cancelled">0</span></div>
                 </div>
-                <div class="summary-card card-pending" style="cursor:pointer">
+
+                <div class="summary-card card-pending" onclick="openReportDrilldown('pending')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#ffc4001a;"><span class="material-symbols-rounded" style="color:#ffc400;">pending</span></div>
                     <div class="summary-title">Pending Orders</div>
                     <div class="summary-value"><span id="rg-pending">0</span></div>
                 </div>
-                <div class="summary-card card-new-customer" style="cursor:pointer">
+
+                <div class="summary-card card-new-customer" onclick="openReportDrilldown('new_customers')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#8e44ad1a;"><span class="material-symbols-rounded" style="color:#8e44ad;">group_add</span></div>
                     <div class="summary-title">New Customers</div>
                     <div class="summary-value"><span id="rg-new-customers">0</span></div>
                 </div>
-                <div class="summary-card card-feedbacks" style="cursor:pointer">
+
+                <div class="summary-card card-feedbacks" onclick="openReportDrilldown('feedbacks')" style="cursor:pointer" title="Click to view details">
                     <div class="summary-icon" style="background:#2980b91a;"><span class="material-symbols-rounded" style="color:#2980b9;">star</span></div>
                     <div class="summary-title">Feedbacks</div>
                     <div class="summary-value"><span id="rg-feedbacks">0</span></div>
                 </div>
-                <div class="summary-card card-most-ordered" style="cursor:pointer">
+
+                <div class="summary-card card-most-ordered" onclick="openReportDrilldown('orders')" style="cursor:pointer" title="View all orders">
                     <div class="summary-icon" style="background:#26c6da1a;"><span class="material-symbols-rounded" style="color:#26c6da;">category</span></div>
                     <div class="summary-title">Most Ordered Item</div>
                     <div class="summary-value"><span id="rg-most-item">—</span></div>
@@ -928,7 +940,7 @@ if (!$isLoggedIn) {
                 </div>
                 <form id="editProfileForm" style="padding:16px">
                     <div class="edit-profile-pic-group" style="display:flex;flex-direction:column;align-items:center;margin-bottom:1rem">
-                        <img id="editProfileAvatar" class="edit-profile-avatar" src="/RADS-TOOLING/assets/images/profile.png" alt="Avatar" />
+                        <img id="editProfileAvatar" class="edit-profile-avatar" src="/assets/images/profile.png" alt="Avatar" />
                         <label class="edit-pic-label" for="editProfilePic" style="cursor:pointer;margin-top:6px">Change Photo</label>
                         <input id="editProfilePic" type="file" accept="image/*" hidden />
                     </div>
@@ -1380,13 +1392,40 @@ if (!$isLoggedIn) {
         </div>
     </div>
 
+    <div id="reportDetailsModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; height: 80vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h2 id="reportDetailTitle">Report Details</h2>
+                <button class="close-modal" onclick="closeModal('reportDetailsModal')">×</button>
+            </div>
+
+            <div class="modal-body-scrollable" style="flex: 1; padding: 0;">
+                <table class="rt-table" style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: #f1f5f9; position: sticky; top: 0;">
+                        <tr id="reportDetailHeaderRow">
+                        </tr>
+                    </thead>
+                    <tbody id="reportDetailBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions" style="border-top: 1px solid #eee; padding: 15px;">
+                <button class="btn-secondary" onclick="closeModal('reportDetailsModal')">Close</button>
+                <a id="btnDownloadDetailPdf" href="#" target="_blank" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                    <span class="material-symbols-rounded">picture_as_pdf</span> Download Detailed PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/script.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/product_management.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/chat_admin.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/chat-notification.js"></script>
-    <script src="/RADS-TOOLING/assets/JS/content_mgmt.js"></script>
+    <script src="/assets/JS/script.js"></script>
+    <script src="/assets/JS/product_management.js"></script>
+    <script src="/assets/JS/chat_admin.js"></script>
+    <script src="/assets/JS/chat-notification.js"></script>
+    <script src="/assets/JS/content_mgmt.js"></script>
 
     <script>
         // Open modals
@@ -1411,7 +1450,7 @@ if (!$isLoggedIn) {
             formData.append('image', file);
 
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_texture_image', {
+                const response = await fetch('/backend/api/admin_customization.php?action=upload_texture_image', {
                     method: 'POST',
                     body: formData
                 });
@@ -1420,7 +1459,7 @@ if (!$isLoggedIn) {
 
                 if (data.success) {
                     const preview = document.getElementById('textureImagePreview');
-                    preview.src = `/RADS-TOOLING/uploads/textures/${data.data.filename}`;
+                    preview.src = `/uploads/textures/${data.data.filename}`;
                     preview.style.display = 'block';
                     preview.dataset.filename = data.data.filename;
                     showNotification('success', 'Texture image uploaded successfully');
@@ -1503,7 +1542,7 @@ if (!$isLoggedIn) {
             const formData = new FormData();
             formData.append('image', file);
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_texture_image', {
+                const response = await fetch('/backend/api/admin_customization.php?action=upload_texture_image', {
                     method: 'POST',
                     body: formData
                 });
@@ -1511,7 +1550,7 @@ if (!$isLoggedIn) {
                 if (data.success) {
                     const preview = document.getElementById('textureImagePreview');
                     if (preview) {
-                        preview.src = `/RADS-TOOLING/uploads/textures/${data.data.filename}`;
+                        preview.src = `/uploads/textures/${data.data.filename}`;
                         preview.style.display = 'block';
                         preview.dataset.filename = data.data.filename;
                     }
@@ -1531,7 +1570,7 @@ if (!$isLoggedIn) {
             const formData = new FormData();
             formData.append('image', file);
             try {
-                const response = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=upload_handle_image', {
+                const response = await fetch('/backend/api/admin_customization.php?action=upload_handle_image', {
                     method: 'POST',
                     body: formData
                 });
@@ -1539,7 +1578,7 @@ if (!$isLoggedIn) {
                 if (data.success) {
                     const preview = document.getElementById('handleImagePreview');
                     if (preview) {
-                        preview.src = `/RADS-TOOLING/uploads/handles/${data.data.filename}`;
+                        preview.src = `/uploads/handles/${data.data.filename}`;
                         preview.style.display = 'block';
                         preview.dataset.filename = data.data.filename;
                     }
@@ -1569,7 +1608,7 @@ if (!$isLoggedIn) {
                 allowed_parts: allowedParts
             };
             try {
-                const res = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_texture', {
+                const res = await fetch('/backend/api/admin_customization.php?action=add_texture', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1607,7 +1646,7 @@ if (!$isLoggedIn) {
 
             console.log('Sending color data:', colorData);
 
-            fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_color', {
+            fetch('/backend/api/admin_customization.php?action=add_color', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1642,7 +1681,7 @@ if (!$isLoggedIn) {
                 handle_image: document.getElementById('handleImagePreview')?.dataset?.filename || ''
             };
             try {
-                const res = await fetch('/RADS-TOOLING/backend/api/admin_customization.php?action=add_handle', {
+                const res = await fetch('/backend/api/admin_customization.php?action=add_handle', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

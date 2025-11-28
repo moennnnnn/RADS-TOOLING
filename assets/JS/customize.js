@@ -1,4 +1,4 @@
-// /RADS-TOOLING/assets/JS/customize.js
+// /assets/JS/customize.js
 (() => {
     // ======= DOM =======
     const mediaBox = document.getElementById('mediaBox');
@@ -25,9 +25,9 @@
 
     // ======= Constants / Paths =======
     const PID = Number(window.PID || 0);
-    const MODEL_DIR = '/RADS-TOOLING/uploads/models/';
-    const TEX_DIR = '/RADS-TOOLING/uploads/textures/';
-    const HANDLE_DIR = '/RADS-TOOLING/uploads/handles/';
+    const MODEL_DIR = '/uploads/models/';
+    const TEX_DIR = '/uploads/textures/';
+    const HANDLE_DIR = '/uploads/handles/';
 
     function normalizePartName(part) {
         const map = {
@@ -256,7 +256,7 @@
 
     // ======= Data Loading =======
     async function loadProduct(id) {
-        const url = `/RADS-TOOLING/backend/api/admin_products.php?action=view&id=${id}`;
+        const url = `/backend/api/admin_products.php?action=view&id=${id}`;
         const r = await fetch(url, { credentials: 'same-origin' });
         if (!r.ok) throw new Error(`admin_products.php returned ${r.status}`);
         const js = await r.json();
@@ -268,9 +268,9 @@
         // model
         let model_url = '';
         if (typeof d.model_3d === 'string' && d.model_3d.trim()) {
-            model_url = d.model_3d.startsWith('/RADS-TOOLING/') ? d.model_3d : (MODEL_DIR + d.model_3d.replace(/^\/+/, ''));
+            model_url = d.model_3d.startsWith('/') ? d.model_3d : (MODEL_DIR + d.model_3d.replace(/^\/+/, ''));
         } else if (typeof d.model_url === 'string' && d.model_url.trim()) {
-            model_url = d.model_url.startsWith('/RADS-TOOLING/') ? d.model_url : (MODEL_DIR + d.model_url.replace(/^\/+/, ''));
+            model_url = d.model_url.startsWith('/') ? d.model_url : (MODEL_DIR + d.model_url.replace(/^\/+/, ''));
         } else if (typeof d.model_path === 'string' && d.model_path.trim()) {
             model_url = MODEL_DIR + d.model_path.replace(/^\/+/, '');
         } else if (typeof d.model === 'string' && d.model.trim()) {
@@ -280,8 +280,8 @@
 
         // image
         let image = d.image || d.image_path || '';
-        if (image && !image.startsWith('/RADS-TOOLING/') && !image.startsWith('http')) {
-            image = '/RADS-TOOLING/' + image.replace(/^\/+/, '');
+        if (image && !image.startsWith('/') && !image.startsWith('http')) {
+            image = '/' + image.replace(/^\/+/, '');
         }
 
         // size_confs
@@ -348,7 +348,7 @@
 
         try {
             // use PID (declared earlier) not PRODUCT_ID
-            const resp = await fetch(`/RADS-TOOLING/backend/api/get_part_textures.php?product_id=${PID}&part=${encodeURIComponent(partName)}`, { credentials: 'same-origin' });
+            const resp = await fetch(`/backend/api/get_part_textures.php?product_id=${PID}&part=${encodeURIComponent(partName)}`, { credentials: 'same-origin' });
             const txt = await resp.text();
 
             let data;
@@ -534,7 +534,7 @@
         colList.innerHTML = '<div style="padding:10px;color:#666">Loading colors...</div>';
 
         try {
-            const resp = await fetch(`/RADS-TOOLING/backend/api/get_part_colors.php?product_id=${PID}&part=${partName}`, { credentials: 'same-origin' });
+            const resp = await fetch(`/backend/api/get_part_colors.php?product_id=${PID}&part=${partName}`, { credentials: 'same-origin' });
             const data = await resp.json();
 
             if (!data.success || !data.colors || data.colors.length === 0) {
@@ -1080,7 +1080,7 @@
             // fallback: call backend list_colors for this product (admin_customization.php?action=list_colors&product_id=PID)
             try {
                 if (!PID) throw new Error('PID missing');
-                const resp = await fetch(`/RADS-TOOLING/backend/api/admin_customization.php?action=list_colors&product_id=${PID}`, { credentials: 'same-origin' });
+                const resp = await fetch(`/backend/api/admin_customization.php?action=list_colors&product_id=${PID}`, { credentials: 'same-origin' });
                 if (resp.ok) {
                     const js = await resp.json();
                     if (js?.success && Array.isArray(js.data)) {
@@ -1159,7 +1159,7 @@
         let handlesToRender = [];
 
         try {
-            const resp = await fetch(`/RADS-TOOLING/backend/api/get_product_handles.php?product_id=${PID}`, {
+            const resp = await fetch(`/backend/api/get_product_handles.php?product_id=${PID}`, {
                 credentials: 'same-origin'
             });
 

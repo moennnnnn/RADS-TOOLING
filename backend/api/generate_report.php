@@ -6,299 +6,126 @@ session_start();
 require_once dirname(__DIR__, 2) . '/includes/guard.php';
 require_once dirname(__DIR__) . '/config/database.php';
 
-$autoloadPath = dirname(__DIR__, 2) . '/vendor/autoload.php';
-if (!file_exists($autoloadPath)) {
-    http_response_code(500);
-    die('Error: PDF library not installed. Please run "composer install"');
+// [FIX] Manual Library Loading (Bypass Composer)
+$manual_tcpdf = dirname(__DIR__) . '/lib/tcpdf/tcpdf.php';
+if (file_exists($manual_tcpdf)) {
+    require_once $manual_tcpdf;
+} else {
+    // Fallback sa composer kung sakali
+    $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+    if (file_exists($autoload)) require_once $autoload;
 }
-require_once $autoloadPath;
 
 guard_require_staff();
 
 if (!class_exists('TCPDF')) {
-    die('TCPDF class not found. Please install via composer: composer require tecnickcom/tcpdf');
+    die('Error: TCPDF library not found. Please follow Step 1 (Manual Install).');
 }
 
 $db = new Database();
 $conn = $db->getConnection();
 
-// Get date range from query parameters
-$from_date = $_GET['from'] ?? date('Y-m-01'); // First day of current month
-$to_date = $_GET['to'] ?? date('Y-m-d'); // Today
+$from_date = $_GET['from'] ?? date('Y-m-01');
+$to_date = $_GET['to'] ?? date('Y-m-d');
+$from = new DateTime($from_date);
+$to = new DateTime($to_date);
 
 try {
-    // Validate dates
-    $from = new DateTime($from_date);
-    $to = new DateTime($to_date);
-    
-    if ($from > $to) {
-        throw new Exception('Invalid date range');
+    // 1. Fetch Data
+    $queries = [
+        'sales' => "SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_date BETWEEN ? AND ? AND status != 'Cancelled'",
+        'orders' => "SELECT COUNT(*) FROM orders WHERE order_date BETWEEN ? AND ?",
+        'paid' => "SELECT COUNT(*) FROM orders WHERE order_date BETWEEN ? AND ? AND payment_status = 'Fully Paid'",
+        'cancelled' => "SELECT COUNT(*) FROM orders WHERE order_date BETWEEN ? AND ? AND status = 'Cancelled'",
+        'pending' => "SELECT COUNT(*) FROM orders WHERE order_date BETWEEN ? AND ? AND status = 'Pending'",
+        'customers' => "SELECT COUNT(*) FROM customers WHERE created_at BETWEEN ? AND ?",
+        'feedbacks' => "SELECT COUNT(*) FROM feedback WHERE created_at BETWEEN ? AND ?"
+    ];
+
+    $stats = [];
+    foreach ($queries as $key => $sql) {
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$from_date, $to_date]);
+        $stats[$key] = $stmt->fetchColumn();
     }
-    
-} catch (Exception $e) {
-    http_response_code(400);
-    die('Invalid date range provided');
-}
 
-// Fetch report data
-try {
-    // Total Sales
-    $stmt = $conn->prepare("
-        SELECT COALESCE(SUM(total_amount), 0) as total_sales
-        FROM orders
-        WHERE order_date BETWEEN ? AND ?
-        AND status != 'Cancelled'
-    ");
+    // Recent Orders
+    $stmt = $conn->prepare("SELECT order_code, full_name, order_date, total_amount, status FROM orders o JOIN customers c ON o.customer_id = c.id WHERE order_date BETWEEN ? AND ? ORDER BY order_date DESC LIMIT 20");
     $stmt->execute([$from_date, $to_date]);
-    $salesData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Total Orders
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as total_orders
-        FROM orders
-        WHERE order_date BETWEEN ? AND ?
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $ordersData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Average Order Value
-    $avgOrder = $ordersData['total_orders'] > 0 
-        ? $salesData['total_sales'] / $ordersData['total_orders'] 
-        : 0;
-    
-    // Fully Paid Orders
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as fully_paid
-        FROM orders
-        WHERE order_date BETWEEN ? AND ?
-        AND payment_status = 'Fully Paid'
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $fullyPaidData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Cancelled Orders
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as cancelled
-        FROM orders
-        WHERE order_date BETWEEN ? AND ?
-        AND status = 'Cancelled'
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $cancelledData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Pending Orders
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as pending
-        FROM orders
-        WHERE order_date BETWEEN ? AND ?
-        AND status = 'Pending'
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $pendingData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // New Customers
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as new_customers
-        FROM customers
-        WHERE created_at BETWEEN ? AND ?
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $customersData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Feedbacks
-    $stmt = $conn->prepare("
-        SELECT COUNT(*) as feedbacks
-        FROM feedback
-        WHERE created_at BETWEEN ? AND ?
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $feedbackData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Most Ordered Item
-    $stmt = $conn->prepare("
-        SELECT oi.name, COUNT(*) as order_count
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.id
-        WHERE o.order_date BETWEEN ? AND ?
-        GROUP BY oi.name
-        ORDER BY order_count DESC
-        LIMIT 1
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $mostOrderedData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Recent Orders for detail section
-    $stmt = $conn->prepare("
-        SELECT 
-            o.order_code,
-            c.full_name as customer_name,
-            o.order_date,
-            o.total_amount,
-            o.status,
-            o.payment_status
-        FROM orders o
-        JOIN customers c ON o.customer_id = c.id
-        WHERE o.order_date BETWEEN ? AND ?
-        ORDER BY o.order_date DESC
-        LIMIT 20
-    ");
-    $stmt->execute([$from_date, $to_date]);
-    $recentOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+    $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    error_log("Report generation error: " . $e->getMessage());
-    http_response_code(500);
-    die('Failed to generate report');
+    die('Database Error: ' . $e->getMessage());
 }
 
-// Create PDF
-//$pdf = new PDF('P', 'mm', 'A4', true, 'UTF-8', false);
+// 2. Create PDF
+// [FIX] Use TCPDF class directly
+$pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
 
-// Set document information
+// Document Settings
 $pdf->SetCreator('RADS TOOLING');
-$pdf->SetAuthor('RADS TOOLING INC.');
-$pdf->SetTitle('Sales Report - ' . $from->format('M d, Y') . ' to ' . $to->format('M d, Y'));
-$pdf->SetSubject('Sales and Order Report');
-
-// Remove default header/footer
+$pdf->SetTitle('Sales Report');
 $pdf->setPrintHeader(false);
 $pdf->setPrintFooter(false);
-
-// Set margins
 $pdf->SetMargins(15, 15, 15);
-$pdf->SetAutoPageBreak(TRUE, 15);
-
-// Add a page
 $pdf->AddPage();
 
-// Set font
-$pdf->SetFont('helvetica', '', 10);
-
-// Company Header
+// Header
 $pdf->SetFont('helvetica', 'B', 20);
-$pdf->SetTextColor(47, 91, 136); // Brand color
-$pdf->Cell(0, 10, 'RADS TOOLING INC.', 0, 1, 'C');
-
-$pdf->SetFont('helvetica', '', 10);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(0, 5, 'Green Breeze, Piela, Dasmarinas, Cavite', 0, 1, 'C');
-$pdf->Cell(0, 5, 'Phone: +63 976 228 4270 | Email: radstooling@gmail.com', 0, 1, 'C');
-
-$pdf->Ln(5);
-
-// Report Title
-$pdf->SetFont('helvetica', 'B', 16);
-$pdf->SetTextColor(0, 0, 0);
-$pdf->Cell(0, 10, 'SALES REPORT', 0, 1, 'C');
-
-$pdf->SetFont('helvetica', '', 10);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(0, 5, 'Report Period: ' . $from->format('F d, Y') . ' to ' . $to->format('F d, Y'), 0, 1, 'C');
-$pdf->Cell(0, 5, 'Generated on: ' . date('F d, Y h:i A'), 0, 1, 'C');
-
-$pdf->Ln(10);
-
-// Summary Section
-$pdf->SetFont('helvetica', 'B', 12);
 $pdf->SetTextColor(47, 91, 136);
-$pdf->Cell(0, 8, 'SUMMARY STATISTICS', 0, 1, 'L');
-$pdf->SetLineStyle(['width' => 0.5, 'color' => [47, 91, 136]]);
-$pdf->Line(15, $pdf->GetY(), 195, $pdf->GetY());
+$pdf->Cell(0, 10, 'RADS TOOLING INC.', 0, 1, 'C');
+$pdf->SetFont('helvetica', '', 10);
+$pdf->SetTextColor(100);
+$pdf->Cell(0, 5, 'Sales & Order Report', 0, 1, 'C');
 $pdf->Ln(5);
 
-// Summary Grid
-$pdf->SetFont('helvetica', '', 10);
-$pdf->SetTextColor(0, 0, 0);
+$pdf->SetFont('helvetica', 'B', 12);
+$pdf->SetTextColor(0);
+$pdf->Cell(0, 10, 'Period: ' . $from->format('M d, Y') . ' - ' . $to->format('M d, Y'), 0, 1, 'C');
+$pdf->Ln(5);
 
-$summaryData = [
-    ['Total Sales', '₱' . number_format($salesData['total_sales'], 2)],
-    ['Total Orders', number_format($ordersData['total_orders'])],
-    ['Avg. Order Value', '₱' . number_format($avgOrder, 2)],
-    ['Fully Paid Orders', number_format($fullyPaidData['fully_paid'])],
-    ['Cancelled Orders', number_format($cancelledData['cancelled'])],
-    ['Pending Orders', number_format($pendingData['pending'])],
-    ['New Customers', number_format($customersData['new_customers'])],
-    ['Feedbacks Received', number_format($feedbackData['feedbacks'])],
-    ['Most Ordered Item', $mostOrderedData['name'] ?? 'N/A']
+// Statistics Grid
+$pdf->SetFont('helvetica', '', 10);
+$w = 90;
+$data = [
+    ['Total Sales', 'P ' . number_format((float)$stats['sales'], 2)],
+    ['Total Orders', $stats['orders']],
+    ['Fully Paid', $stats['paid']],
+    ['Cancelled', $stats['cancelled']],
+    ['New Customers', $stats['customers']],
+    ['Feedbacks', $stats['feedbacks']]
 ];
 
-$colWidth = 90;
-$rowHeight = 8;
-$x = 15;
-$y = $pdf->GetY();
+foreach ($data as $row) {
+    $pdf->Cell($w, 8, $row[0] . ': ' . $row[1], 1, 0, 'L');
+    if ($pdf->GetX() > 150) $pdf->Ln();
+}
+$pdf->Ln(15);
 
-foreach ($summaryData as $index => $row) {
-    if ($index % 2 == 0) {
-        $pdf->SetXY($x, $y);
-    } else {
-        $pdf->SetXY($x + $colWidth, $y);
-    }
-    
-    // Background color for label
-    $pdf->SetFillColor(247, 250, 252);
-    $pdf->Cell($colWidth * 0.6, $rowHeight, $row[0] . ':', 0, 0, 'L', true);
-    
-    // Value
-    $pdf->SetFont('helvetica', 'B', 10);
-    $pdf->Cell($colWidth * 0.4, $rowHeight, $row[1], 0, 0, 'R');
-    $pdf->SetFont('helvetica', '', 10);
-    
-    if ($index % 2 == 1) {
-        $y += $rowHeight;
-    }
+// Recent Orders Table
+$pdf->SetFont('helvetica', 'B', 11);
+$pdf->SetTextColor(47, 91, 136);
+$pdf->Cell(0, 10, 'Recent Orders', 0, 1, 'L');
+
+$pdf->SetFont('helvetica', 'B', 9);
+$pdf->SetTextColor(255);
+$pdf->SetFillColor(47, 91, 136);
+$pdf->Cell(35, 7, 'Code', 1, 0, 'C', 1);
+$pdf->Cell(50, 7, 'Customer', 1, 0, 'C', 1);
+$pdf->Cell(30, 7, 'Date', 1, 0, 'C', 1);
+$pdf->Cell(30, 7, 'Amount', 1, 0, 'C', 1);
+$pdf->Cell(35, 7, 'Status', 1, 1, 'C', 1);
+
+$pdf->SetFont('helvetica', '', 9);
+$pdf->SetTextColor(0);
+foreach ($recent as $r) {
+    $pdf->Cell(35, 7, $r['order_code'], 1, 0, 'C');
+    $pdf->Cell(50, 7, substr($r['full_name'], 0, 25), 1, 0, 'L');
+    $pdf->Cell(30, 7, date('M d', strtotime($r['order_date'])), 1, 0, 'C');
+    $pdf->Cell(30, 7, number_format((float)$r['total_amount'], 2), 1, 0, 'R');
+    $pdf->Cell(35, 7, $r['status'], 1, 1, 'C');
 }
 
-if (count($summaryData) % 2 == 1) {
-    $y += $rowHeight;
-}
+// [FIX] Output Cleaning
+if (ob_get_length()) ob_end_clean();
 
-$pdf->SetY($y + 5);
-
-// Recent Orders Section
-if (count($recentOrders) > 0) {
-    $pdf->Ln(10);
-    $pdf->SetFont('helvetica', 'B', 12);
-    $pdf->SetTextColor(47, 91, 136);
-    $pdf->Cell(0, 8, 'RECENT ORDERS', 0, 1, 'L');
-    $pdf->Line(15, $pdf->GetY(), 195, $pdf->GetY());
-    $pdf->Ln(5);
-    
-    // Table Header
-    $pdf->SetFont('helvetica', 'B', 9);
-    $pdf->SetFillColor(47, 91, 136);
-    $pdf->SetTextColor(255, 255, 255);
-    
-    $pdf->Cell(35, 7, 'Order Code', 1, 0, 'C', true);
-    $pdf->Cell(45, 7, 'Customer', 1, 0, 'C', true);
-    $pdf->Cell(30, 7, 'Date', 1, 0, 'C', true);
-    $pdf->Cell(30, 7, 'Amount', 1, 0, 'C', true);
-    $pdf->Cell(25, 7, 'Status', 1, 1, 'C', true);
-    
-    // Table Rows
-    $pdf->SetFont('helvetica', '', 8);
-    $pdf->SetTextColor(0, 0, 0);
-    
-    $fill = false;
-    foreach ($recentOrders as $order) {
-        $pdf->SetFillColor(247, 250, 252);
-        
-        $pdf->Cell(35, 6, $order['order_code'], 1, 0, 'L', $fill);
-        $pdf->Cell(45, 6, substr($order['customer_name'], 0, 25), 1, 0, 'L', $fill);
-        $pdf->Cell(30, 6, date('M d, Y', strtotime($order['order_date'])), 1, 0, 'C', $fill);
-        $pdf->Cell(30, 6, '₱' . number_format($order['total_amount'], 2), 1, 0, 'R', $fill);
-        $pdf->Cell(25, 6, $order['status'], 1, 1, 'C', $fill);
-        
-        $fill = !$fill;
-    }
-}
-
-// Footer
-$pdf->Ln(10);
-$pdf->SetFont('helvetica', 'I', 8);
-$pdf->SetTextColor(150, 150, 150);
-$pdf->Cell(0, 5, 'This is a computer-generated report. No signature required.', 0, 1, 'C');
-$pdf->Cell(0, 5, '© ' . date('Y') . ' RADS TOOLING INC. All rights reserved.', 0, 1, 'C');
-
-// Output PDF
-$filename = 'Sales_Report_' . $from->format('Y-m-d') . '_to_' . $to->format('Y-m-d') . '.pdf';
-$pdf->Output($filename, 'D'); // D = download
+$pdf->Output('Report.pdf', 'D');
